@@ -1,0 +1,87 @@
+# Delegation Protocol
+
+**Always delegate to a specialist sub-agent when one exists for the task.** Do not perform the work yourself if a matching agent is available.
+
+## Routing
+
+| Work type | Sub-agent |
+| --- | --- |
+| Project planning, task breakdown, sequencing | `task-planner` |
+| Tool research, version assessment, production readiness | `tool-researcher` |
+| Helm chart authoring and upgrades | `helm-engineer` |
+| ArgoCD applications, per-cluster values, GitOps enablement | `argocd-engineer` |
+| CI workflows, alerts, dashboards, SLOs, observability | `platform-engineer` |
+| Post-PR review, fix, CI feedback | `pr-reviewer` |
+| Parallel exploration, bounded research, Q&A | `worker` |
+
+## When NOT to delegate
+
+Do the work directly when:
+
+1. No sub-agent matches.
+2. The change is trivial (one file, less than ~2 minutes).
+3. A previous sub-agent already failed or timed out on the same task in this session.
+4. The operation requires `rm -rf` or other deletion the orchestrator must execute itself. Sub-agents are typically blocked from destructive shell verbs by the runtime's risk gate. Use `git rm -r` as a safer alternative when applicable.
+
+When delegating, always provide: goal, target architecture / outcome, reference files / patterns, constraints, verification criteria, expected output.
+
+## Dispatch prompt structure
+
+**The target architecture goes first.** Sub-agents bias toward current repo state and will ignore a buried target.
+
+```markdown
+## Goal
+<one sentence>
+
+## Target architecture / outcome
+<one paragraph stating the intended end state, BEFORE any "explore the repo" instructions>
+
+## Steps
+1. <specific step>
+2. <specific step>
+
+## Reference
+- <files to read first>
+- <patterns to follow>
+
+## Constraints
+- <what to preserve / not touch>
+
+## Verify by
+- <command/check>: <pass/fail criterion>
+- <command/check>: <pass/fail criterion>
+
+## Expected output
+<format: PR, structured report, file at path, etc.>
+
+## Memory
+Before finishing:
+bd remember "<insight>" --key <repo>/<prefix>/<topic>
+```
+
+**Every dispatch must include `Verify by:`.** Vague tasks produce vague results. Concrete examples:
+
+- `helm template` succeeds without rendering errors.
+- Metric names match `/metrics` endpoint output.
+- PR diff contains only files in `charts/<name>/`.
+- Pods Ready, zero restarts, operator logs clean.
+
+## Subagent-specific dispatch tips
+
+- **For `tool-researcher`**: state the deployment model explicitly at the top (e.g. "We deploy as 4 independent ArgoCD apps, NOT a single umbrella chart"). Buried targets get ignored.
+- **For `pr-reviewer`**: pass the PR URL, original task summary, key files, and any preserve constraints. Use a different model from the creating sub-agent when the runtime supports it.
+- **For amending PRs**: tell the sub-agent about the open PR, branch name, and worktree path explicitly. They will not discover them on their own.
+
+## Parallel dispatch
+
+When the same playbook runs across N independent targets (clusters, services, charts, dashboards), see [`parallel-dispatch.md`](parallel-dispatch.md): one playbook, N workers launched in a single message, aggregation in the orchestrator.
+
+## PR review dispatch rules
+
+After any sub-agent returns a PR URL, evaluate whether to dispatch `pr-reviewer`. See the full matrix in [`pr-review-loop.md`](pr-review-loop.md). Summary:
+
+**Always dispatch for**: Helm chart, ArgoCD, CI/alerting/observability changes, PRs touching >5 files or >100 lines, security-sensitive paths (secrets, RBAC, NetworkPolicies, escalation policies).
+
+**Never dispatch for**: docs-only PRs, single-file config value changes (<10 lines), or when the user says "skip review."
+
+**Use judgment for**: 3–5 files / 50–100 lines (dispatch if logic, skip if scaffolding); worker-sub-agent PRs (dispatch if the original task was non-trivial).

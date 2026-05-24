@@ -1,0 +1,38 @@
+# Local sanitization denylist seed.
+#
+# Copy to your repo (or `.git/info/exclude`-adjacent location) and populate
+# with the strings unique to YOUR environment. Then run from the repo root:
+#
+#   rg -nFf .redaction-denylist . | head
+#
+# Treat any non-empty result as a blocking finding.
+#
+# Format: one match string per line. Lines starting with # are comments.
+# Strings are matched literally (rg -F), not as regex.
+
+# --- Cluster / environment identifiers ---
+# Add your real cluster names, regions, project IDs.
+# example-cluster-prod-01
+# my-real-cluster-name
+
+# --- Customer / tenant names ---
+# acme-corp
+# big-co
+
+# --- Internal domains and URLs ---
+# .internal.example.com
+# vpn.example.com
+# wiki.example.com
+
+# --- Ticket / project prefixes ---
+# ACME-
+# PROJ-
+
+# --- People / handles to avoid leaking ---
+# alice@example.com
+# bob.username
+
+# --- Secret-shaped tokens (these should NEVER ship; use trufflehog/gitleaks too) ---
+# glsa_
+# ghp_
+# github_pat_
