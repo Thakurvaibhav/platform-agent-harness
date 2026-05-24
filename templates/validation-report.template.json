@@ -1,0 +1,46 @@
+{
+  "contract": "<contract-name>",
+  "target": "<repo | service | cluster | dashboard>",
+  "ran_at": "<ISO-8601 timestamp>",
+  "ran_by": "<agent or human>",
+  "summary": {
+    "pass": 0,
+    "fail": 0,
+    "blocked": 0,
+    "skipped": 0
+  },
+  "assertions": [
+    {
+      "id": 1,
+      "name": "<short name>",
+      "status": "pass",
+      "evidence": [
+        {
+          "kind": "command",
+          "command": "<exact command>",
+          "output_summary": "<one-line summary>"
+        }
+      ],
+      "notes": ""
+    },
+    {
+      "id": 2,
+      "name": "<short name>",
+      "status": "fail",
+      "evidence": [
+        {
+          "kind": "query",
+          "query": "<PromQL / LogQL / API path>",
+          "result_summary": "<key fact>"
+        }
+      ],
+      "notes": "<observed vs expected diff>"
+    }
+  ],
+  "follow_ups": [
+    {
+      "bd_task": "<id>",
+      "description": "<what to do next>"
+    }
+  ]
+}
