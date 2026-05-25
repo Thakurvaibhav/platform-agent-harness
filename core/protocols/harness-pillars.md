@@ -59,11 +59,12 @@ Graph output guides exploration; source files remain the final authority. See [`
 
 Skills are repeatable operational workflows:
 
-- create-pr
-- helm-upgrade
-- k8s-debug
-- contract-validation
-- graphify
+- shiny-engineer — structured Design → Implement → Review → Test → Submit formula with rule-of-five expansion on implementation
+- create-pr — consistent PR open flow with structured description, ticket link, CI follow-through
+- helm-upgrade — full subchart upgrade flow with render-diff and immutable-field checks
+- k8s-debug — read-only Kubernetes triage workflow
+- graphify — knowledge-graph build and query workflow
+- contract-validation — runnable pass/fail assertion contracts with evidence
 
 Plus the 18-skill Grafana observability bundle installed via `gcx skills install --all`.
 
