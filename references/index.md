@@ -45,6 +45,7 @@ Master catalog for the harness. Agents check this file **before** broad searches
 
 | Path | Purpose |
 | --- | --- |
+| [`skills/shiny-engineer/SKILL.md`](../skills/shiny-engineer/SKILL.md) | Structured implementation workflow (Design → Implement → Review → Test → Submit, rule-of-five expansion) |
 | [`skills/create-pr/SKILL.md`](../skills/create-pr/SKILL.md) | PR creation workflow |
 | [`skills/helm-upgrade/SKILL.md`](../skills/helm-upgrade/SKILL.md) | Helm dependency upgrade workflow |
 | [`skills/k8s-debug/SKILL.md`](../skills/k8s-debug/SKILL.md) | Read-only Kubernetes debugging |

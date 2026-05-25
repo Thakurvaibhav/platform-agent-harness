@@ -1,0 +1,45 @@
+# Secrets and local state
+.env
+.env.*
+*.key
+*.pem
+*.p12
+*.kubeconfig
+kubeconfig*
+auth*
+*oauth*
+*.token
+*.secret
+
+# Agent runtime state
+sessions/
+history.json
+logs/
+cache/
+snapshots/
+telemetry/
+artifacts/
+tmp/
+temp/
+
+# bd / Beads local state
+.beads/
+
+# Graphify generated output from real repos
+graphify-out/
+
+# Tool/vendor caches
+node_modules/
+.venv/
+venv/
+__pycache__/
+*.pyc
+.DS_Store
+
+# Local runtime config
+settings.json
+mcp.json
+cli-hints.json
+
+# Sanitization seed (real org-specific names, not for public commit)
+.redaction-denylist
