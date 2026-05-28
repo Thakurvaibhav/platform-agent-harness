@@ -62,6 +62,41 @@ bd close <id> --reason "<PR created and CI passing>"
 
 ## Code quality principles
 
+### Assumptions
+
+**Don't assume. Don't hide confusion. Surface tradeoffs.**
+
+- State assumptions explicitly before executing; log them in `bd comments`.
+- If multiple valid interpretations exist, present them — don't pick silently.
+- If a simpler approach exists than what was requested, say so.
+- If confused, stop and name what's unclear. Never fabricate context.
+- Before starting work that might have prior art (rollout, research, upgrade, playbook), check [`references/index.md`](../../references/index.md) for an existing doc on the topic. Read the relevant doc before writing anything from scratch.
+- Verify metric names: `curl -s <pod-ip>:<port>/metrics | grep <metric>`.
+- Verify upstream values paths: `helm show values <repo>/<chart> --version <ver> | grep <path>`.
+- If the task feels wrong, log the concern and proceed with your best judgment. Do NOT silently reinterpret.
+
+### Simplicity
+
+Minimum code that solves the task. Nothing speculative.
+
+- No features or templates beyond what was asked. If the task says "create 5 alerts," create exactly 5.
+- No abstractions for single-use code. No "flexibility" or "configurability" that wasn't requested.
+- No error handling for impossible scenarios.
+- If you wrote 200 lines and it could be 50, rewrite it.
+- Test: "Would a senior engineer say this is overcomplicated?" If yes, simplify.
+
+**Reuse-first.** Before writing any new function, utility, or pattern — search the codebase for an existing one.
+
+1. **Search first**: grep keywords in `utils/`, `helpers/`, `common/`, `shared/`, `lib/` and across the repo.
+2. **Reuse or extend**: if something similar exists, use it. If close but not exact, extend it — don't fork a parallel implementation.
+3. **Document if new**: place it where future code can find it (shared module, not buried in a feature directory).
+
+Blocking violations: creating a function that duplicates >80% of an existing one; reimplementing a utility that already lives in a shared module; ignoring existing naming conventions, error handling patterns, or config approaches.
+
+Reject these rationalizations: "My version is slightly different" (extend instead), "The existing code is messy" (refactor separately), "It's faster to rewrite" (maintaining two versions is slower forever).
+
+**Infrastructure exception**: guardrails (policy rules), alerts, and log filtering are baseline requirements for production tools, not speculative work.
+
 ### Surgical changes
 
 Touch only what you must. Every changed line traces to the task.
@@ -70,25 +105,27 @@ Touch only what you must. Every changed line traces to the task.
 - No explanatory comments for obvious patterns.
 - Do not include fields/defaults the existing pattern omits — explicit defaults cause permadiffs in ArgoCD.
 - Match existing style exactly even if you would do it differently.
+- Remove only imports/variables/functions that YOUR changes made unused. Do not remove pre-existing dead code unless the task asks for it.
 - Log unrelated issues you spot as `bd comments` or new `bd create` tasks. Do NOT fix them in your PR.
 
-### Simplicity
+### Verification (goal-driven execution)
 
-Minimum code that solves the task. No features beyond what was asked. If the task says "create 5 alerts," create exactly 5.
+Define success criteria. Loop until verified. Every task ends with explicit verification.
 
-**Infrastructure exception**: Guardrails (policy rules), alerts, and log filtering are baseline requirements for production tools, not speculative work.
+Transform tasks into verifiable goals:
 
-### Assumptions
+- "Add validation" → write tests for invalid inputs, then make them pass.
+- "Fix the bug" → write a test that reproduces it, then make it pass.
+- "Refactor X" → ensure tests pass before and after.
 
-State assumptions before executing; log them in `bd comments`.
+For multi-step tasks, state a brief plan:
 
-- Verify metric names: `curl -s <pod-ip>:<port>/metrics | grep <metric>`.
-- Verify upstream values paths: `helm show values <repo>/<chart> --version <ver> | grep <path>`.
-- If the task feels wrong, log the concern and proceed with your best judgment. Do NOT silently reinterpret.
+```
+1. [step] → verify: [check]
+2. [step] → verify: [check]
+```
 
-### Verification
-
-Every task ends with explicit verification.
+Domain-specific checks:
 
 - Helm: `helm dep build && helm lint && helm template` must succeed.
 - ArgoCD: `helm template <argo-apps-release> <argo-apps-chart> -f values.<cluster>.yaml` renders correctly.
@@ -164,10 +201,11 @@ Available learnings files:
 - `learnings-helm-ci.md` — YAML formatting, Helm patterns, Git, GitHub Actions, workflow pinning
 - `learnings-argocd.md` — ArgoCD sync, values keys, CRD ordering
 - `learnings-observability.md` — PromQL, alerting, Grafana dashboards
-- `learnings-operators.md` — Operators, CRDs, policy engines
 - `learnings-rollout.md` — Rollout patterns, campaigns, cross-repo coordination
+- `learnings-progressive-delivery.md` — Argo Rollouts + Gateway API plugin patterns, ArgoCD ignoreDifferences for Rollout-managed resources
+- `learnings-operators.md` — Operators, CRDs, policy-engine patterns (guard/mutation/audit), admission-controller cache gotchas
+- `learnings-k8s-sa.md` — ServiceAccount separation, Workload Identity, image-pull secrets, batch SA rollout
 - `learnings-agent-workflow.md` — Sub-agent dispatch pitfalls
-- `learnings-k8s-sa.md` — ServiceAccount separation, Workload Identity, image pull secrets
 
 Capturing a new learning: append a numbered item to the right file. Never duplicate — update the existing entry instead. If a learning is tightly coupled to one sub-agent, also add a short pointer in that agent's "Learnings tightly coupled" section.
 
