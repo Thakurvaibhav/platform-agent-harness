@@ -66,6 +66,29 @@ bd remember "<insight>" --key <repo>/<prefix>/<topic>
 - PR diff contains only files in `charts/<name>/`.
 - Pods Ready, zero restarts, operator logs clean.
 
+## Include this in every dispatch prompt
+
+Append this block to every sub-agent dispatch. It primes the sub-agent on shared protocols, knowledge sources, and the memory contract:
+
+```markdown
+## Reference loading
+- Read `core/protocols/bd-and-memory.md` for shared protocols (code quality, bd, verification, completion).
+- Read `references/index.md` to discover available reference docs.
+- Read `references/clusters.md` (or the repo equivalent) for cluster details, if the task is cluster-scoped.
+- If `graphify-out/graph.json` exists in the repo, load it for architecture and dependency questions.
+
+## Memory
+Before finishing, persist any non-obvious findings:
+bd remember "<insight>" --key <repo>/<prefix>/<topic>
+```
+
+This is non-negotiable. Sub-agents that skip the reference-loading step routinely:
+- re-implement utilities that already exist (Reuse-First violations),
+- contradict numbered learnings entries with conflicting fixes,
+- miss cluster-specific constraints documented in `clusters.md`.
+
+The block is short, paste-friendly, and the cost of including it is zero.
+
 ## Subagent-specific dispatch tips
 
 - **For `tool-researcher`**: state the deployment model explicitly at the top (e.g. "We deploy as 4 independent ArgoCD apps, NOT a single umbrella chart"). Buried targets get ignored.

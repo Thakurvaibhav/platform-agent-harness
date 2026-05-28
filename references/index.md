@@ -69,6 +69,9 @@ Master catalog for the harness. Agents check this file **before** broad searches
 | [`references/learnings-argocd.md`](learnings-argocd.md) | ArgoCD sync behavior, ignoreDifferences, sync-waves, values key naming |
 | [`references/learnings-observability.md`](learnings-observability.md) | PromQL, alerting, ServiceMonitor, Grafana dashboards |
 | [`references/learnings-rollout.md`](learnings-rollout.md) | Rollout strategy, staged migrations, batch campaign hygiene |
+| [`references/learnings-progressive-delivery.md`](learnings-progressive-delivery.md) | Argo Rollouts + Gateway API plugin patterns, ArgoCD ignoreDifferences for Rollout-managed resources |
+| [`references/learnings-operators.md`](learnings-operators.md) | Operators, CRDs, policy-engine patterns (guard/mutation/audit), admission-controller cache gotchas |
+| [`references/learnings-k8s-sa.md`](learnings-k8s-sa.md) | ServiceAccount separation, Workload Identity (GKE WI / EKS IRSA), image-pull secrets, batch SA rollout |
 | [`references/learnings-agent-workflow.md`](learnings-agent-workflow.md) | Sub-agent dispatch pitfalls, parallel work, knowledge capture |
 
 ## Tools

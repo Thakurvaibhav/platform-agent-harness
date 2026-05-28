@@ -6,6 +6,18 @@
 
 Use this file as the root instruction contract for CLI agents working in platform / infrastructure repositories.
 
+## Startup
+
+At session start or resume, every agent — main session and sub-agent — does the following before any task work:
+
+1. Read [`core/protocols/bd-and-memory.md`](../core/protocols/bd-and-memory.md) for the shared protocols: code quality (Assumptions, Simplicity, Reuse-First, Surgical Changes), constraints, bd workflow, memory taxonomy, verification (goal-driven execution), and the completion checklist.
+2. Read [`references/index.md`](../references/index.md) to discover available reference docs — agents check the index **before** broad searches so existing knowledge is reused, not re-derived.
+3. Read [`references/clusters.md`](../references/clusters.md) (or your repo's equivalent) before any cluster-scoped decision.
+4. If `graphify-out/graph.json` exists in the repo, load it for architecture and dependency questions.
+
+For the wider operating model (the seven pillars), see [`core/protocols/harness-pillars.md`](../core/protocols/harness-pillars.md). For the compaction lifecycle, see [`LIFECYCLE.md`](../LIFECYCLE.md).
+
+
 ## Operating principles
 
 - Treat the harness as an operating system around the agent: agents, skills, task state, memory, knowledge index, graph context, validation, and safety all work together.
