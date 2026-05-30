@@ -31,14 +31,12 @@ Numbered, append-only. **Update the existing entry — never duplicate.**
 
 ## Git & CI
 
-8. **Sub-agents typically cannot delete directories.** The runtime risk gate often blocks `rm -rf` for sub-agents. For tasks requiring directory deletion, handle from the main session or use `git rm -r`.
+8. **Reusable workflows cannot use local composite actions** when called via `uses: ./.github/actions/*`. GitHub resolves these paths from the workspace, not the workflow's source ref. Either inline steps or call scripts directly.
 
-9. **Reusable workflows cannot use local composite actions** when called via `uses: ./.github/actions/*`. GitHub resolves these paths from the workspace, not the workflow's source ref. Either inline steps or call scripts directly.
+9. **Pin tool downloads and third-party Actions.** Use specific versions with checksum verification for tool downloads (yq, kubectl). Pin third-party Actions to commit SHAs with version comments (e.g. `uses: actions/checkout@abc123 # v6`).
 
-10. **Pin tool downloads and third-party Actions.** Use specific versions with checksum verification for tool downloads (yq, kubectl). Pin third-party Actions to commit SHAs with version comments (e.g. `uses: actions/checkout@abc123 # v6`).
-
-11. **When a reusable workflow is referenced by branch name**, the branch gets deleted on merge, causing `startup_failure` in all consumers. Always pin to commit SHA.
+10. **When a reusable workflow is referenced by branch name**, the branch gets deleted on merge, causing `startup_failure` in all consumers. Always pin to commit SHA.
 
 ## YAML tooling
 
-12. **`yq -i` reformats YAML.** It adds array indentation, breaking `indentless_arrays` yamlfmt configs. Use the hybrid pattern: `yq` for reading/parsing, `sed` for writing — or run `yamlfmt` after `yq -i` to restore formatting.
+11. **`yq -i` reformats YAML.** It adds array indentation, breaking `indentless_arrays` yamlfmt configs. Use the hybrid pattern: `yq` for reading/parsing, `sed` for writing — or run `yamlfmt` after `yq -i` to restore formatting.

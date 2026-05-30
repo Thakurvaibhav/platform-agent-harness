@@ -10,9 +10,9 @@
 | Tool research, version assessment, production readiness | `tool-researcher` |
 | Helm chart authoring and upgrades | `helm-engineer` |
 | ArgoCD applications, per-cluster values, GitOps enablement | `argocd-engineer` |
-| CI workflows, alerts, dashboards, SLOs, observability | `platform-engineer` |
+| CI workflows, alerts, dashboards, observability | `platform-engineer` |
 | Post-PR review, fix, CI feedback | `pr-reviewer` |
-| Parallel exploration, bounded research, Q&A | `worker` |
+| General-purpose engineering: code exploration, research, analysis, parallel file edits, validation, Q&A, report generation | `general-engineer` |
 
 ## When NOT to delegate
 
@@ -24,6 +24,17 @@ Do the work directly when:
 4. The operation requires `rm -rf` or other deletion the orchestrator must execute itself. Sub-agents are typically blocked from destructive shell verbs by the runtime's risk gate. Use `git rm -r` as a safer alternative when applicable.
 
 When delegating, always provide: goal, target architecture / outcome, reference files / patterns, constraints, verification criteria, expected output.
+
+## Multi-agent orchestration
+
+When a task spans multiple sub-agents (e.g., new tool = tool-researcher → helm-engineer → argocd-engineer → platform-engineer), the orchestrator self-chains the dispatch. Pass each agent's output as context to the next. Do NOT dispatch task-planner for orchestration — the orchestrator owns the chain.
+
+## When a sub-agent fails or times out
+
+1. Read the error or partial output. Identify whether it's a prompt issue, a tooling issue, or a genuine blocker.
+2. Retry ONCE with a tighter, more specific prompt — add the missing context or constraint.
+3. If it fails again, break the task into smaller pieces and dispatch separately.
+4. If still blocked, perform the work directly and note the failure pattern via `bd remember`.
 
 ## Dispatch prompt structure
 
@@ -74,6 +85,7 @@ Append this block to every sub-agent dispatch. It primes the sub-agent on shared
 ## Reference loading
 - Read `core/protocols/bd-and-memory.md` for shared protocols (code quality, bd, verification, completion).
 - Read `references/index.md` to discover available reference docs.
+- Search `bd memories <keywords>` for task-relevant prior art.
 - Read `references/clusters.md` (or the repo equivalent) for cluster details, if the task is cluster-scoped.
 - If `graphify-out/graph.json` exists in the repo, load it for architecture and dependency questions.
 
@@ -99,6 +111,21 @@ The block is short, paste-friendly, and the cost of including it is zero.
 
 When the same playbook runs across N independent targets (clusters, services, charts, dashboards), see [`parallel-dispatch.md`](parallel-dispatch.md): one playbook, N workers launched in a single message, aggregation in the orchestrator.
 
+## Knowledge consolidation
+
+On every session start or resume, the orchestrator checks if bd memories need consolidating into learnings files:
+
+1. Run `bd memories consolidation` to find the `<repo>/meta/last-consolidation` memory.
+2. If missing or older than 7 days, suggest to the user: "Last knowledge consolidation was N days ago (or never). Want me to consolidate?"
+3. If approved, dispatch `general-engineer` with the consolidation workflow:
+   - Read all bd memories
+   - For each memory with prefix `<repo>/decision`, `<repo>/lesson`, `<repo>/trouble`, `<repo>/tool`: check if it exists in the matching learnings file
+   - If not present and reusable, append as numbered item
+   - Update `index.md` if new files created
+   - Run: `bd remember "last consolidation: <date>, promoted N memories" --key <repo>/meta/last-consolidation`
+
+Do NOT auto-run without user approval.
+
 ## PR review dispatch rules
 
 After any sub-agent returns a PR URL, evaluate whether to dispatch `pr-reviewer`. See the full matrix in [`pr-review-loop.md`](pr-review-loop.md). Summary:
@@ -107,4 +134,4 @@ After any sub-agent returns a PR URL, evaluate whether to dispatch `pr-reviewer`
 
 **Never dispatch for**: docs-only PRs, single-file config value changes (<10 lines), or when the user says "skip review."
 
-**Use judgment for**: 3–5 files / 50–100 lines (dispatch if logic, skip if scaffolding); worker-sub-agent PRs (dispatch if the original task was non-trivial).
+**Use judgment for**: 3–5 files / 50–100 lines (dispatch if logic, skip if scaffolding); general-engineer PRs (dispatch if the original task was non-trivial).

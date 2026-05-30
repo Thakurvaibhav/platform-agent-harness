@@ -12,8 +12,9 @@ At session start or resume, every agent — main session and sub-agent — does 
 
 1. Read [`core/protocols/bd-and-memory.md`](../core/protocols/bd-and-memory.md) for the shared protocols: code quality (Assumptions, Simplicity, Reuse-First, Surgical Changes), constraints, bd workflow, memory taxonomy, verification (goal-driven execution), and the completion checklist.
 2. Read [`references/index.md`](../references/index.md) to discover available reference docs — agents check the index **before** broad searches so existing knowledge is reused, not re-derived.
-3. Read [`references/clusters.md`](../references/clusters.md) (or your repo's equivalent) before any cluster-scoped decision.
-4. If `graphify-out/graph.json` exists in the repo, load it for architecture and dependency questions.
+3. Search `bd memories <keywords>` for task-relevant prior art before starting work.
+4. Read [`references/clusters.md`](../references/clusters.md) (or your repo's equivalent) before any cluster-scoped decision.
+5. If `graphify-out/graph.json` exists in the repo, load it for architecture and dependency questions.
 
 For the wider operating model (the seven pillars), see [`core/protocols/harness-pillars.md`](../core/protocols/harness-pillars.md). For the compaction lifecycle, see [`LIFECYCLE.md`](../LIFECYCLE.md).
 
@@ -41,9 +42,9 @@ The canonical operating model is in [`core/protocols/harness-pillars.md`](../cor
 | Tool research and production readiness | `tool-researcher` |
 | Helm chart authoring and upgrades | `helm-engineer` |
 | ArgoCD applications and GitOps enablement | `argocd-engineer` |
-| CI, alerting, SLOs, dashboards, observability | `platform-engineer` |
+| CI, alerting, dashboards, observability | `platform-engineer` |
 | PR review and CI feedback | `pr-reviewer` |
-| Parallel research or general support | `worker` |
+| General-purpose engineering, research, validation | `general-engineer` |
 
 Contract or milestone validation runs via the `contract-validation` skill — no dedicated validator agent required.
 
