@@ -20,6 +20,19 @@ Non-engineering sub-agents (`task-planner`, `tool-researcher`): read only the "b
 - **If assigned a bd task**: `bd comments <id>` to read prior agent notes. On completion: `bd comments add <id> "PR #XXXX merged. Validated on <env>. Next: ..."`.
 - **On reusable insight**: `bd remember "<insight>" --key <repo>/<prefix>/<topic>`. Memories must be self-contained — what was done, what remains, bd task IDs, external ticket keys, blockers.
 
+## Pre-compaction / context-loss checkpoint
+
+The pre-compaction hook ([`core/hooks/factory-droid/pre-compact-bd-sync.py`](../hooks/factory-droid/pre-compact-bd-sync.py)) snapshots state automatically before auto/manual compaction, but **do not rely on it alone**. Checkpoint deliberately whenever context is high, a long turn is ending, or a task has meaningful in-flight state.
+
+Before compaction or any handoff-prone pause:
+
+1. Run `bd remember "<self-contained current state: decisions, blockers, PRs, bd IDs, next action>" --key <repo>/pre-compact` from the repo root.
+2. If working a bd task, add `bd comments add <id> "Checkpoint: <current state and next action>"`.
+3. If a reusable operational lesson emerged, add or update the relevant `learnings-*.md` entry **in the same session** — don't wait for final task completion.
+4. If `bd remember` fails with "no beads database found", change to the repo root (the directory that owns `.beads/`) and retry before continuing.
+
+The hook is the safety net; the deliberate checkpoint is what captures the *reasoning* the hook can't infer from the transcript.
+
 ## Memory key taxonomy
 
 Use these prefixes consistently so memories are categorizable and searchable.
