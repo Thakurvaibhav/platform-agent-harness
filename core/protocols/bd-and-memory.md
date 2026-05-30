@@ -7,12 +7,11 @@ The single source of truth for task state, durable memory, the compaction lifecy
 At the start of every task, every sub-agent must:
 
 1. Read this file (for bd workflow, verification, constraints).
-2. Read [`references/index.md`](../../references/index.md) to discover available reference docs.
-3. Read [`references/clusters.md`](../../references/clusters.md) before any cluster-scoped decision.
-4. Read the **core domain learnings** file(s) named in your agent prompt.
-5. Read **conditional learnings** files only when the task involves their domain.
+2. Read [`references/index.md`](../../references/index.md) to discover available reference docs, project documentation, and topic learnings. From the "Topic learnings" table, load every learnings file whose domain overlaps with your assigned task. When uncertain, load it.
+3. Search `bd memories <keywords>` for task-relevant prior art (use 2-3 keywords from your task). bd memories contain operational state, decisions, and gotchas that may not be in learnings files yet.
+4. Read [`references/clusters.md`](../../references/clusters.md) (or the repo equivalent) before any cluster-scoped decision.
 
-Non-engineering sub-agents (`task-planner`, `tool-researcher`): read only the "bd Context", "Constraints", and "Learnings Protocol" sections. Skip Git Worktree, Verification, and Pre-Completion Checklist.
+Non-engineering sub-agents (`task-planner`, `tool-researcher`): read Constraints, bd context, Learnings protocol, Task completion checklist, and the Handoff contract (in [`safety-and-handoff.md`](safety-and-handoff.md)). Skip Code quality principles, Git worktree protocol, Amending existing PRs, Base pre-completion checklist, and Post-deploy validation.
 
 ## bd context & coordination
 
@@ -142,7 +141,7 @@ Domain-specific checks:
 
 - Helm: `helm dep build && helm lint && helm template` must succeed.
 - ArgoCD: `helm template <argo-apps-release> <argo-apps-chart> -f values.<cluster>.yaml` renders correctly.
-- Alerts / SLOs: PromQL syntactically valid; metric names exist in the target datasource.
+- Alerts: PromQL syntactically valid; metric names exist in the target datasource.
 - Enablement: pods Ready, zero restarts, operator logs clean (see Post-Deploy Validation Protocol below).
 
 ## Git worktree protocol
@@ -207,18 +206,9 @@ After any tool/chart is deployed or enabled on a cluster, validate:
 
 ## Learnings protocol (short form)
 
-Learnings live in [`references/learnings-*.md`](../../references/), not in agent configs. Each agent config specifies which files to load — only load what your config says. The system as a whole (index + log + learnings) follows [Andrej Karpathy's LLM Wiki](https://gist.github.com/karpathy/442a6bf555914893e9891c11519de94f) pattern; full rules and the `bd remember` → numbered-learning promotion path are in [`references/README.md`](../../references/README.md).
+Learnings live in [`references/learnings-*.md`](../../references/), not in agent configs. Agents discover relevant files via [`references/index.md`](../../references/index.md) at startup (step 2) — no hardcoded lists in agent configs. Additionally, `bd memories` (step 3) contain operational knowledge that may not yet be in learnings files. The system as a whole (index + log + learnings) follows [Andrej Karpathy's LLM Wiki](https://gist.github.com/karpathy/442a6bf555914893e9891c11519de94f) pattern; full rules and the `bd remember` → numbered-learning promotion path are in [`references/README.md`](../../references/README.md).
 
-Available learnings files:
-
-- `learnings-helm-ci.md` — YAML formatting, Helm patterns, Git, GitHub Actions, workflow pinning
-- `learnings-argocd.md` — ArgoCD sync, values keys, CRD ordering
-- `learnings-observability.md` — PromQL, alerting, Grafana dashboards
-- `learnings-rollout.md` — Rollout patterns, campaigns, cross-repo coordination
-- `learnings-progressive-delivery.md` — Argo Rollouts + Gateway API plugin patterns, ArgoCD ignoreDifferences for Rollout-managed resources
-- `learnings-operators.md` — Operators, CRDs, policy-engine patterns (guard/mutation/audit), admission-controller cache gotchas
-- `learnings-k8s-sa.md` — ServiceAccount separation, Workload Identity, image-pull secrets, batch SA rollout
-- `learnings-agent-workflow.md` — Sub-agent dispatch pitfalls
+**Primary write path:** `bd remember` on every non-trivial task (mandatory). Learnings file updates when a clear reusable pattern emerged (recommended). Periodic consolidation from bd memories to learnings files is handled by the orchestrator.
 
 Capturing a new learning: append a numbered item to the right file. Never duplicate — update the existing entry instead. If a learning is tightly coupled to one sub-agent, also add a short pointer in that agent's "Learnings tightly coupled" section.
 
@@ -226,15 +216,27 @@ Capturing a new learning: append a numbered item to the right file. Never duplic
 
 Before finishing any non-trivial task:
 
-1. **Persist learnings**: `bd remember "<self-contained insight>" --key <repo>/<prefix>/<topic>`.
-2. **Append one line to [`references/log.md`](../../references/log.md)**:
+1. **bd remember** — operational state (mandatory):
+   ```bash
+   bd remember "<self-contained insight>" --key <repo>/<prefix>/<topic>
    ```
-   ## [YYYY-MM-DD] <type> | <repo> | <one-line summary> [bd:<id>] [pr:<#>]
-   ```
-   Types: `rollout` | `research` | `bugfix` | `docs` | `refactor` | `upgrade` | `enablement` | `audit` | `harness`. Skip for trivial / read-only tasks.
-3. **Flag conflicts**. If a finding conflicts with an existing numbered entry in a `learnings-*.md` file, include in your handoff:
-   ```
-   CONFLICT: <new finding> vs <file>#<item-number>
-   ```
-   Do NOT silently edit learnings files — the human reviews and decides.
-4. **Update [`references/index.md`](../../references/index.md)** only when you add or remove a file in any indexed location.
+2. **Learnings files** (recommended when a clear reusable pattern emerged — not required on every task):
+   - Update the matching `learnings-*.md` file (find it via [`references/index.md`](../../references/index.md)).
+   - Search the file first — never duplicate. Update in place if similar exists.
+   - Append as next numbered item. Be specific: include file paths, commands, error messages.
+   - If no file matches, store via `bd remember` and flag in handoff report.
+   - **Graduation rule:** If a learning in your agent's "Learnings tightly coupled" section would benefit other agents, move it to the shared learnings file.
+3. **[`references/index.md`](../../references/index.md)** — update only when you add or remove a file in any indexed location.
+
+Additionally:
+
+- Append one line to [`references/log.md`](../../references/log.md) (format unchanged, skip for trivial / read-only tasks):
+  ```
+  ## [YYYY-MM-DD] <type> | <repo> | <one-line summary> [bd:<id>] [pr:<#>]
+  ```
+  Types: `rollout` | `research` | `bugfix` | `docs` | `refactor` | `upgrade` | `enablement` | `audit` | `harness`.
+- **Flag conflicts.** If a finding conflicts with an existing numbered entry in a `learnings-*.md` file, include in your handoff:
+  ```
+  CONFLICT: <new finding> vs <file>#<item-number>
+  ```
+  Do NOT silently edit learnings files — the human reviews and decides.

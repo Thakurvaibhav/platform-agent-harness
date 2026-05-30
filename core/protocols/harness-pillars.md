@@ -12,7 +12,7 @@ Each agent encodes a domain contract:
 - `argocd-engineer` owns GitOps application and rollout config.
 - `platform-engineer` owns CI, observability, alerting, and SLOs.
 - `pr-reviewer` provides a second pass before human review.
-- `worker` handles bounded parallel research and exploration.
+- `general-engineer` handles bounded parallel research, code exploration, and general-purpose engineering.
 
 The `contract-validation` skill covers feature, surface, and milestone validation without needing a dedicated validator agent. This lets the harness behave like a small platform team instead of one generic assistant.
 
