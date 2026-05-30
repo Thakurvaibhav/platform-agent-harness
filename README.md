@@ -24,13 +24,13 @@ A portable, runtime-neutral operating system for AI agents doing Kubernetes, Hel
 
 ```
                      ┌─────────────────────────────────────────────────┐
-                     │                  AGENTS.md                       │
-                     │  routing rules · safety defaults · memory keys   │
+                     │                  AGENTS.md                      │
+                     │  routing rules · safety defaults · memory keys  │
                      └────────────────────┬────────────────────────────┘
                                           │
             ┌─────────────────────────────┼─────────────────────────────┐
-            │                             │                              │
-   ┌────────▼────────┐         ┌─────────▼─────────┐         ┌──────────▼────────┐
+            │                             │                             │
+   ┌────────▼────────┐         ┌──────────▼────────┐         ┌──────────▼─────────┐
    │  Specialist     │         │   Durable state   │         │   Local knowledge  │
    │  sub-agents     │         │   (bd / Beads)    │         │   base + Graphify  │
    │                 │         │                   │         │                    │
@@ -40,11 +40,11 @@ A portable, runtime-neutral operating system for AI agents doing Kubernetes, Hel
    │ argocd-engineer │◄────────┤ compaction        │────────►│   learnings-*.md   │
    │ platform-engr   │         │                   │         │ (Karpathy LLM      │
    │ pr-reviewer     │         └─────────┬─────────┘         │  Wiki pattern) +   │
-   │ worker          │                   │                   │ graph queries      │
+   │ general-engineer│                   │                   │ graph queries      │
    └────────┬────────┘                   │                   └────────────────────┘
             │                            ▼
-            │            ┌────────────────────────────────┐
-            └───────────►│   Skills (executable playbooks) │
+            │            ┌──────────────────────────────────┐
+            └───────────►│   Skills (executable playbooks)  │
                          │                                  │
                          │   shiny-engineer · create-pr ·   │
                          │   helm-upgrade · k8s-debug ·     │
@@ -100,7 +100,7 @@ For a public companion repo using this exact operating model, see [`Thakurvaibha
 
 | Layer | Path | What it provides |
 | --- | --- | --- |
-| Agent prompts | [`core/agents/`](core/agents/) | 7 specialist sub-agents (planner, researcher, helm, argocd, platform/observability, PR reviewer, worker) with explicit "when to invoke / when NOT to invoke" boundaries |
+| Agent prompts | [`core/agents/`](core/agents/) | 7 specialist sub-agents (planner, researcher, helm, argocd, platform/observability, PR reviewer, general-engineer) with explicit "when to invoke / when NOT to invoke" boundaries |
 | Protocols | [`core/protocols/`](core/protocols/) | 8 canonical rules: harness-pillars, delegation, bd-and-memory, rtk-command-policy, graphify-first, pr-review-loop, parallel-dispatch, safety-and-handoff |
 | Skills | [`skills/`](skills/) | 6 portable executable playbooks (shiny-engineer, create-pr, helm-upgrade, k8s-debug, graphify, contract-validation); observability skills live in `gcx skills install` |
 | Domain packs | [`domain-packs/`](domain-packs/) | Kubernetes safety, Helm essentials, observability-via-gcx — focused, not exhaustive |

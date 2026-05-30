@@ -1,6 +1,6 @@
 # Dispatch Prompt Template
 
-Use this exact shape when delegating to a specialist sub-agent or `worker`.
+Use this exact shape when delegating to a specialist sub-agent or `general-engineer`.
 
 ```markdown
 ## Goal
@@ -53,4 +53,4 @@ bd remember "<self-contained insight>" --key <repo>/<prefix>/<topic>
 
 ## For parallel dispatch
 
-When fanning out to N targets, see [`core/protocols/parallel-dispatch.md`](../core/protocols/parallel-dispatch.md) and use the worker-prompt variant there.
+When fanning out to N targets, see [`core/protocols/parallel-dispatch.md`](../core/protocols/parallel-dispatch.md) and use the parallel-dispatch variant there.

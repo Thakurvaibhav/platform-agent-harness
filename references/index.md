@@ -37,9 +37,10 @@ Master catalog for the harness. Agents check this file **before** broad searches
 | [`core/agents/tool-researcher.md`](../core/agents/tool-researcher.md) | Production-readiness research |
 | [`core/agents/helm-engineer.md`](../core/agents/helm-engineer.md) | Helm charts and values |
 | [`core/agents/argocd-engineer.md`](../core/agents/argocd-engineer.md) | ArgoCD and GitOps enablement |
-| [`core/agents/platform-engineer.md`](../core/agents/platform-engineer.md) | CI, alerting, SLOs, observability |
+| [`core/agents/platform-engineer.md`](../core/agents/platform-engineer.md) | CI, alerting, observability |
 | [`core/agents/pr-reviewer.md`](../core/agents/pr-reviewer.md) | PR review and CI feedback |
-| [`core/agents/worker.md`](../core/agents/worker.md) | Bounded research and parallel support |
+| [`core/agents/general-engineer.md`](../core/agents/general-engineer.md) | General-purpose engineering, research, validation |
+
 
 ## Skills
 
@@ -63,16 +64,31 @@ Master catalog for the harness. Agents check this file **before** broad searches
 
 ## Topic learnings
 
-| Path | Domain |
+| Path | Domain | Keywords |
+| --- | --- | --- |
+| [`references/learnings-helm-ci.md`](learnings-helm-ci.md) | YAML formatting, Helm patterns, dependency handling, GitHub Actions, workflow pinning | helm, chart, values, yaml, yamlfmt, CI, GitHub Actions, workflow, dependency, lint |
+| [`references/learnings-argocd.md`](learnings-argocd.md) | ArgoCD sync behavior, ignoreDifferences, sync-waves, values key naming | argocd, sync, ignoreDifferences, sync-wave, values key, CRD, Application |
+| [`references/learnings-observability.md`](learnings-observability.md) | PromQL, alerting, ServiceMonitor, Grafana dashboards | prometheus, promql, alerting, grafana, dashboard, ServiceMonitor, metrics |
+| [`references/learnings-rollout.md`](learnings-rollout.md) | Rollout strategy, staged migrations, batch campaign hygiene | rollout, migration, batch, campaign, phased, staged, gap-fill, validation |
+| [`references/learnings-progressive-delivery.md`](learnings-progressive-delivery.md) | Argo Rollouts + Gateway API plugin patterns, ArgoCD ignoreDifferences for Rollout-managed resources | argo rollouts, canary, progressive, Gateway API, httpRoute, header routing, workloadRef |
+| [`references/learnings-operators.md`](learnings-operators.md) | Operators, CRDs, policy-engine patterns (guard/mutation/audit), admission-controller cache gotchas | kyverno, tetragon, CRD, operator, policy, mutating, validating, reconciliation |
+| [`references/learnings-k8s-sa.md`](learnings-k8s-sa.md) | ServiceAccount separation, Workload Identity (GKE WI / EKS IRSA), image-pull secrets, batch SA rollout | ServiceAccount, SA, Workload Identity, imagePullSecrets, GKE, EKS, IAM |
+| [`references/learnings-agent-workflow.md`](learnings-agent-workflow.md) | Sub-agent dispatch pitfalls, parallel work, knowledge capture | dispatch, subagent, timeout, prompt, delegation, parallel |
+| [`references/learnings-code-review.md`](learnings-code-review.md) | PR review patterns, bot interactions, CI feedback handling | review, PR, CodeRabbit, Cursor Bugbot, CI feedback, bot, false positive |
+
+## Documentation folder convention
+
+When creating domain documentation outside this repo, use these standard subfolder names:
+
+| Folder | Contents |
 | --- | --- |
-| [`references/learnings-helm-ci.md`](learnings-helm-ci.md) | YAML formatting, Helm patterns, dependency handling, GitHub Actions, workflow pinning |
-| [`references/learnings-argocd.md`](learnings-argocd.md) | ArgoCD sync behavior, ignoreDifferences, sync-waves, values key naming |
-| [`references/learnings-observability.md`](learnings-observability.md) | PromQL, alerting, ServiceMonitor, Grafana dashboards |
-| [`references/learnings-rollout.md`](learnings-rollout.md) | Rollout strategy, staged migrations, batch campaign hygiene |
-| [`references/learnings-progressive-delivery.md`](learnings-progressive-delivery.md) | Argo Rollouts + Gateway API plugin patterns, ArgoCD ignoreDifferences for Rollout-managed resources |
-| [`references/learnings-operators.md`](learnings-operators.md) | Operators, CRDs, policy-engine patterns (guard/mutation/audit), admission-controller cache gotchas |
-| [`references/learnings-k8s-sa.md`](learnings-k8s-sa.md) | ServiceAccount separation, Workload Identity (GKE WI / EKS IRSA), image-pull secrets, batch SA rollout |
-| [`references/learnings-agent-workflow.md`](learnings-agent-workflow.md) | Sub-agent dispatch pitfalls, parallel work, knowledge capture |
+| playbooks | Step-by-step operational procedures |
+| research | Investigation reports, feasibility studies |
+| reports | Point-in-time audit/validation outputs (dated) |
+| tests | Test plans and test result reports |
+| tools | Scripts and utilities |
+| design | Architecture proposals, experiment specs |
+| summaries | Frozen project writeups (historical) |
 
 ## Tools
 
@@ -125,6 +141,7 @@ Master catalog for the harness. Agents check this file **before** broad searches
 | [`templates/validation-contract.template.md`](../templates/validation-contract.template.md) | Pass/fail assertion contract |
 | [`templates/validation-report.template.json`](../templates/validation-report.template.json) | Machine-readable validation report |
 | [`templates/redaction-denylist.template.txt`](../templates/redaction-denylist.template.txt) | Local denylist seed |
+| [`templates/commands/consolidate.md`](../templates/commands/consolidate.md) | Knowledge consolidation command template |
 | [`examples/README.md`](../examples/README.md) | Worked example catalog |
 | [`examples/helm-chart-upgrade.md`](../examples/helm-chart-upgrade.md) | End-to-end Helm chart upgrade flow exercising 6 sub-agents |
 | [`examples/alert-investigation.md`](../examples/alert-investigation.md) | Alert RCA via the gcx bundled skills |
