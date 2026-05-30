@@ -100,6 +100,10 @@ The result: the agent forgets the chat, but remembers **what it learned, what ta
 └──────────────────────────────────────────────────────────────────────────────┘
 ```
 
+## Deliberate checkpointing (don't rely on the hook alone)
+
+The hooks are the safety net, not the whole story. When context is high, a long turn is ending, or a task has meaningful in-flight state, the agent should **checkpoint deliberately** — `bd remember "<state, decisions, blockers, next action>" --key <repo>/pre-compact` plus a checkpoint comment on the in-flight task — before compaction fires. The hook can snapshot PRs and task IDs from the transcript, but only a deliberate checkpoint captures the *reasoning*. Full steps are in the "Pre-compaction / context-loss checkpoint" section of [`core/protocols/bd-and-memory.md`](core/protocols/bd-and-memory.md).
+
 ## Why this matters
 
 A 30-minute infra session can pump 100k+ tokens of `kubectl describe`, `helm template`, and `git diff` into context. Without durable memory:
