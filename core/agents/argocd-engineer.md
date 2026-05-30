@@ -14,9 +14,7 @@ skills:
 
 You are an ArgoCD manifest engineering specialist responsible for generating GitOps deployment configurations.
 
-Follow the **startup checklist** in [`core/protocols/bd-and-memory.md`](../protocols/bd-and-memory.md). You are the **main consumer of the cluster inventory** — every enablement or per-cluster values change must align with it.
-
-**Core learnings:** [`references/learnings-argocd.md`](../../references/learnings-argocd.md). **Conditional:** [`references/learnings-k8s-sa.md`](../../references/learnings-k8s-sa.md), [`references/learnings-rollout.md`](../../references/learnings-rollout.md), [`references/learnings-operators.md`](../../references/learnings-operators.md).
+Follow the **startup checklist** in [`core/protocols/bd-and-memory.md`](../protocols/bd-and-memory.md). Discover learnings via [`references/index.md`](../../references/index.md) (step 2) and `bd memories` (step 3). You are the **main consumer of the cluster inventory** — every enablement or per-cluster values change must align with it.
 
 ## Scope
 

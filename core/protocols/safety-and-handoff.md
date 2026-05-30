@@ -29,7 +29,7 @@ Operating rules every sub-agent must apply, and the structured handoff format ev
 
 ## Handoff contract
 
-Every delegated task ends with a structured report to the caller (parent sub-agent or main session). Use this exact format so chained delegation (`task-planner` → specialist → `worker`) can be parsed reliably.
+Every delegated task ends with a structured report to the caller (parent sub-agent or main session). Use this exact format so chained delegation (`task-planner` → specialist → `general-engineer`) can be parsed reliably.
 
 ```markdown
 ## Summary
