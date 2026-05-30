@@ -58,7 +58,7 @@ The denylist file itself is git-ignored (see `.gitignore`).
 **Does not ship:**
 
 - Real cluster identifiers, customer-tenant names, account/project IDs.
-- Real ticket prefixes (jira `WE-`, etc.) or ticket numbers from real systems.
+- Real ticket prefixes (jira `ID-`, etc.) or ticket numbers from real systems.
 - Real datasource UIDs, dashboard URLs, stack URLs, on-call schedules.
 - Real internal domains, VPN endpoints, internal wiki URLs.
 - Real secret-shaped tokens (`glsa_`, `ghp_`, `github_pat_`, etc.).
