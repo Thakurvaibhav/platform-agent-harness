@@ -7,20 +7,30 @@ utilization (matching the statusline). When utilization crosses a configurable
 threshold, injects an `additionalContext` block reminding the agent to run
 `/compact` (or the runtime's equivalent) at a quiet moment rather than mid-turn.
 
-The PreCompact hook (pre-compact-bd-sync.py) snapshots bd memories on both
-manual and auto compaction, so no task state is lost.
+When the threshold is crossed, the hook also actively runs the PreCompact hook
+(pre-compact-bd-sync.py) as a deliberate checkpoint, so bd memories are
+snapshotted at that moment rather than only when compaction eventually fires.
 
 Configuration (env vars):
   CTX_COMPACT_THRESHOLD   percentage 0-100, default 85
   CTX_COMPACT_DISABLE     "1" disables the hook silently
   CTX_STATUSLINE_PATH     override for statusline-context.py location
+  CTX_PRECOMPACT_HOOK     override for pre-compact-bd-sync.py location
 """
 import importlib.util
 import json
 import os
+import subprocess
 import sys
 
 DEFAULT_THRESHOLD = 85
+
+# Sibling PreCompact hook, resolved relative to this file. Override with
+# CTX_PRECOMPACT_HOOK. No organisation-specific path is hard-coded.
+PRE_COMPACT_HOOK = os.environ.get(
+    "CTX_PRECOMPACT_HOOK",
+    os.path.join(os.path.dirname(os.path.abspath(__file__)), "pre-compact-bd-sync.py"),
+)
 
 DEFAULT_STATUSLINE_PATHS = [
     os.environ.get("CTX_STATUSLINE_PATH", ""),
@@ -91,13 +101,40 @@ def main() -> int:
     if pct < threshold:
         return 0
 
+    checkpoint_status = (
+        "A pre-compaction bd checkpoint was attempted now so memories are current."
+    )
+    if os.path.isfile(PRE_COMPACT_HOOK):
+        try:
+            result = subprocess.run(
+                ["python3", PRE_COMPACT_HOOK],
+                input=json.dumps(data),
+                text=True,
+                capture_output=True,
+                timeout=20,
+            )
+            if result.returncode != 0:
+                checkpoint_status = (
+                    "A pre-compaction bd checkpoint was attempted but the hook "
+                    "returned non-zero."
+                )
+        except Exception:
+            checkpoint_status = (
+                "A pre-compaction bd checkpoint was attempted but the hook failed "
+                "to execute."
+            )
+    else:
+        checkpoint_status = (
+            "No PreCompact hook found to checkpoint bd memories automatically."
+        )
+
     msg = (
         f"[context-budget] Context window is at {pct}% "
         f"({tokens:,}/{ctx_max:,} tokens), above the {threshold}% threshold. "
-        "Consider running `/compact` (or the runtime equivalent) before continuing long "
-        "tool chains. The PreCompact hook will snapshot bd memories and add pre-compact "
-        "comments to in-progress tasks on both manual and auto compaction, so no task "
-        "context will be lost."
+        f"{checkpoint_status} Consider running `/compact` (or the runtime equivalent) "
+        "before continuing long tool chains. The PreCompact hook will also run again "
+        "on manual or auto compaction; if bd context looks stale after restore, retry "
+        "`bd prime` from the repo root and add a manual `bd remember` checkpoint."
     )
 
     out = {
