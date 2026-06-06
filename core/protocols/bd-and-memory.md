@@ -208,9 +208,24 @@ After any tool/chart is deployed or enabled on a cluster, validate:
 
 Learnings live in [`references/learnings-*.md`](../../references/), not in agent configs. Agents discover relevant files via [`references/index.md`](../../references/index.md) at startup (step 2) — no hardcoded lists in agent configs. Additionally, `bd memories` (step 3) contain operational knowledge that may not yet be in learnings files. The system as a whole (index + log + learnings) follows [Andrej Karpathy's LLM Wiki](https://gist.github.com/karpathy/442a6bf555914893e9891c11519de94f) pattern; full rules and the `bd remember` → numbered-learning promotion path are in [`references/README.md`](../../references/README.md).
 
-**Primary write path:** `bd remember` on every non-trivial task (mandatory). Learnings file updates when a clear reusable pattern emerged (recommended). Periodic consolidation from bd memories to learnings files is handled by the orchestrator.
+**Primary write path:** Immediate ingest to learnings files when trigger conditions are met (see Knowledge Ingest below). `bd remember` for operational state and uncertain findings. Periodic consolidation catches stragglers and runs cross-link lint.
 
 Capturing a new learning: append a numbered item to the right file. Never duplicate — update the existing entry instead. If a learning is tightly coupled to one sub-agent, also add a short pointer in that agent's "Learnings tightly coupled" section.
+
+## Knowledge ingest (immediate synthesis)
+
+After completing a non-trivial task, evaluate whether the outcome contains a reusable pattern. If YES, update the matching learnings file immediately — do not defer to periodic consolidation.
+
+**Ingest now (compile on completion):**
+- Gotcha or pitfall that would have saved >10 minutes if known earlier
+- Tool or API behaved differently than documented
+- Architectural decision with tradeoffs worth recording
+- Non-obvious root cause from debugging
+
+**Defer to `bd remember` (consolidation catches later):**
+- Operational state (which PR, which environment, current progress)
+- Findings that might change after further investigation
+- One-off facts unlikely to recur
 
 ## Task completion checklist
 
@@ -220,10 +235,11 @@ Before finishing any non-trivial task:
    ```bash
    bd remember "<self-contained insight>" --key <repo>/<prefix>/<topic>
    ```
-2. **Learnings files** (recommended when a clear reusable pattern emerged — not required on every task):
+2. **Learnings files** (required when ingest trigger conditions above are met):
    - Update the matching `learnings-*.md` file (find it via [`references/index.md`](../../references/index.md)).
    - Search the file first — never duplicate. Update in place if similar exists.
    - Append as next numbered item. Be specific: include file paths, commands, error messages.
+   - **Provenance:** Append `(ref: #NNN)` or `(ref: <url>)` when the entry derives from a specific PR, issue, or external doc. Skip for general experience-derived lessons.
    - If no file matches, store via `bd remember` and flag in handoff report.
    - **Graduation rule:** If a learning in your agent's "Learnings tightly coupled" section would benefit other agents, move it to the shared learnings file.
 3. **[`references/index.md`](../../references/index.md)** — update only when you add or remove a file in any indexed location.

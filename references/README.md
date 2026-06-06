@@ -55,13 +55,20 @@ So `bd` memories are the firehose; `learnings-*.md` is the curated stream that f
 
 ### Promotion path (`bd remember` → `learnings-*.md`)
 
+**Immediate ingest (primary path):** Promote during the same session when ingest trigger conditions are met (see "Knowledge Ingest" in [`core/protocols/bd-and-memory.md`](../core/protocols/bd-and-memory.md)). Don't defer when the insight is clear and actionable.
+
+**Consolidation (catch-all):** Periodic consolidation catches memories that weren't promoted immediately — uncertain findings that settled, patterns that only became clear across multiple sessions, or sessions where ingest was skipped.
+
 A memory earns a numbered entry when:
 
-1. It has come up across more than one session, or
-2. It's a non-obvious gotcha that future agents would otherwise rediscover, or
-3. It corrects a recurring sub-agent mistake.
+1. It would have saved >10 minutes if known earlier, or
+2. A tool or API behaved differently than documented, or
+3. An architectural decision was made with tradeoffs worth recording, or
+4. A non-obvious root cause was uncovered during debugging.
 
-Promote during retrospectives (e.g. after a campaign closes). Don't promote during the same session that produced the memory — let it settle first.
+**Provenance:** Append `(ref: #NNN)` or `(ref: <url>)` when the entry derives from a specific PR, issue, or external doc. Skip for general experience-derived lessons.
+
+**Convention:** `See also:` cross-reference pointers go in the file header, immediately after the opening description paragraph. Single line format: `See also: \`learnings-foo.md\`, \`learnings-bar.md\``.
 
 ## How agents actually use this
 

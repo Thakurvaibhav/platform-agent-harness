@@ -64,17 +64,17 @@ Master catalog for the harness. Agents check this file **before** broad searches
 
 ## Topic learnings
 
-| Path | Domain | Keywords |
-| --- | --- | --- |
-| [`references/learnings-helm-ci.md`](learnings-helm-ci.md) | YAML formatting, Helm patterns, dependency handling, GitHub Actions, workflow pinning | helm, chart, values, yaml, yamlfmt, CI, GitHub Actions, workflow, dependency, lint |
-| [`references/learnings-argocd.md`](learnings-argocd.md) | ArgoCD sync behavior, ignoreDifferences, sync-waves, values key naming | argocd, sync, ignoreDifferences, sync-wave, values key, CRD, Application |
-| [`references/learnings-observability.md`](learnings-observability.md) | PromQL, alerting, ServiceMonitor, Grafana dashboards | prometheus, promql, alerting, grafana, dashboard, ServiceMonitor, metrics |
-| [`references/learnings-rollout.md`](learnings-rollout.md) | Rollout strategy, staged migrations, batch campaign hygiene | rollout, migration, batch, campaign, phased, staged, gap-fill, validation |
-| [`references/learnings-progressive-delivery.md`](learnings-progressive-delivery.md) | Argo Rollouts + Gateway API plugin patterns, ArgoCD ignoreDifferences for Rollout-managed resources | argo rollouts, canary, progressive, Gateway API, httpRoute, header routing, workloadRef |
-| [`references/learnings-operators.md`](learnings-operators.md) | Operators, CRDs, policy-engine patterns (guard/mutation/audit), admission-controller cache gotchas | kyverno, tetragon, CRD, operator, policy, mutating, validating, reconciliation |
-| [`references/learnings-k8s-sa.md`](learnings-k8s-sa.md) | ServiceAccount separation, Workload Identity (GKE WI / EKS IRSA), image-pull secrets, batch SA rollout | ServiceAccount, SA, Workload Identity, imagePullSecrets, GKE, EKS, IAM |
-| [`references/learnings-agent-workflow.md`](learnings-agent-workflow.md) | Sub-agent dispatch pitfalls, parallel work, knowledge capture | dispatch, subagent, timeout, prompt, delegation, parallel |
-| [`references/learnings-code-review.md`](learnings-code-review.md) | PR review patterns, bot interactions, CI feedback handling | review, PR, CodeRabbit, Cursor Bugbot, CI feedback, bot, false positive |
+| Path | Domain | Keywords | Cross-refs |
+| --- | --- | --- | --- |
+| [`references/learnings-helm-ci.md`](learnings-helm-ci.md) | YAML formatting, Helm patterns, dependency handling, GitHub Actions, workflow pinning | helm, chart, values, yaml, yamlfmt, CI, GitHub Actions, workflow, dependency, lint | `learnings-argocd.md` |
+| [`references/learnings-argocd.md`](learnings-argocd.md) | ArgoCD sync behavior, ignoreDifferences, sync-waves, values key naming | argocd, sync, ignoreDifferences, sync-wave, values key, CRD, Application | `learnings-helm-ci.md`, `learnings-progressive-delivery.md` |
+| [`references/learnings-observability.md`](learnings-observability.md) | PromQL, alerting, ServiceMonitor, Grafana dashboards | prometheus, promql, alerting, grafana, dashboard, ServiceMonitor, metrics | — |
+| [`references/learnings-rollout.md`](learnings-rollout.md) | Rollout strategy, staged migrations, batch campaign hygiene | rollout, migration, batch, campaign, phased, staged, gap-fill, validation | — |
+| [`references/learnings-progressive-delivery.md`](learnings-progressive-delivery.md) | Argo Rollouts + Gateway API plugin patterns, ArgoCD ignoreDifferences for Rollout-managed resources | argo rollouts, canary, progressive, Gateway API, httpRoute, header routing, workloadRef | `learnings-argocd.md`, `learnings-helm-ci.md` |
+| [`references/learnings-operators.md`](learnings-operators.md) | Operators, CRDs, policy-engine patterns (guard/mutation/audit), admission-controller cache gotchas | kyverno, tetragon, CRD, operator, policy, mutating, validating, reconciliation | `learnings-argocd.md` |
+| [`references/learnings-k8s-sa.md`](learnings-k8s-sa.md) | ServiceAccount separation, Workload Identity (GKE WI / EKS IRSA), image-pull secrets, batch SA rollout | ServiceAccount, SA, Workload Identity, imagePullSecrets, GKE, EKS, IAM | — |
+| [`references/learnings-agent-workflow.md`](learnings-agent-workflow.md) | Sub-agent dispatch pitfalls, parallel work, knowledge capture | dispatch, subagent, timeout, prompt, delegation, parallel | — |
+| [`references/learnings-code-review.md`](learnings-code-review.md) | PR review patterns, bot interactions, CI feedback handling | review, PR, CodeRabbit, Cursor Bugbot, CI feedback, bot, false positive | — |
 
 ## Documentation folder convention
 

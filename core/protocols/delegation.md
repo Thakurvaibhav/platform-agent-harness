@@ -88,6 +88,7 @@ Append this block to every sub-agent dispatch. It primes the sub-agent on shared
 - Search `bd memories <keywords>` for task-relevant prior art.
 - Read `references/clusters.md` (or the repo equivalent) for cluster details, if the task is cluster-scoped.
 - If `graphify-out/graph.json` exists in the repo, load it for architecture and dependency questions.
+- **Prior art citation**: Before implementing, grep learnings files for prior art on your task keywords. If a learnings entry is relevant, cite it as `[learnings-<file>.md#<N>]` in your output and build on it rather than re-deriving.
 
 ## Memory
 Before finishing, persist any non-obvious findings:
