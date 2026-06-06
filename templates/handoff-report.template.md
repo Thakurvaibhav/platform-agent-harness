@@ -24,7 +24,7 @@ Use this exact format at the end of every non-trivial sub-agent run. Parseable b
 ## Knowledge updates
 - bd memories: <list of `bd remember --key ...` entries written this task, or "None.">
 - references/log.md: <"appended one line" | "not appended (trivial/read-only)">
-- references/learnings-*.md: <"<file>#<item> updated" | "new item <file>#<n> added" | "not changed">
+- references/learnings-*.md: <"<file>#<item> updated" | "new item <file>#<n> added" | "not changed (reason: trivial|operational-state|uncertain|already-captured)">
 - references/index.md: <"updated row for <path>" | "not changed">
 - Conflicts flagged: <"CONFLICT: <new finding> vs learnings-<file>.md#<n>" | "None.">
 
