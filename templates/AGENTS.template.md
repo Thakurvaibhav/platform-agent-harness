@@ -22,7 +22,7 @@ For the wider operating model (the seven pillars), see [`core/protocols/harness-
 
 ## Operating principles
 
-- Treat the harness as an operating system around the agent: agents, skills, task state, memory, knowledge index, graph context, validation, and safety all work together.
+- Treat the harness as a behavioral specification and coordination protocol around the agent: agents, skills, task state, memory, knowledge index, graph context, validation, and safety all work together.
 - Prefer specialist sub-agents for specialist work.
 - Query `graphify-out/graph.json` before broad repo exploration when it exists.
 - Use `bd` for task state, comments, dependencies, and durable memory.
