@@ -108,6 +108,8 @@ When creating domain documentation outside this repo, use these standard subfold
 | [`core/hooks/generic/pre-task-check.sh`](../core/hooks/generic/pre-task-check.sh) | Portable session-start hook |
 | [`core/hooks/generic/post-task-memory.sh`](../core/hooks/generic/post-task-memory.sh) | Portable `bd remember` helper with sanitization guard |
 | [`core/hooks/generic/rtk-wrapper.sh`](../core/hooks/generic/rtk-wrapper.sh) | Portable rtk command wrapper |
+| [`core/hooks/generic/knowledge-search.sh`](../core/hooks/generic/knowledge-search.sh) | Search bd memories + learnings + domain docs with OR-matching across query terms |
+| [`core/hooks/generic/drift-check.sh`](../core/hooks/generic/drift-check.sh) | Harness health: graph freshness, learnings staleness, memory bloat, consolidation overdue |
 | [`core/hooks/factory-droid/rtk-autoprefix.py`](../core/hooks/factory-droid/rtk-autoprefix.py) | PreToolUse hook preserving `sudo`/`env=`/`time` prefixes |
 | [`core/hooks/factory-droid/pre-compact-bd-sync.py`](../core/hooks/factory-droid/pre-compact-bd-sync.py) | PreCompact transcript parser → bd memory + per-task comments |
 | [`core/hooks/factory-droid/post-compact-prime-reminder.sh`](../core/hooks/factory-droid/post-compact-prime-reminder.sh) | SessionStart `bd prime` |
