@@ -34,7 +34,12 @@ When a task spans multiple sub-agents (e.g., new tool = tool-researcher → helm
 1. Read the error or partial output. Identify whether it's a prompt issue, a tooling issue, or a genuine blocker.
 2. Retry ONCE with a tighter, more specific prompt — add the missing context or constraint.
 3. If it fails again, break the task into smaller pieces and dispatch separately.
-4. If still blocked, perform the work directly and note the failure pattern via `bd remember`.
+4. If still blocked, perform the work directly.
+5. **Post-failure retrospective (mandatory after step 4):**
+   - Diagnose: was it (a) prompt too vague, (b) missing context/reference, (c) tooling limitation, or (d) genuine complexity?
+   - Immediately ingest the fix into the relevant `references/learnings-*.md` file with `(ref: this session)`.
+   - If same sub-agent + same failure mode has occurred before (check `references/learnings-agent-workflow.md`), flag for agent config update.
+   - `bd remember "<agent> fails on <pattern> because <root cause>. Fix: <what worked>" --key <repo>/lesson/<topic>`
 
 ## Dispatch prompt structure
 
@@ -85,10 +90,10 @@ Append this block to every sub-agent dispatch. It primes the sub-agent on shared
 ## Reference loading
 - Read `core/protocols/bd-and-memory.md` for shared protocols (code quality, bd, verification, completion).
 - Read `references/index.md` to discover available reference docs.
-- Search `bd memories <keywords>` for task-relevant prior art.
+- Run `core/hooks/generic/knowledge-search.sh <task keywords>` to find prior art across memories, learnings, and docs.
 - Read `references/clusters.md` (or the repo equivalent) for cluster details, if the task is cluster-scoped.
 - If `graphify-out/graph.json` exists in the repo, load it for architecture and dependency questions.
-- **Prior art citation**: Before implementing, grep learnings files for prior art on your task keywords. If a learnings entry is relevant, cite it as `[learnings-<file>.md#<N>]` in your output and build on it rather than re-deriving.
+- **Prior art citation**: Before implementing, if a learnings entry is relevant, cite it as `[learnings-<file>.md#<N>]` in your output and build on it rather than re-deriving.
 
 ## Memory
 Before finishing, persist any non-obvious findings:

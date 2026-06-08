@@ -22,6 +22,7 @@ Use this exact format at the end of every non-trivial sub-agent run. Parseable b
 - Ticket: <KEY> — <url> (if applicable)
 
 ## Knowledge updates
+- Prior art used: <list of `[learnings-<file>.md#<N>]` entries cited during this task, or "None.">
 - bd memories: <list of `bd remember --key ...` entries written this task, or "None.">
 - references/log.md: <"appended one line" | "not appended (trivial/read-only)">
 - references/learnings-*.md: <"<file>#<item> updated" | "new item <file>#<n> added" | "not changed (reason: trivial|operational-state|uncertain|already-captured)">
