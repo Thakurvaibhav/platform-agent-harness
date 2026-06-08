@@ -8,8 +8,9 @@ At the start of every task, every sub-agent must:
 
 1. Read this file (for bd workflow, verification, constraints).
 2. Read [`references/index.md`](../../references/index.md) to discover available reference docs, project documentation, and topic learnings. From the "Topic learnings" table, load every learnings file whose domain overlaps with your assigned task. When uncertain, load it.
-3. Search `bd memories <keywords>` for task-relevant prior art (use 2-3 keywords from your task). bd memories contain operational state, decisions, and gotchas that may not be in learnings files yet.
+3. **Knowledge search** — run [`core/hooks/generic/knowledge-search.sh`](../hooks/generic/knowledge-search.sh) `<2-3 task keywords>` to find prior art across bd memories, learnings files, and domain docs simultaneously. This catches matches that keyword-only `bd memories <term>` would miss.
 4. Read [`references/clusters.md`](../../references/clusters.md) (or the repo equivalent) before any cluster-scoped decision.
+5. **Drift check** (orchestrator only, at session start/resume) — run [`core/hooks/generic/drift-check.sh`](../hooks/generic/drift-check.sh). If warnings are found, surface them to the user before starting work.
 
 Non-engineering sub-agents (`task-planner`, `tool-researcher`): read Constraints, bd context, Learnings protocol, Task completion checklist, and the Handoff contract (in [`safety-and-handoff.md`](safety-and-handoff.md)). Skip Code quality principles, Git worktree protocol, Amending existing PRs, Base pre-completion checklist, and Post-deploy validation.
 
