@@ -2,9 +2,9 @@
 
 **Turn a CLI coding agent into a coordinated platform engineering teammate.**
 
-A portable, runtime-neutral operating system for AI agents doing Kubernetes, Helm, ArgoCD, CI, and observability work. Works with [Aider](https://aider.chat/), [Claude Code](https://code.claude.com/), [Codex CLI](https://developers.openai.com/codex/cli), [Factory Droid](https://factory.ai/), [Goose](https://block.github.io/goose/), [OpenCode](https://opencode.ai/), or any CLI agent that can read instructions and run shell commands.
+A portable, runtime-neutral behavioral specification and coordination protocol for AI agents doing Kubernetes, Helm, ArgoCD, CI, and observability work. Works with [Aider](https://aider.chat/), [Claude Code](https://code.claude.com/), [Codex CLI](https://developers.openai.com/codex/cli), [Factory Droid](https://factory.ai/), [Goose](https://block.github.io/goose/), [OpenCode](https://opencode.ai/), or any CLI agent that can read instructions and run shell commands.
 
-> Most agent setups stop at "give it a system prompt." That falls apart on real infra work — multi-step rollouts, second opinions on risky PRs, memory that survives context resets, safe Kubernetes defaults, and parallel investigation across clusters. This harness adds the **operating system around the prompt.**
+> Most agent setups stop at "give it a system prompt." That falls apart on real infra work — multi-step rollouts, second opinions on risky PRs, memory that survives context resets, safe Kubernetes defaults, and parallel investigation across clusters. This harness adds the **behavioral specification and coordination protocol around the prompt.**
 
 ---
 
