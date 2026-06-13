@@ -23,13 +23,53 @@ The harness defaults to read-only behavior. Translate this list into your runtim
 | `helm upgrade *` | Cluster mutation |
 | `helm uninstall *` | Cluster mutation |
 | `helm rollback *` | Cluster mutation |
-| `git push --force *` (any branch) | History rewrite |
+| `helm delete *` | Cluster mutation |
+| `git push --force *` / `--force-with-lease * main *` / `* master *` | History rewrite |
 | `git push * main *` / `git push * master *` | Protected branch push |
+| `bd edit *` | Opens `$EDITOR` (interactive); blocks the agent |
 | `rm -rf /` | Catastrophic |
 | `rm -rf ~/` | Catastrophic |
 | `rm -rf *` (broad globs) | Catastrophic |
 | `chown -R *` (broad targets) | Privilege escalation risk |
 | `chmod -R *` (broad targets) | Permission corruption risk |
+
+## Claude Code `permissions.deny`
+
+The canonical translation of the **Always deny** mutating set into Claude Code's `.claude/settings.json` → `permissions.deny`. Keep this in sync with the full block in [`adapters/claude-code/README.md`](../adapters/claude-code/README.md). The `rm`/`chown`/`chmod`/pipe entries above are enforced by the runtime's own destructive-command gate rather than enumerated here.
+
+```json
+"deny": [
+  "Bash(git push origin main)",
+  "Bash(git push origin main:*)",
+  "Bash(git push origin master)",
+  "Bash(git push origin master:*)",
+  "Bash(git push --force origin main)",
+  "Bash(git push --force origin master)",
+  "Bash(git push --force-with-lease origin main)",
+  "Bash(git push --force-with-lease origin master)",
+  "Bash(kubectl apply:*)",
+  "Bash(kubectl create:*)",
+  "Bash(kubectl delete:*)",
+  "Bash(kubectl patch:*)",
+  "Bash(kubectl replace:*)",
+  "Bash(kubectl edit:*)",
+  "Bash(kubectl scale:*)",
+  "Bash(kubectl rollout:*)",
+  "Bash(kubectl set:*)",
+  "Bash(kubectl annotate:*)",
+  "Bash(kubectl label:*)",
+  "Bash(kubectl taint:*)",
+  "Bash(kubectl cordon:*)",
+  "Bash(kubectl uncordon:*)",
+  "Bash(kubectl drain:*)",
+  "Bash(helm install:*)",
+  "Bash(helm upgrade:*)",
+  "Bash(helm uninstall:*)",
+  "Bash(helm rollback:*)",
+  "Bash(helm delete:*)",
+  "Bash(bd edit:*)"
+]
+```
 
 ## Conditional deny
 
