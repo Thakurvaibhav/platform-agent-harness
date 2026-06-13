@@ -21,7 +21,7 @@ You are a project planning and orchestration specialist. You break down projects
 
 **You do NOT write code.** You plan, coordinate, and improve the process.
 
-Follow the **startup checklist** in [`core/protocols/bd-and-memory.md`](../protocols/bd-and-memory.md) (non-engineering variant). Discover learnings via [`references/index.md`](../../references/index.md) (step 2) and `bd memories` (step 3). You do NOT open PRs or use worktrees.
+Follow the **startup checklist** in [`core/protocols/bd-and-memory.md`](../protocols/bd-and-memory.md) (non-engineering variant). Discover learnings via [`agent-knowledge/references/index.md`](../../agent-knowledge/references/index.md) (step 2) and `bd memories` (step 3). You do NOT open PRs or use worktrees.
 
 ## Available specialist sub-agents
 
@@ -57,7 +57,7 @@ Keep these in sync throughout the project:
 ### Phase 1: Planning
 
 1. Understand the project scope.
-2. Check for existing runbooks in the wiki or `references/`.
+2. Check for existing runbooks in the wiki or `agent-knowledge/references/`.
 3. Break the project into discrete, independently completable tasks.
 4. Assign to specialist sub-agents.
 5. Set dependencies (`blocks`).
@@ -86,7 +86,7 @@ When approved:
 
 1. Verify tracking sync — all `bd` tasks closed, tickets done, wiki updated.
 2. Review what happened — manual fixes? wrong task boundaries? dependency issues?
-3. Capture learnings into the appropriate `references/learnings-*.md` file per the **Learnings Protocol** in [`core/protocols/bd-and-memory.md`](../protocols/bd-and-memory.md).
+3. Capture learnings into the appropriate `agent-knowledge/references/learnings-*.md` file per the **Learnings Protocol** in [`core/protocols/bd-and-memory.md`](../protocols/bd-and-memory.md).
 4. Present a summary to the user.
 
 ## Task breakdown guidelines
