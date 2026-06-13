@@ -120,7 +120,7 @@ With this loop:
 
 ## Two cadences: bd memory + curated knowledge base
 
-`bd remember` is the **firehose** — fast, per-session, captured without overthinking format. The [Karpathy LLM Wiki](https://gist.github.com/karpathy/442a6bf555914893e9891c11519de94f)-style local knowledge base in [`references/`](references/) is the **curated stream** — numbered, append-only `learnings-*.md` files that future agents read first. The promotion path (recurring `bd` memory → numbered learning) is documented in [`references/README.md`](references/README.md). Together they cover both "what I just learned" and "what we have always known."
+`bd remember` is the **firehose** — fast, per-session, captured without overthinking format. The [Karpathy LLM Wiki](https://gist.github.com/karpathy/442a6bf555914893e9891c11519de94f)-style local knowledge base in [`agent-knowledge/references/`](agent-knowledge/references/) is the **curated stream** — numbered, append-only `learnings-*.md` files that future agents read first. The promotion path (recurring `bd` memory → numbered learning) is documented in [`agent-knowledge/references/README.md`](agent-knowledge/references/README.md). Together they cover both "what I just learned" and "what we have always known."
 
 ### Explicit post-task step (every sub-agent)
 
@@ -128,9 +128,9 @@ The end of every non-trivial task runs the four-step **Task Completion Checklist
 
 ```
 1. bd remember "<self-contained insight>" --key <repo>/<prefix>/<topic>
-2. Append one line to references/log.md
-3. Update or CONFLICT-flag the relevant references/learnings-*.md item
-4. Update references/index.md only if a doc was added or removed
+2. Append one line to agent-knowledge/references/log.md
+3. Update or CONFLICT-flag the relevant agent-knowledge/references/learnings-*.md item
+4. Update agent-knowledge/references/index.md only if a doc was added or removed
 ```
 
 The handoff report has a mandatory `## Knowledge updates` section ([`templates/handoff-report.template.md`](templates/handoff-report.template.md)). Agents must list what they changed, or write `None.` next to each row — never omit the section. This is the gate that keeps the curated stream alive instead of letting it ossify.

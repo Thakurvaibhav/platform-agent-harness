@@ -24,9 +24,9 @@ Use this exact format at the end of every non-trivial sub-agent run. Parseable b
 ## Knowledge updates
 - Prior art used: <list of `[learnings-<file>.md#<N>]` entries cited during this task, or "None.">
 - bd memories: <list of `bd remember --key ...` entries written this task, or "None.">
-- references/log.md: <"appended one line" | "not appended (trivial/read-only)">
-- references/learnings-*.md: <"<file>#<item> updated" | "new item <file>#<n> added" | "not changed (reason: trivial|operational-state|uncertain|already-captured)">
-- references/index.md: <"updated row for <path>" | "not changed">
+- agent-knowledge/references/log.md: <"appended one line" | "not appended (trivial/read-only)">
+- agent-knowledge/references/learnings-*.md: <"<file>#<item> updated" | "new item <file>#<n> added" | "not changed (reason: trivial|operational-state|uncertain|already-captured)">
+- agent-knowledge/references/index.md: <"updated row for <path>" | "not changed">
 - Conflicts flagged: <"CONFLICT: <new finding> vs learnings-<file>.md#<n>" | "None.">
 
 ## Open questions / follow-ups
@@ -74,10 +74,10 @@ Omit `## Changes`. Lead with findings.
 
 - Every `Verification` bullet is backed by a command or link. Never claim "verified" without evidence.
 - Failures must still be reported. Do not silently retry or mask them.
-- The `## Knowledge updates` section is **mandatory** for every non-trivial task. If you have nothing to add, write `None.` next to each row — never omit the section. This is the explicit gate that keeps the local knowledge base ([`references/`](../references/README.md)) alive.
+- The `## Knowledge updates` section is **mandatory** for every non-trivial task. If you have nothing to add, write `None.` next to each row — never omit the section. This is the explicit gate that keeps the local knowledge base ([`agent-knowledge/references/`](../agent-knowledge/references/README.md)) alive.
 - Conflicts with existing `learnings-*.md` entries must be flagged explicitly in the report:
   ```
-  CONFLICT: <new finding> vs references/learnings-<file>.md#<item-number>
+  CONFLICT: <new finding> vs agent-knowledge/references/learnings-<file>.md#<item-number>
   ```
   Do NOT silently edit learnings files — the human decides.
-- The post-task discipline is canonical in [`core/protocols/bd-and-memory.md`](../core/protocols/bd-and-memory.md) "Task Completion Checklist". The promotion path from `bd remember` to numbered `learnings-*.md` items is in [`references/README.md`](../references/README.md).
+- The post-task discipline is canonical in [`core/protocols/bd-and-memory.md`](../core/protocols/bd-and-memory.md) "Task Completion Checklist". The promotion path from `bd remember` to numbered `learnings-*.md` items is in [`agent-knowledge/references/README.md`](../agent-knowledge/references/README.md).

@@ -16,7 +16,7 @@ skills:
 
 You are a general-purpose engineering agent dispatched for tasks that don't map to a domain specialist (helm-engineer, argocd-engineer, platform-engineer, tool-researcher).
 
-Follow the **startup checklist** in [`core/protocols/bd-and-memory.md`](../protocols/bd-and-memory.md). Discover learnings via [`references/index.md`](../../references/index.md) (step 2) and `bd memories` (step 3).
+Follow the **startup checklist** in [`core/protocols/bd-and-memory.md`](../protocols/bd-and-memory.md). Discover learnings via [`agent-knowledge/references/index.md`](../../agent-knowledge/references/index.md) (step 2) and `bd memories` (step 3).
 
 ## Scope
 
@@ -56,7 +56,7 @@ If the prompt is ambiguous about output format, default to the **Handoff contrac
 | `charts/<argo-apps>/` | ArgoCD Application templates and per-cluster values |
 | `.github/workflows/` | CI workflows |
 
-Adjust paths to match your repo. Reference docs and learnings: `references/`.
+Adjust paths to match your repo. Reference docs and learnings: `agent-knowledge/references/`.
 
 ## Efficiency
 

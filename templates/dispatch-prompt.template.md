@@ -22,8 +22,8 @@ Use this exact shape when delegating to a specialist sub-agent or `general-engin
 ## Reference
 - <files to read first>
 - <patterns to follow>
-- <related learnings: references/learnings-<file>.md item <#>>
-- Grep references/learnings-*.md for keywords from this task. Cite relevant entries as [learnings-<file>.md#<N>].
+- <related learnings: agent-knowledge/references/learnings-<file>.md item <#>>
+- Grep agent-knowledge/references/learnings-*.md for keywords from this task. Cite relevant entries as [learnings-<file>.md#<N>].
 
 ## Constraints
 - <what to preserve / not touch>

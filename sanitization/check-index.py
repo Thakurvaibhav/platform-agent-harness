@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Verify every backtick or markdown-linked path in references/index.md exists."""
+"""Verify every backtick or markdown-linked path in agent-knowledge/references/index.md exists."""
 import re
 import sys
 from pathlib import Path
@@ -10,9 +10,9 @@ PATH_PATTERN = re.compile(r"`([^`]+)`|\]\(([^)]+)\)")
 
 def main() -> int:
     root = Path(sys.argv[1] if len(sys.argv) > 1 else ".")
-    index = root / "references/index.md"
+    index = root / "agent-knowledge/references/index.md"
     if not index.exists():
-        print("references/index.md not found")
+        print("agent-knowledge/references/index.md not found")
         return 1
 
     missing: list[str] = []

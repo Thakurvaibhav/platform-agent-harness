@@ -7,10 +7,10 @@ The single source of truth for task state, durable memory, the compaction lifecy
 At the start of every task, every sub-agent must:
 
 1. Read this file (for bd workflow, verification, constraints).
-2. Read [`references/index.md`](../../references/index.md) to discover available reference docs, project documentation, and topic learnings. From the "Topic learnings" table, load every learnings file whose domain overlaps with your assigned task. When uncertain, load it.
-3. **Knowledge search** — run [`core/hooks/generic/knowledge-search.sh`](../hooks/generic/knowledge-search.sh) `<2-3 task keywords>` to find prior art across bd memories, learnings files, and domain docs simultaneously. This catches matches that keyword-only `bd memories <term>` would miss.
-4. Read [`references/clusters.md`](../../references/clusters.md) (or the repo equivalent) before any cluster-scoped decision.
-5. **Drift check** (orchestrator only, at session start/resume) — run [`core/hooks/generic/drift-check.sh`](../hooks/generic/drift-check.sh). If warnings are found, surface them to the user before starting work.
+2. Read [`agent-knowledge/references/index.md`](../../agent-knowledge/references/index.md) to discover available reference docs, project documentation, and topic learnings. From the "Topic learnings" table, load every learnings file whose domain overlaps with your assigned task. When uncertain, load it.
+3. **Knowledge search** — run [`agent-knowledge/scripts/knowledge-search.sh`](../../agent-knowledge/scripts/knowledge-search.sh) `<2-3 task keywords>` to find prior art across bd memories, learnings files, and domain docs simultaneously. This catches matches that keyword-only `bd memories <term>` would miss.
+4. Read [`agent-knowledge/references/clusters.md`](../../agent-knowledge/references/clusters.md) (or the repo equivalent) before any cluster-scoped decision.
+5. **Drift check** (orchestrator only, at session start/resume) — run [`agent-knowledge/scripts/drift-check.sh`](../../agent-knowledge/scripts/drift-check.sh). If warnings are found, surface them to the user before starting work.
 
 Non-engineering sub-agents (`task-planner`, `tool-researcher`): read Constraints, bd context, Learnings protocol, Task completion checklist, and the Handoff contract (in [`safety-and-handoff.md`](safety-and-handoff.md)). Skip Code quality principles, Git worktree protocol, Amending existing PRs, Base pre-completion checklist, and Post-deploy validation.
 
@@ -83,7 +83,7 @@ bd close <id> --reason "<PR created and CI passing>"
 - If multiple valid interpretations exist, present them — don't pick silently.
 - If a simpler approach exists than what was requested, say so.
 - If confused, stop and name what's unclear. Never fabricate context.
-- Before starting work that might have prior art (rollout, research, upgrade, playbook), check [`references/index.md`](../../references/index.md) for an existing doc on the topic. Read the relevant doc before writing anything from scratch.
+- Before starting work that might have prior art (rollout, research, upgrade, playbook), check [`agent-knowledge/references/index.md`](../../agent-knowledge/references/index.md) for an existing doc on the topic. Read the relevant doc before writing anything from scratch.
 - Verify metric names: `curl -s <pod-ip>:<port>/metrics | grep <metric>`.
 - Verify upstream values paths: `helm show values <repo>/<chart> --version <ver> | grep <path>`.
 - If the task feels wrong, log the concern and proceed with your best judgment. Do NOT silently reinterpret.
@@ -207,11 +207,24 @@ After any tool/chart is deployed or enabled on a cluster, validate:
 
 ## Learnings protocol (short form)
 
-Learnings live in [`references/learnings-*.md`](../../references/), not in agent configs. Agents discover relevant files via [`references/index.md`](../../references/index.md) at startup (step 2) — no hardcoded lists in agent configs. Additionally, `bd memories` (step 3) contain operational knowledge that may not yet be in learnings files. The system as a whole (index + log + learnings) follows [Andrej Karpathy's LLM Wiki](https://gist.github.com/karpathy/442a6bf555914893e9891c11519de94f) pattern; full rules and the `bd remember` → numbered-learning promotion path are in [`references/README.md`](../../references/README.md).
+Learnings live in [`agent-knowledge/references/learnings-*.md`](../../agent-knowledge/references/), not in agent configs. Agents discover relevant files via [`agent-knowledge/references/index.md`](../../agent-knowledge/references/index.md) at startup (step 2) — no hardcoded lists in agent configs. Additionally, `bd memories` (step 3) contain operational knowledge that may not yet be in learnings files. The system as a whole (index + log + learnings) follows [Andrej Karpathy's LLM Wiki](https://gist.github.com/karpathy/442a6bf555914893e9891c11519de94f) pattern; full rules and the `bd remember` → numbered-learning promotion path are in [`agent-knowledge/references/README.md`](../../agent-knowledge/references/README.md).
 
 **Primary write path:** Immediate ingest to learnings files when trigger conditions are met (see Knowledge Ingest below). `bd remember` for operational state and uncertain findings. Periodic consolidation catches stragglers and runs cross-link lint.
 
 Capturing a new learning: append a numbered item to the right file. Never duplicate — update the existing entry instead. If a learning is tightly coupled to one sub-agent, also add a short pointer in that agent's "Learnings tightly coupled" section.
+
+### Memory routing — which store for what
+
+Four stores, each with a distinct scope. Route every fact to exactly one — never write the same fact to two stores.
+
+| Store | Scope | Use for |
+| --- | --- | --- |
+| **bd / beads** | Cross-runtime (git-synced via the repo's `.beads`) | Default for operational state (task progress, PRs, environments) and findings still uncertain or likely to change. The firehose. |
+| **`learnings-*.md`** (`agent-knowledge/references/`) | Cross-runtime, citation-measured, durable | Reusable, generalized engineering patterns: gotchas, non-obvious fixes, decisions + rationale. The curated stream. |
+| **runtime-native memory** (e.g. a runtime's own project memory) | Runtime-only **and** cwd-scoped | ONLY runtime/config facts specific to this machine or runtime (hook wiring, local paths, settings). **Never** domain knowledge or anything another runtime would want. |
+| **`agent-knowledge/references/` docs** | Cross-runtime, stable reference | Protocols, cluster/inventory tables, tool guides — slow-changing reference material, not per-session findings. |
+
+Rule of thumb: reusable engineering knowledge → learnings; operational or uncertain → bd; runtime-only config trivia → native memory; stable reference material → reference docs.
 
 ## Knowledge ingest (immediate synthesis)
 
@@ -228,6 +241,14 @@ After completing a non-trivial task, evaluate whether the outcome contains a reu
 - Findings that might change after further investigation
 - One-off facts unlikely to recur
 
+### Enforcement (machine-checked)
+
+This gate is no longer convention-only — it is backed by [`core/hooks/generic/learning-gate.py`](../hooks/generic/learning-gate.py): a **hard gate** for sub-agents (blocks stop once if substantive work persisted nothing) and a **soft nudge** for the main session, with citations measured into the heatmap.
+
+- **Capture on discovery, not at task end.** Persist the moment a non-obvious finding appears — batching to the end loses them.
+- **Fastest path:** `agent-knowledge/scripts/learn.sh "<insight>" <domain>/<category>/<topic>` (a low-friction `bd remember` wrapper). `bd remember` directly also works.
+- **Cite, don't re-explain.** Reference an existing entry as `[learnings-<file>.md#<N>]` instead of restating it — citations are logged to `agent-knowledge/metrics/learning-usage.json`, and consolidation prunes by that usage. Re-explaining a known pattern wastes tokens and hides the real usage signal.
+
 ## Task completion checklist
 
 Before finishing any non-trivial task:
@@ -237,17 +258,17 @@ Before finishing any non-trivial task:
    bd remember "<self-contained insight>" --key <repo>/<prefix>/<topic>
    ```
 2. **Learnings files** (required when ingest trigger conditions above are met):
-   - Update the matching `learnings-*.md` file (find it via [`references/index.md`](../../references/index.md)).
+   - Update the matching `learnings-*.md` file (find it via [`agent-knowledge/references/index.md`](../../agent-knowledge/references/index.md)).
    - Search the file first — never duplicate. Update in place if similar exists.
    - Append as next numbered item. Be specific: include file paths, commands, error messages.
    - **Provenance:** Append `(ref: #NNN)` or `(ref: <url>)` when the entry derives from a specific PR, issue, or external doc. Skip for general experience-derived lessons.
    - If no file matches, store via `bd remember` and flag in handoff report.
    - **Graduation rule:** If a learning in your agent's "Learnings tightly coupled" section would benefit other agents, move it to the shared learnings file.
-3. **[`references/index.md`](../../references/index.md)** — update only when you add or remove a file in any indexed location.
+3. **[`agent-knowledge/references/index.md`](../../agent-knowledge/references/index.md)** — update only when you add or remove a file in any indexed location.
 
 Additionally:
 
-- Append one line to [`references/log.md`](../../references/log.md) (format unchanged, skip for trivial / read-only tasks):
+- Append one line to [`agent-knowledge/references/log.md`](../../agent-knowledge/references/log.md) (format unchanged, skip for trivial / read-only tasks):
   ```
   ## [YYYY-MM-DD] <type> | <repo> | <one-line summary> [bd:<id>] [pr:<#>]
   ```

@@ -9,13 +9,14 @@
 #   3. Domain docs in HARNESS_DOCS (if set)
 #
 # Environment:
-#   HARNESS_REFS  — path to references/ directory (default: ./references)
+#   HARNESS_REFS  — path to the knowledge home's references/ dir
+#                   (default: $HOME/.agent-knowledge/references)
 #   HARNESS_DOCS  — path to domain docs directory (optional)
 #   BEADS_DIR     — beads database location (default: auto-discover)
 
 set -o pipefail
 
-REFS_DIR="${HARNESS_REFS:-./references}"
+REFS_DIR="${HARNESS_REFS:-$HOME/.agent-knowledge/references}"
 
 if [ $# -eq 0 ]; then
     echo "Usage: knowledge-search.sh <query terms...>"

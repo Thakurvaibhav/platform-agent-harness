@@ -22,8 +22,8 @@ Karpathy's argument is that for a small, hand-curated corpus (hundreds of files,
 
 Two layers, two cadences:
 
-- **`bd remember`** — fast, per-session capture. Agents write memories during a task without thinking about formatting. Survives compaction via the [PreCompact hook](../core/hooks/factory-droid/pre-compact-bd-sync.py).
-- **`references/learnings-*.md`** — slow, deliberate, append-only. A human (or a high-trust agent) promotes a recurring `bd` memory into a numbered learning when it becomes a durable pattern.
+- **`bd remember`** — fast, per-session capture. Agents write memories during a task without thinking about formatting. Survives compaction via the [PreCompact hook](../../core/hooks/factory-droid/pre-compact-bd-sync.py).
+- **`agent-knowledge/references/learnings-*.md`** — slow, deliberate, append-only. A human (or a high-trust agent) promotes a recurring `bd` memory into a numbered learning when it becomes a durable pattern.
 
 So `bd` memories are the firehose; `learnings-*.md` is the curated stream that future sessions actually read first.
 
@@ -55,7 +55,7 @@ So `bd` memories are the firehose; `learnings-*.md` is the curated stream that f
 
 ### Promotion path (`bd remember` → `learnings-*.md`)
 
-**Immediate ingest (primary path):** Promote during the same session when ingest trigger conditions are met (see "Knowledge Ingest" in [`core/protocols/bd-and-memory.md`](../core/protocols/bd-and-memory.md)). Don't defer when the insight is clear and actionable.
+**Immediate ingest (primary path):** Promote during the same session when ingest trigger conditions are met (see "Knowledge Ingest" in [`core/protocols/bd-and-memory.md`](../../core/protocols/bd-and-memory.md)). Don't defer when the insight is clear and actionable.
 
 **Consolidation (catch-all):** Periodic consolidation catches memories that weren't promoted immediately — uncertain findings that settled, patterns that only became clear across multiple sessions, or sessions where ingest was skipped.
 
@@ -72,7 +72,7 @@ A memory earns a numbered entry when:
 
 ## How agents actually use this
 
-A typical sub-agent startup, per [`core/protocols/bd-and-memory.md`](../core/protocols/bd-and-memory.md):
+A typical sub-agent startup, per [`core/protocols/bd-and-memory.md`](../../core/protocols/bd-and-memory.md):
 
 1. Read this `index.md` to discover what reference docs exist.
 2. Read the domain `learnings-*.md` files named in your agent prompt.
@@ -91,4 +91,4 @@ The two slow files (`index.md`, `learnings-*.md`) cover the durable institutiona
 
 ## Public sharing rule
 
-The harness ships sanitized learnings (no real cluster names, ticket prefixes, customer names, internal URLs). Before publishing any derivative learnings file, run [`sanitization/prepublish-checklist.md`](../sanitization/prepublish-checklist.md).
+The harness ships sanitized learnings (no real cluster names, ticket prefixes, customer names, internal URLs). Before publishing any derivative learnings file, run [`sanitization/prepublish-checklist.md`](../../sanitization/prepublish-checklist.md).

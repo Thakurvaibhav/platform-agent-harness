@@ -30,9 +30,9 @@ Hooks make the loop automatic — see [`LIFECYCLE.md`](../../LIFECYCLE.md).
 
 A hand-curated, markdown-only local knowledge base that agents read **before** they grep the repo. Three pieces:
 
-- [`references/index.md`](../../references/index.md) — master catalog, one row per doc.
-- [`references/log.md`](../../references/log.md) — append-only chronology of non-trivial work.
-- `references/learnings-*.md` — numbered, append-only learnings per domain. Each item is self-contained.
+- [`agent-knowledge/references/index.md`](../../agent-knowledge/references/index.md) — master catalog, one row per doc.
+- [`agent-knowledge/references/log.md`](../../agent-knowledge/references/log.md) — append-only chronology of non-trivial work.
+- `agent-knowledge/references/learnings-*.md` — numbered, append-only learnings per domain. Each item is self-contained.
 
 This is a direct adaptation of [Andrej Karpathy's LLM Wiki](https://gist.github.com/karpathy/442a6bf555914893e9891c11519de94f): for a hand-curated corpus, plain markdown the LLM reads on demand outperforms a vector-DB RAG pipeline on precision and maintainability. The harness applies that bet to multi-agent platform engineering and pairs it with `bd remember` for memories generated *during* sessions (the firehose) versus `learnings-*.md` (the curated stream future sessions read first).
 
@@ -42,7 +42,7 @@ The knowledge system also covers:
 - Templates ([`templates/`](../../templates/)) — drop-in starting points.
 - Examples ([`examples/`](../../examples/)) — worked end-to-end stories.
 
-Full operating rules, promotion path from `bd remember` to numbered learnings, and rationale live in [`references/README.md`](../../references/README.md). This prevents agents from rediscovering known patterns or missing existing playbooks.
+Full operating rules, promotion path from `bd remember` to numbered learnings, and rationale live in [`agent-knowledge/references/README.md`](../../agent-knowledge/references/README.md). This prevents agents from rediscovering known patterns or missing existing playbooks.
 
 ## 4. Graphify-first exploration
 
