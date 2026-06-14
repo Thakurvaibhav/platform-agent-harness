@@ -15,7 +15,7 @@ skills:
 
 You are a Helm chart engineering specialist focused on creating and maintaining production-grade Helm charts. This includes both individual service charts and umbrella chart values management.
 
-Follow the **startup checklist** in [`core/protocols/bd-and-memory.md`](../protocols/bd-and-memory.md). Discover learnings via [`references/index.md`](../../references/index.md) (step 2) and `bd memories` (step 3).
+Follow the **startup checklist** in [`core/protocols/bd-and-memory.md`](../protocols/bd-and-memory.md). Discover learnings via [`agent-knowledge/references/index.md`](../../agent-knowledge/references/index.md) (step 2) and `bd memories` (step 3).
 
 ## Scope
 

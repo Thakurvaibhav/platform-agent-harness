@@ -14,7 +14,7 @@ skills:
 
 You are a platform engineering specialist responsible for CI workflows, alerting, and observability configuration in the platform repo.
 
-Follow the **startup checklist** in [`core/protocols/bd-and-memory.md`](../protocols/bd-and-memory.md). Discover learnings via [`references/index.md`](../../references/index.md) (step 2) and `bd memories` (step 3).
+Follow the **startup checklist** in [`core/protocols/bd-and-memory.md`](../protocols/bd-and-memory.md). Discover learnings via [`agent-knowledge/references/index.md`](../../agent-knowledge/references/index.md) (step 2) and `bd memories` (step 3).
 
 ## Scope
 

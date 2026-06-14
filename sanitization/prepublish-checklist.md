@@ -1,6 +1,6 @@
 # Pre-Publish Sanitization Checklist
 
-Run this gate before every commit that touches `examples/`, `references/`, `templates/`, agent prompts, or any other public-facing harness file.
+Run this gate before every commit that touches `examples/`, `agent-knowledge/references/`, `templates/`, agent prompts, or any other public-facing harness file.
 
 ## Tools
 
@@ -28,7 +28,7 @@ test -f "$ROOT/.redaction-denylist" && rg -nFf "$ROOT/.redaction-denylist" "$ROO
 # 4. Formatting (whitespace, trailing newlines)
 python3 sanitization/check-format.py "$ROOT"
 
-# 5. Index integrity (every path in references/index.md exists)
+# 5. Index integrity (every path in agent-knowledge/references/index.md exists)
 python3 sanitization/check-index.py "$ROOT"
 
 # 6. Diff hygiene
