@@ -13,7 +13,7 @@ A portable, runtime-neutral behavioral specification and coordination protocol f
 | **~70x fewer tokens** for architecture questions via [Graphify](https://github.com/safishamsi/graphify) graph queries vs. linear file reads. |
 | **60–90% token compression** on verbose CLI output via [`rtk`](https://github.com/rtk-ai/rtk) with zero workflow change. |
 | **Cross-session memory** via [`bd`](https://github.com/steveyegge/beads) — task state, comments, and durable learnings survive every compaction. |
-| **Hand-curated knowledge base** ([`references/`](references/)) — markdown-only `index.md`, `log.md`, and numbered `learnings-*.md` agents read before they grep the repo. Adapted from [Karpathy's LLM Wiki](https://gist.github.com/karpathy/442a6bf555914893e9891c11519de94f). |
+| **Hand-curated knowledge base** ([`agent-knowledge/references/`](agent-knowledge/references/)) — markdown-only `index.md`, `log.md`, and numbered `learnings-*.md` agents read before they grep the repo. Adapted from [Karpathy's LLM Wiki](https://gist.github.com/karpathy/442a6bf555914893e9891c11519de94f). |
 | **3x+ wall-clock speedup** on N-cluster validation via parallel sub-agent dispatch ([`core/protocols/parallel-dispatch.md`](core/protocols/parallel-dispatch.md)). |
 | **Second-agent PR review** with structured bot-reply protocol ([`core/protocols/pr-review-loop.md`](core/protocols/pr-review-loop.md)). |
 | **18 observability skills** install via `gcx skills install --all` — no vendoring. |
@@ -34,13 +34,13 @@ A portable, runtime-neutral behavioral specification and coordination protocol f
    │  Specialist     │         │   Durable state   │         │   Local knowledge  │
    │  sub-agents     │         │   (bd / Beads)    │         │   base + Graphify  │
    │                 │         │                   │         │                    │
-   │ task-planner    │         │ tasks, comments,  │         │ references/        │
-   │ tool-researcher │         │ memories, ready   │         │   index.md         │
-   │ helm-engineer   │         │ queues survive    │         │   log.md           │
+   │ task-planner    │         │ tasks, comments,  │         │ agent-knowledge/   │
+   │ tool-researcher │         │ memories, ready   │         │  references/       │
+   │ helm-engineer   │         │ queues survive    │         │   index · log ·    │
    │ argocd-engineer │◄────────┤ compaction        │────────►│   learnings-*.md   │
-   │ platform-engr   │         │                   │         │ (Karpathy LLM      │
-   │ pr-reviewer     │         └─────────┬─────────┘         │  Wiki pattern) +   │
-   │ general-engineer│                   │                   │ graph queries      │
+   │ platform-engr   │         │                   │         │  (Karpathy Wiki)   │
+   │ pr-reviewer     │         └─────────┬─────────┘         │  scripts/ · metrics│
+   │ general-engineer│                   │                   │  + graph queries   │
    └────────┬────────┘                   │                   └────────────────────┘
             │                            ▼
             │            ┌──────────────────────────────────┐
@@ -104,10 +104,10 @@ For a public companion repo using this exact operating model, see [`Thakurvaibha
 | Protocols | [`core/protocols/`](core/protocols/) | 8 canonical rules: harness-pillars, delegation, bd-and-memory, rtk-command-policy, graphify-first, pr-review-loop, parallel-dispatch, safety-and-handoff |
 | Skills | [`skills/`](skills/) | 6 portable executable playbooks (shiny-engineer, create-pr, helm-upgrade, k8s-debug, graphify, contract-validation); observability skills live in `gcx skills install` |
 | Domain packs | [`domain-packs/`](domain-packs/) | Kubernetes safety, Helm essentials, observability-via-gcx — focused, not exhaustive |
-| Hooks | [`core/hooks/`](core/hooks/) | Transcript-parsing pre-compact memory snapshot, rtk autoprefix, context-threshold warning |
+| Hooks | [`core/hooks/`](core/hooks/) | Transcript-parsing pre-compact memory snapshot, rtk autoprefix, context-threshold warning, learning-capture gate |
 | Tools | [`tools/`](tools/) | One-pagers for bd, Graphify, rtk, gcx with upstream install links |
 | Adapters | [`adapters/`](adapters/) | Concrete wiring for 6 CLI agent runtimes |
-| References | [`references/`](references/) | Hand-curated local knowledge base for agents — `index.md`, `log.md`, numbered `learnings-*.md` (Karpathy LLM Wiki pattern, see [`references/README.md`](references/README.md)) |
+| Agent knowledge | [`agent-knowledge/`](agent-knowledge/) | Shared, runtime-neutral knowledge home (see [`agent-knowledge/README.md`](agent-knowledge/README.md)): `references/` (hand-curated `index.md`, `log.md`, numbered `learnings-*.md` — Karpathy LLM Wiki pattern), `scripts/` (knowledge-search, drift-check, learn), `metrics/` (citation heatmap) |
 | Templates | [`templates/`](templates/) | `AGENTS.template.md` to drop into your repo + dispatch / handoff / validation contracts |
 | Examples | [`examples/`](examples/) | 2 end-to-end worked stories: Helm chart upgrade and alert investigation |
 | Sanitization | [`sanitization/`](sanitization/) | Pre-publish gate using trufflehog + gitleaks + local denylist |
@@ -117,9 +117,9 @@ For a public companion repo using this exact operating model, see [`Thakurvaibha
 Every sub-agent ends a non-trivial task with a four-step **Task Completion Checklist** (canonical: [`core/protocols/bd-and-memory.md`](core/protocols/bd-and-memory.md)):
 
 1. `bd remember` — persist any non-obvious finding as a self-contained memory.
-2. Append one line to [`references/log.md`](references/log.md).
-3. If a finding refines or contradicts an existing item, update or `CONFLICT:`-flag the right `references/learnings-*.md` entry.
-4. Update [`references/index.md`](references/index.md) only when a doc was added or removed.
+2. Append one line to [`agent-knowledge/references/log.md`](agent-knowledge/references/log.md).
+3. If a finding refines or contradicts an existing item, update or `CONFLICT:`-flag the right `agent-knowledge/references/learnings-*.md` entry.
+4. Update [`agent-knowledge/references/index.md`](agent-knowledge/references/index.md) only when a doc was added or removed.
 
 The handoff report has a mandatory `## Knowledge updates` section ([`templates/handoff-report.template.md`](templates/handoff-report.template.md)) — agents must list what they changed, or write `None.` next to each row. This is the explicit gate that keeps the local knowledge base alive across sessions.
 

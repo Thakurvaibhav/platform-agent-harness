@@ -37,8 +37,8 @@ When a task spans multiple sub-agents (e.g., new tool = tool-researcher → helm
 4. If still blocked, perform the work directly.
 5. **Post-failure retrospective (mandatory after step 4):**
    - Diagnose: was it (a) prompt too vague, (b) missing context/reference, (c) tooling limitation, or (d) genuine complexity?
-   - Immediately ingest the fix into the relevant `references/learnings-*.md` file with `(ref: this session)`.
-   - If same sub-agent + same failure mode has occurred before (check `references/learnings-agent-workflow.md`), flag for agent config update.
+   - Immediately ingest the fix into the relevant `agent-knowledge/references/learnings-*.md` file with `(ref: this session)`.
+   - If same sub-agent + same failure mode has occurred before (check `agent-knowledge/references/learnings-agent-workflow.md`), flag for agent config update.
    - `bd remember "<agent> fails on <pattern> because <root cause>. Fix: <what worked>" --key <repo>/lesson/<topic>`
 
 ## Dispatch prompt structure
@@ -89,9 +89,9 @@ Append this block to every sub-agent dispatch. It primes the sub-agent on shared
 ```markdown
 ## Reference loading
 - Read `core/protocols/bd-and-memory.md` for shared protocols (code quality, bd, verification, completion).
-- Read `references/index.md` to discover available reference docs.
-- Run `core/hooks/generic/knowledge-search.sh <task keywords>` to find prior art across memories, learnings, and docs.
-- Read `references/clusters.md` (or the repo equivalent) for cluster details, if the task is cluster-scoped.
+- Read `agent-knowledge/references/index.md` to discover available reference docs.
+- Run `agent-knowledge/scripts/knowledge-search.sh <task keywords>` to find prior art across memories, learnings, and docs.
+- Read `agent-knowledge/references/clusters.md` (or the repo equivalent) for cluster details, if the task is cluster-scoped.
 - If `graphify-out/graph.json` exists in the repo, load it for architecture and dependency questions.
 - **Prior art citation**: Before implementing, if a learnings entry is relevant, cite it as `[learnings-<file>.md#<N>]` in your output and build on it rather than re-deriving.
 

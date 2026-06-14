@@ -22,11 +22,11 @@ Numbered, append-only. **Update the existing entry — never duplicate.**
 
 ## Knowledge capture
 
-8. **Encode agent mistakes into protocols or domain packs the same session.** Delayed encoding leads to repeated mistakes across sessions. Every correction is captured in the appropriate `references/learnings-*.md` file before the session ends.
+8. **Encode agent mistakes into protocols or domain packs the same session.** Delayed encoding leads to repeated mistakes across sessions. Every correction is captured in the appropriate `agent-knowledge/references/learnings-*.md` file before the session ends.
 
 9. **Copy-paste contamination in generated docs.** When generating docs from templates or existing docs, always review for content carried from the source that doesn't apply.
 
-10. **The index is the cheapest abstraction in the harness.** Every doc that lands in `references/` gets a row in `references/index.md`. Agents grep the index before the repo — saves enormous amounts of exploration.
+10. **The index is the cheapest abstraction in the harness.** Every doc that lands in `agent-knowledge/references/` gets a row in `agent-knowledge/references/index.md`. Agents grep the index before the repo — saves enormous amounts of exploration.
 
 ## Memory hygiene
 

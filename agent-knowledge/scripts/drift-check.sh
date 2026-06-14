@@ -8,7 +8,8 @@
 #   4. Consolidation overdue (>7 days)
 #
 # Environment:
-#   HARNESS_REFS        — path to references/ directory (default: ./references)
+#   HARNESS_REFS        — path to the knowledge home's references/ dir
+#                         (default: $HOME/.agent-knowledge/references)
 #   HARNESS_REPOS       — space-separated list of repo paths to check graphs for
 #   DRIFT_GRAPH_DAYS    — graph staleness threshold in days (default: 7)
 #   DRIFT_LEARN_DAYS    — learnings staleness threshold in days (default: 30)
@@ -19,7 +20,7 @@
 
 set -o pipefail
 
-REFS_DIR="${HARNESS_REFS:-./references}"
+REFS_DIR="${HARNESS_REFS:-$HOME/.agent-knowledge/references}"
 REPOS="${HARNESS_REPOS:-$(pwd)}"
 GRAPH_DAYS="${DRIFT_GRAPH_DAYS:-7}"
 LEARN_DAYS="${DRIFT_LEARN_DAYS:-30}"

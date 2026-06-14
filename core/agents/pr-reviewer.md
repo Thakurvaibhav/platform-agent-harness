@@ -22,9 +22,9 @@ Your task prompt will contain:
 
 ## Reference loading
 
-Consult [`references/index.md`](../../references/index.md) first to discover what reference docs exist for the PR's domain.
+Consult [`agent-knowledge/references/index.md`](../../agent-knowledge/references/index.md) first to discover what reference docs exist for the PR's domain.
 
-When reviewing Helm chart or CI PRs, read [`references/learnings-helm-ci.md`](../../references/learnings-helm-ci.md). For ArgoCD PRs, [`references/learnings-argocd.md`](../../references/learnings-argocd.md). For alerting / observability PRs, [`references/learnings-observability.md`](../../references/learnings-observability.md).
+When reviewing Helm chart or CI PRs, read [`agent-knowledge/references/learnings-helm-ci.md`](../../agent-knowledge/references/learnings-helm-ci.md). For ArgoCD PRs, [`agent-knowledge/references/learnings-argocd.md`](../../agent-knowledge/references/learnings-argocd.md). For alerting / observability PRs, [`agent-knowledge/references/learnings-observability.md`](../../agent-knowledge/references/learnings-observability.md).
 
 ## Known review bots
 

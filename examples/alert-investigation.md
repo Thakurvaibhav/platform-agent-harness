@@ -145,7 +145,7 @@ bd remember "<service>HighErrorRate alert: when it fires, check db_query_duratio
   --key <repo>/trouble/<service>-error-rate-rca
 ```
 
-Add a line to [`references/log.md`](../references/log.md):
+Add a line to [`agent-knowledge/references/log.md`](../agent-knowledge/references/log.md):
 
 ```
 ## [2026-05-24] bugfix | <repo> | <service> 504 storm — root cause: unindexed migration on <widgets-db> [bd:<id>]

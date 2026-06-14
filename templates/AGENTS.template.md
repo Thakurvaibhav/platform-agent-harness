@@ -2,7 +2,7 @@
 
 > **This is a template.** Copy this file into the root of your infra repo as `AGENTS.md` and customize the placeholders for your environment. The cross-tool `AGENTS.md` standard is supported by Codex CLI, OpenCode, Goose, Claude Code (alongside `CLAUDE.md`), and newer Aider releases. See `adapters/` in the harness for runtime-specific wiring.
 >
-> When you copy this file, also copy or symlink the referenced directories (`core/agents/`, `core/protocols/`, `skills/`, `domain-packs/`, `references/`) into your repo, or adjust the paths to match where you place them.
+> When you copy this file, also copy or symlink the referenced directories (`core/agents/`, `core/protocols/`, `skills/`, `domain-packs/`, `agent-knowledge/references/`) into your repo, or adjust the paths to match where you place them.
 
 Use this file as the root instruction contract for CLI agents working in platform / infrastructure repositories.
 
@@ -11,11 +11,11 @@ Use this file as the root instruction contract for CLI agents working in platfor
 At session start or resume, every agent — main session and sub-agent — does the following before any task work:
 
 1. Read [`core/protocols/bd-and-memory.md`](../core/protocols/bd-and-memory.md) for the shared protocols: code quality (Assumptions, Simplicity, Reuse-First, Surgical Changes), constraints, bd workflow, memory taxonomy, verification (goal-driven execution), and the completion checklist.
-2. Read [`references/index.md`](../references/index.md) to discover available reference docs — agents check the index **before** broad searches so existing knowledge is reused, not re-derived.
-3. **Knowledge search** — run [`core/hooks/generic/knowledge-search.sh`](../core/hooks/generic/knowledge-search.sh) `<task keywords>` to find prior art across bd memories, learnings files, and domain docs.
-4. Read [`references/clusters.md`](../references/clusters.md) (or your repo's equivalent) before any cluster-scoped decision.
+2. Read [`agent-knowledge/references/index.md`](../agent-knowledge/references/index.md) to discover available reference docs — agents check the index **before** broad searches so existing knowledge is reused, not re-derived.
+3. **Knowledge search** — run [`agent-knowledge/scripts/knowledge-search.sh`](../agent-knowledge/scripts/knowledge-search.sh) `<task keywords>` to find prior art across bd memories, learnings files, and domain docs.
+4. Read [`agent-knowledge/references/clusters.md`](../agent-knowledge/references/clusters.md) (or your repo's equivalent) before any cluster-scoped decision.
 5. If `graphify-out/graph.json` exists in the repo, load it for architecture and dependency questions.
-6. **Drift check** (orchestrator only, at session start/resume) — run [`core/hooks/generic/drift-check.sh`](../core/hooks/generic/drift-check.sh). Surface warnings to the user before starting work. Do not auto-fix without approval.
+6. **Drift check** (orchestrator only, at session start/resume) — run [`agent-knowledge/scripts/drift-check.sh`](../agent-knowledge/scripts/drift-check.sh). Surface warnings to the user before starting work. Do not auto-fix without approval.
 
 For the wider operating model (the seven pillars), see [`core/protocols/harness-pillars.md`](../core/protocols/harness-pillars.md). For the compaction lifecycle, see [`LIFECYCLE.md`](../LIFECYCLE.md).
 
@@ -26,7 +26,7 @@ For the wider operating model (the seven pillars), see [`core/protocols/harness-
 - Prefer specialist sub-agents for specialist work.
 - Query `graphify-out/graph.json` before broad repo exploration when it exists.
 - Use `bd` for task state, comments, dependencies, and durable memory.
-- Check `references/index.md` before broad searches so existing knowledge is reused.
+- Check `agent-knowledge/references/index.md` before broad searches so existing knowledge is reused.
 - Use `rtk` for simple read-only verbose commands; do not wrap mutating, piped, chained, interactive, or exact-output-sensitive commands.
 - Keep changes surgical and verifiable.
 - Never expose secrets, internal identifiers, cluster names, account IDs, customer names, or private URLs.
@@ -73,6 +73,16 @@ bd close <id> --reason "<reason>"
 ```
 
 Avoid commands that open an editor (e.g. `bd edit`).
+
+## Learning capture (enforced)
+
+Persist the moment you hit something non-obvious — a gotcha, a non-obvious fix, or a decision and its rationale. Batching to task end loses them.
+
+- **Fastest path:** `agent-knowledge/scripts/learn.sh "<insight>" <domain>/<category>/<topic>` (a low-friction `bd remember` wrapper). `bd remember` directly also works.
+- **Reusable engineering knowledge** belongs in `agent-knowledge/references/learnings-*.md`; **operational/uncertain** state in `bd`; **runtime-only config trivia** in runtime-native memory. See "Memory routing" in [`core/protocols/bd-and-memory.md`](../core/protocols/bd-and-memory.md). Never write the same fact to two stores.
+- **Machine-enforced** via [`core/hooks/generic/learning-gate.py`](../core/hooks/generic/learning-gate.py): a hard gate for sub-agents (blocks stop once if substantive work persisted nothing) and a soft nudge for the main session.
+- **Cite, don't re-explain.** Reference existing entries as `[learnings-<file>.md#<N>]`; citations logged to `agent-knowledge/metrics/learning-usage.json` drive consolidation pruning, so citing beats restating.
+- **Kill switch:** `LEARN_GATE_DISABLE=1` disables gating and nudging.
 
 ## Graphify-first workflow
 
