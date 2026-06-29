@@ -44,7 +44,10 @@ METRICS_DIR = os.environ.get(
 )
 CIT_LOG = os.path.join(METRICS_DIR, "learning-citations.jsonl")
 USAGE_JSON = os.path.join(METRICS_DIR, "learning-usage.json")
+READS_JSON = os.path.join(METRICS_DIR, "learning-reads.json")
+READS_LOG = os.path.join(METRICS_DIR, "learning-reads.jsonl")
 CIT_RE = re.compile(r"learnings-[\w.\-]+\.md#\d+")
+LEARN_FILE_RE = re.compile(r"learnings-[\w.\-]+\.md")
 TMP = "/tmp"
 
 
@@ -56,9 +59,10 @@ def _envint(name, default):
 
 
 def parse_transcript(path):
-    """Single pass: tally tool use, mutations, persistence, and citations."""
+    """Single pass: tally tool use, mutations, persistence, citations, and reads."""
     tool_uses = mutations = commits_prs = bd_remembers = learnings_writes = 0
     citations = []
+    learnings_reads = []  # files read (for read-frequency tracking)
     try:
         with open(path) as f:
             lines = f.readlines()
@@ -84,7 +88,12 @@ def parse_transcript(path):
                 tool_uses += 1
                 name = b.get("name", "")
                 inp = b.get("input", {}) if isinstance(b.get("input"), dict) else {}
-                if name in ("Edit", "Write", "NotebookEdit", "MultiEdit", "Create"):
+                if name == "Read":
+                    fp = str(inp.get("file_path", ""))
+                    m = LEARN_FILE_RE.search(fp)
+                    if m:
+                        learnings_reads.append(m.group(0))
+                elif name in ("Edit", "Write", "NotebookEdit", "MultiEdit", "Create"):
                     mutations += 1
                     fp = str(inp.get("file_path", ""))
                     # Any recognized knowledge store counts as persistence:
@@ -103,7 +112,7 @@ def parse_transcript(path):
     return {
         "tool_uses": tool_uses, "mutations": mutations, "commits_prs": commits_prs,
         "bd_remembers": bd_remembers, "learnings_writes": learnings_writes,
-        "citations": citations,
+        "citations": citations, "learnings_reads": learnings_reads,
     }
 
 
@@ -142,6 +151,45 @@ def log_new_citations(path, citations, source):
             json.dump(usage, f, indent=2, sort_keys=True)
         with open(marker, "w") as f:
             json.dump({"n": len(citations)}, f)
+    except OSError:
+        pass
+
+
+def log_learnings_reads(path, reads, source):
+    """Log per-file read counts for read-frequency tracking (primary usage signal)."""
+    if os.environ.get("LEARN_METRICS_DISABLE") == "1" or not reads:
+        return
+    h = hashlib.sha1(path.encode()).hexdigest()[:12]
+    marker = os.path.join(TMP, f"learn-reads-{h}.json")
+    already = 0
+    try:
+        with open(marker) as f:
+            already = int(json.load(f).get("n", 0))
+    except (OSError, json.JSONDecodeError, ValueError):
+        pass
+    new = reads[already:]
+    if not new:
+        return
+    try:
+        os.makedirs(METRICS_DIR, exist_ok=True)
+        with open(READS_LOG, "a") as f:
+            for r in new:
+                f.write(json.dumps({"file": r, "source": source,
+                                    "transcript": os.path.basename(path)}) + "\n")
+        usage = {}
+        try:
+            with open(READS_JSON) as f:
+                usage = json.load(f)
+        except (OSError, json.JSONDecodeError):
+            usage = {}
+        if not isinstance(usage, dict):
+            usage = {}
+        for r in new:
+            usage[r] = int(usage.get(r, 0)) + 1
+        with open(READS_JSON, "w") as f:
+            json.dump(usage, f, indent=2, sort_keys=True)
+        with open(marker, "w") as f:
+            json.dump({"n": len(reads)}, f)
     except OSError:
         pass
 
@@ -219,9 +267,11 @@ def main():
     event = data.get("hook_event_name", "")
     if event == "SubagentStop":
         log_new_citations(path, stats["citations"], "subagent")
+        log_learnings_reads(path, stats["learnings_reads"], "subagent")
         handle_subagent_stop(data, stats)
     elif event == "UserPromptSubmit":
         log_new_citations(path, stats["citations"], "main")
+        log_learnings_reads(path, stats["learnings_reads"], "main")
         handle_main_prompt(data, path, stats)
     sys.exit(0)
 
