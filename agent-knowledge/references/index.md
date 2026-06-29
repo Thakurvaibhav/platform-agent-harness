@@ -24,7 +24,10 @@ Master catalog for the harness. Agents check this file **before** broad searches
 | [`agent-knowledge/scripts/knowledge-search.sh`](../scripts/knowledge-search.sh) | Search bd memories + learnings + domain docs with OR-matching across query terms |
 | [`agent-knowledge/scripts/drift-check.sh`](../scripts/drift-check.sh) | Harness health: graph freshness, learnings staleness, memory bloat, consolidation overdue |
 | [`agent-knowledge/scripts/learn.sh`](../scripts/learn.sh) | One-liner `bd remember` wrapper; finds the `.beads`-owning dir from CWD |
-| [`agent-knowledge/metrics/README.md`](../metrics/README.md) | Citation heatmap explainer: per-entry usage counts + append-only citation log |
+| [`agent-knowledge/scripts/codex-dispatch.sh`](../scripts/codex-dispatch.sh) | Cross-runtime subagent parity: wraps `codex exec` with specialist role + hive preamble |
+| [`agent-knowledge/scripts/codex-session-prime.sh`](../scripts/codex-session-prime.sh) | Codex SessionStart hook: warms bd hive, emits valid JSON hook output |
+| [`agent-knowledge/scripts/auto-consolidate.sh`](../scripts/auto-consolidate.sh) | Scheduled, threshold-guarded knowledge consolidation (launchd/cron runner) |
+| [`agent-knowledge/metrics/README.md`](../metrics/README.md) | Usage metrics explainer: per-file read counts + append-only citation log |
 
 ## Core protocols
 
@@ -62,6 +65,8 @@ Master catalog for the harness. Agents check this file **before** broad searches
 | [`skills/k8s-debug/SKILL.md`](../../skills/k8s-debug/SKILL.md) | Read-only Kubernetes debugging |
 | [`skills/graphify/SKILL.md`](../../skills/graphify/SKILL.md) | Graphify build/query workflow |
 | [`skills/contract-validation/SKILL.md`](../../skills/contract-validation/SKILL.md) | Contract-driven validation workflow |
+| [`skills/upstream-triage/SKILL.md`](../../skills/upstream-triage/SKILL.md) | Third-party limitation triage: search, assess, draft redacted upstream issue (R3 reflex) |
+| [`skills/stakeholder-comms/SKILL.md`](../../skills/stakeholder-comms/SKILL.md) | Diplomatic team-facing messages about decisions/tradeoffs (R4 reflex) |
 | (external) | The 18-skill Grafana bundle installed via `gcx skills install --all` → `~/.agents/skills/` |
 
 ## Domain packs
@@ -80,11 +85,12 @@ Master catalog for the harness. Agents check this file **before** broad searches
 | [`agent-knowledge/references/learnings-argocd.md`](learnings-argocd.md) | ArgoCD sync behavior, ignoreDifferences, sync-waves, values key naming | argocd, sync, ignoreDifferences, sync-wave, values key, CRD, Application | `learnings-helm-ci.md`, `learnings-progressive-delivery.md` |
 | [`agent-knowledge/references/learnings-observability.md`](learnings-observability.md) | PromQL, alerting, ServiceMonitor, Grafana dashboards | prometheus, promql, alerting, grafana, dashboard, ServiceMonitor, metrics | — |
 | [`agent-knowledge/references/learnings-rollout.md`](learnings-rollout.md) | Rollout strategy, staged migrations, batch campaign hygiene | rollout, migration, batch, campaign, phased, staged, gap-fill, validation | — |
-| [`agent-knowledge/references/learnings-progressive-delivery.md`](learnings-progressive-delivery.md) | Argo Rollouts + Gateway API plugin patterns, ArgoCD ignoreDifferences for Rollout-managed resources | argo rollouts, canary, progressive, Gateway API, httpRoute, header routing, workloadRef | `learnings-argocd.md`, `learnings-helm-ci.md` |
+| [`agent-knowledge/references/learnings-progressive-delivery.md`](learnings-progressive-delivery.md) | Argo Rollouts + Gateway API plugin patterns, ArgoCD ignoreDifferences, header canary, route-split, Envoy Gateway, Flagger alternatives | argo rollouts, canary, progressive, Gateway API, httpRoute, header routing, workloadRef, setHeaderRoute, managedRoutes, Envoy Gateway, route-split, jq, ignoreDifferences, Flagger | `learnings-argocd.md`, `learnings-helm-ci.md`, `learnings-code-review.md` |
 | [`agent-knowledge/references/learnings-operators.md`](learnings-operators.md) | Operators, CRDs, policy-engine patterns (guard/mutation/audit), admission-controller cache gotchas | kyverno, tetragon, CRD, operator, policy, mutating, validating, reconciliation | `learnings-argocd.md` |
 | [`agent-knowledge/references/learnings-k8s-sa.md`](learnings-k8s-sa.md) | ServiceAccount separation, Workload Identity (GKE WI / EKS IRSA), image-pull secrets, batch SA rollout | ServiceAccount, SA, Workload Identity, imagePullSecrets, GKE, EKS, IAM | — |
-| [`agent-knowledge/references/learnings-agent-workflow.md`](learnings-agent-workflow.md) | Sub-agent dispatch pitfalls, parallel work, knowledge capture | dispatch, subagent, timeout, prompt, delegation, parallel | — |
-| [`agent-knowledge/references/learnings-code-review.md`](learnings-code-review.md) | PR review patterns, bot interactions, CI feedback handling | review, PR, CodeRabbit, Cursor Bugbot, CI feedback, bot, false positive | — |
+| [`agent-knowledge/references/learnings-agent-workflow.md`](learnings-agent-workflow.md) | Sub-agent dispatch pitfalls, parallel work, knowledge capture, cross-harness, debugging | dispatch, subagent, timeout, prompt, delegation, parallel, codex, cross-harness, bd, regression, fan-out, MCP | `learnings-code-review.md`, `learnings-rollout.md`, `learnings-confluence.md` |
+| [`agent-knowledge/references/learnings-confluence.md`](learnings-confluence.md) | Confluence page surgical-edit mechanics, MCP tool availability, collision-safe anchoring | confluence, atlassian, MCP, page edit, surgical edit, storage format, difflib | `learnings-code-review.md`, `learnings-agent-workflow.md` |
+| [`agent-knowledge/references/learnings-code-review.md`](learnings-code-review.md) | PR review patterns, bot interactions, CI feedback handling | review, PR, CodeRabbit, Cursor Bugbot, CI feedback, bot, false positive | `learnings-agent-workflow.md`, `learnings-confluence.md` |
 
 ## Documentation folder convention
 
@@ -153,6 +159,8 @@ When creating domain documentation outside this repo, use these standard subfold
 | [`templates/validation-report.template.json`](../../templates/validation-report.template.json) | Machine-readable validation report |
 | [`templates/redaction-denylist.template.txt`](../../templates/redaction-denylist.template.txt) | Local denylist seed |
 | [`templates/commands/consolidate.md`](../../templates/commands/consolidate.md) | Knowledge consolidation command template |
+| [`templates/agents-core.template.md`](../../templates/agents-core.template.md) | Shared agent core: runtime-neutral identity, memory, search, capture (deploy to `~/.agent-knowledge/references/`) |
+| [`templates/codex-overlay.template.md`](../../templates/codex-overlay.template.md) | Codex CLI overlay: sandbox, manual rtk, `codex exec` fan-out, hooks.json wiring |
 | [`examples/README.md`](../../examples/README.md) | Worked example catalog |
 | [`examples/helm-chart-upgrade.md`](../../examples/helm-chart-upgrade.md) | End-to-end Helm chart upgrade flow exercising 6 sub-agents |
 | [`examples/alert-investigation.md`](../../examples/alert-investigation.md) | Alert RCA via the gcx bundled skills |

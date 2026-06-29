@@ -145,6 +145,18 @@ Domain-specific checks:
 - Alerts: PromQL syntactically valid; metric names exist in the target datasource.
 - Enablement: pods Ready, zero restarts, operator logs clean (see Post-Deploy Validation Protocol below).
 
+### Standing engineering reflexes
+
+Apply on context, no prompt needed. These fire alongside any verification work.
+
+**R1 - Offline proof before "done" (and before live testing).** For any change whose effect can be rendered or simulated, reproduce the NEW behavior offline and diff against current BEFORE claiming it works: `helm template` / `egctl x translate` / admission dry-run / `kubectl --dry-run`. Cite the artifact (the diff, the rendered output). Live testing is confirmation, not first evidence. Include a negative control where feasible (mutate one input; the check must catch it). Skip only for trivial edits where behavior isn't in question.
+
+**R2 - Read the source for third-party behavior.** Any claim about how a third-party tool (plugin, controller, operator, library) behaves at runtime must be backed by its SOURCE at the version you run — read it and cite `file:line`. Docs and issues are secondary and often stale. Skip only when the behavior isn't in question.
+
+**R3 - Upstream triage.** On a confirmed third-party limitation/bug, search its issues/PRs, judge whether it's tracked + the project's health, and if untracked-and-costly, draft a generic (no internal names) upstream issue. DRAFT and CONFIRM before filing — never auto-file.
+
+**R4 - Stakeholder-aware comms.** For any team-facing message about a decision/tradeoff/change: acknowledge prior sign-offs, present options neutrally (value before cost), position yourself as ready-either-way (not blocking), make complexity concrete but blame-free, redact internal info from external-facing, link external docs.
+
 ## Git worktree protocol
 
 Never work in the main checkout. Always use a git worktree.
