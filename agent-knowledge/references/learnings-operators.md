@@ -1,5 +1,7 @@
 # Operators, CRDs & Policy Engine Learnings
 
+See also: `learnings-argocd.md`, `learnings-network-policy.md`
+
 Numbered, append-only. **Update the existing entry — never duplicate.**
 
 ## Operators & CRDs

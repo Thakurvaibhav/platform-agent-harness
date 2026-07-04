@@ -2,6 +2,8 @@
 
 Patterns, gotchas, and best practices for PR review workflows.
 
+See also: `learnings-progressive-delivery.md`, `learnings-agent-workflow.md`, `learnings-confluence.md`
+
 ## Entries
 
 1. **Known review bots post asynchronously.** Wait for bot reviews (CodeRabbit, Cursor Bugbot) before starting your own pass — they may take several minutes. Poll with a timeout rather than blocking indefinitely.

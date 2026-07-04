@@ -225,6 +225,29 @@ Notes:
 - `permissions.deny` is the full mutating-command denylist; keep it in sync with [`installation/command-denylist.md`](../../installation/command-denylist.md).
 - `permissions.allow` is a short example. Adopters tailor it to the read-only commands and MCP write tools their workflows require — the two `mcp__<server>__<writeTool>` entries are placeholders for whichever MCP write tools you pre-approve.
 
+## Cross-runtime dispatch (Claude to Codex)
+
+Claude can dispatch Codex workers for adversarial review or parallel research using [`agent-knowledge/scripts/codex-dispatch.sh`](../../agent-knowledge/scripts/codex-dispatch.sh):
+
+```bash
+# Background dispatch with stdin closed (REQUIRED or it hangs)
+~/.agent-knowledge/scripts/codex-dispatch.sh general-engineer "<task>" <dir> > /tmp/out.log 2>&1 < /dev/null &
+
+# Wait and read results
+wait && cat /tmp/out.log
+```
+
+Use cases:
+- **Adversarial cross-model review** before human handoff (the `adopt-eval` skill requires this)
+- **Parallel research** when the task benefits from a different model's perspective
+- **Farm-out doc generation** with a tight brief pointing at a decisions single-source-of-truth
+
+Key rules:
+- Always close stdin (`< /dev/null`) -- `codex exec` hangs without it
+- Tell the worker NOT to `bd remember` when the doc itself IS the artifact
+- Keep relationship-sensitive replies (Slack, comments) in the main session, never farmed out
+- The dispatch script handles role loading and hive preamble automatically
+
 ## Verify
 
 ```bash
