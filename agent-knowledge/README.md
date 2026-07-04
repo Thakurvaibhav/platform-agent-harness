@@ -2,7 +2,7 @@
 
 The harness-neutral **source of truth** for everything agents read before they
 grep a repo: protocols, topic learnings, tool guides, the knowledge-home
-scripts, and the citation heatmap. It is shared by **all** runtimes (Factory
+scripts, and usage telemetry. It is shared by **all** runtimes (Factory
 Droid, Claude Code, and any CLI agent that can read files and run shell).
 
 **Edit canonical files here — never duplicate them into a runtime-specific dir.**
@@ -13,8 +13,8 @@ A runtime points *at* this home; it does not own a private copy.
 | Dir | Contents |
 | --- | --- |
 | [`references/`](references/) | Always-load protocols (the `index.md` catalog, `log.md` chronology) + topic learnings (`learnings-*.md`) + tool guides. The hand-curated [Karpathy LLM Wiki](https://gist.github.com/karpathy/442a6bf555914893e9891c11519de94f)-style knowledge base (see [`references/README.md`](references/README.md)). |
-| [`scripts/`](scripts/) | `knowledge-search.sh` (search bd memories + learnings + domain docs), `drift-check.sh` (staleness warnings), `learn.sh` (one-liner learning capture). All honor the `HARNESS_REFS` env var and default to this home's `references/`. |
-| [`metrics/`](metrics/) | Citation heatmap written by the learning-gate hook (`learning-usage.json` + `learning-citations.jsonl`). Drives usage-based consolidation pruning. See [`metrics/README.md`](metrics/README.md). |
+| [`scripts/`](scripts/) | `knowledge-search.sh` (search bd memories + learnings + domain docs), `drift-check.sh` (staleness warnings), `learn.sh` (one-liner learning capture), `codex-dispatch.sh` (cross-runtime sub-agent parity), `codex-session-prime.sh` (Codex SessionStart bd-prime hook), `auto-consolidate.sh` (scheduled consolidation runner). The knowledge scripts honor the `HARNESS_REFS` env var and default to this home's `references/`. |
+| [`metrics/`](metrics/) | Usage telemetry written by the learning-gate hook: per-file read counts (`learning-reads.json`/`.jsonl`, primary) + per-entry citation counts (`learning-usage.json`/`learning-citations.jsonl`). Drives consolidation ranking + gap-detection (never pruning). See [`metrics/README.md`](metrics/README.md). |
 
 ## How each runtime reaches it
 

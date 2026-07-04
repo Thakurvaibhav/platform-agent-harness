@@ -103,3 +103,33 @@ Numbered, append-only. **Update the existing entry — never duplicate.**
 39. **Pattern transfer eliminates design iteration on subsequent implementations.** First implementation: 4 design pivots, 4 review rounds, ~3h. Second implementation (same pattern): 0 pivots, 2 mechanical fixes, ~1.5h. Key: encode mistakes within the same session they occur.
 
 40. **PR reviewer as quality gate pattern.** Dispatch a review sub-agent on every chart PR (~2 min cost). Fresh model perspective finds patterns the authoring agent missed. Always dispatch in parallel with description updates to save wall-clock time.
+
+## Docs, reporting, and knowledge-base craft
+
+41. **Chart generation on a stock Mac: system python3 has no matplotlib -- use ephemeral uv**: `uv run --with matplotlib python script.py` (resolves in ms, no venv). For executive/summary charts: matplotlib Agg backend, horizontal `barh` + log xscale when one value dwarfs others, value labels on bars, hide top/right spines.
+
+42. **md to PDF with no pandoc/weasyprint (mac): render via headless Chrome**: (1) convert md to HTML with print CSS (`@page` size A4 margin; img max-width 100% + page-break-inside avoid). Write the .html INTO the same dir as the md so relative image paths resolve. (2) `Google Chrome --headless=new --no-pdf-header-footer --print-to-pdf=out.pdf file:///abs/path.html`.
+
+43. **Learnings-KB cross-ref consistency method: ONE adjacency matrix, verified by edge-symmetry script.** Build a single matrix of genuine file-to-file neighbors, apply it identically to (a) each file's `See also:` header and (b) the index.md Cross-refs column, verify with a script asserting symmetry (A in B's refs iff B in A's). GOTCHA: regex `[a-z-]+` silently drops filenames containing digits (e.g. `learnings-k8s-sa.md`) -- use `[a-z0-9-]+`.
+
+44. **KB dedup is mainly merging cross-file duplicate claims, not rewriting.** Pick ONE canonical home (the topical owner) and leave one-line pointers in other files retaining their unique specifics. Preserve all citations: superset-check by extracting every PR#/metric/file:line token before and after the merge.
+
+45. **Codex farm-out pattern for research/doc-gen.** Write a tight brief to a temp file, run `codex exec --skip-git-repo-check --cd <dir> "$(cat promptfile)" < /dev/null` in the background; point it at a decisions single-source-of-truth so it doesn't re-derive settled decisions. Tell it NOT to `bd remember` -- the doc IS the artifact. Keep relationship-sensitive comment/Slack replies in the main session, never farmed out.
+
+## Decision and proposal craft
+
+46. **Separate CAPABILITY from MECHANISM, isolate the ONE concrete driver before scoping.** Adoption debates collapse when reframed from "use tool X" (mechanism) to "we need capability Y." Scope to the hard requirement before evaluating tools -- a whole-fleet takeover may be disproportionate to one service's need.
+
+47. **Decision-doc tone: due-diligence-then-conclude, not advocacy.** "We explored it, it's overkill" reads better than "I don't want this." Run adversarial cross-model review (different model) to catch over-claims. Credit reviewer corrections and concede fast.
+
+48. **Scale guardrail/security rigor to blast radius.** A greenfield dev-sandbox pilot needs "does the claim work, does retention work, does health reporting work" -- NOT permission-boundary design or threat models as go/no-go. Prod-grade hardening belongs on the path-to-prod, not in front of the pilot.
+
+49. **For config-state claims, the LIVE cluster is authoritative; git/declared state is a hint.** A generic upstream claim was recorded as a fleet risk and took THREE passes to correct because only the live cluster `kubectl get` revealed a custom config making the risk a non-issue. Tag unverified claims `UNVERIFIED`.
+
+50. **Don't let evidence for an EASY maturity layer launder as proof for a HARD layer.** "X+Y coexist" may be true at a shallow layer while saying nothing about your deeper combo (e.g. primary-CNI takeover + triple eBPF). Tag claims by maturity layer; absence of prior art for your exact combo is itself a finding.
+
+51. **After heavy iterative pruning of a framework, run a consistency-grep pass.** Prune-heavy editing leaves scars: stale section names referencing demoted features, half-demoted rules restated in two places, and "thin wrapper" orchestrators that have re-accumulated methodology they were supposed to only point to.
+
+## Self-tooling gotchas
+
+52. **Unattended recurring jobs on macOS: launchd LaunchAgent, NOT CronCreate.** CronCreate jobs are session-bound (fire only while a REPL is open+idle) and auto-expire after ~7 days. launchd survives reboots. Threshold-guard the script and support a DRYRUN mode. GOTCHA: the safety classifier blocks the agent from installing a LaunchAgent that spawns an autonomous permission-bypass loop -- the user must install the plist.

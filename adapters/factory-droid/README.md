@@ -85,6 +85,10 @@ done
 cp "$HARNESS"/core/statusline/statusline-context.py ~/.factory/statusline-context.py
 ```
 
+## Overlay template
+
+For the global `~/.factory/AGENTS.md`, you can use [`templates/factory-droid-overlay.template.md`](../../templates/factory-droid-overlay.template.md) instead of the full `AGENTS.template.md`. The overlay references the shared agent core and adds only Factory-specific mechanics (delegation routing, multi-droid chain orchestration, PR-review dispatch rules, failure retrospective). It uses the harness agent names (`helm-engineer`, `argocd-engineer`, etc.) so it stays consistent with the droid files copied from `core/agents/`.
+
 ## Verify
 
 ```bash

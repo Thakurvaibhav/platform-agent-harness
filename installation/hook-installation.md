@@ -27,7 +27,7 @@ Do not commit runtime settings containing credentials or local paths.
 - **`SubagentStop`** — hard gate: blocks a sub-agent's stop **once** if it did substantive work (file edits, commits/PRs, or `tool_uses >= LEARN_TOOLUSE_MIN`) but persisted nothing (`bd remember` / `learn.sh` / a `learnings-*.md` or native-memory edit).
 - **`UserPromptSubmit`** — soft, debounced nudge for the long-lived main session when work outpaces persistence by `LEARN_MAIN_GAP`.
 
-Both paths log `[learnings-<file>.md#<N>]` citations to the heatmap under `${HARNESS_METRICS:-~/.agent-knowledge/metrics}` (`learning-citations.jsonl` + `learning-usage.json`), which usage-based consolidation prunes against. Env switches: `LEARN_GATE_DISABLE`, `LEARN_METRICS_DISABLE`, `LEARN_TOOLUSE_MIN` (default 8), `LEARN_MAIN_GAP` (default 2), `HARNESS_METRICS`. Map the two event names to your runtime's equivalents; the transcript parser targets Claude-Code-style JSONL and may need a small per-runtime tweak (see the hook's file header).
+Both paths record usage telemetry under `${HARNESS_METRICS:-~/.agent-knowledge/metrics}`: per-file read counts (`learning-reads.json`/`.jsonl`, the primary signal) and per-entry `[learnings-<file>.md#<N>]` citation counts (`learning-usage.json`/`learning-citations.jsonl`). Consolidation uses these for ranking and gap-detection only — never for pruning. Env switches: `LEARN_GATE_DISABLE`, `LEARN_METRICS_DISABLE`, `LEARN_TOOLUSE_MIN` (default 8), `LEARN_MAIN_GAP` (default 2), `HARNESS_METRICS`. Map the two event names to your runtime's equivalents; the transcript parser targets Claude-Code-style JSONL and may need a small per-runtime tweak (see the hook's file header).
 
 ## Adoption checklist
 

@@ -1,5 +1,7 @@
 # Helm, YAML & CI Learnings
 
+See also: `learnings-argocd.md`, `learnings-progressive-delivery.md`
+
 Numbered, append-only. **Update the existing entry — never duplicate.**
 
 ## YAML formatting
