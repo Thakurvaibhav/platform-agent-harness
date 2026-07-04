@@ -15,13 +15,18 @@ runtime's equivalents — see core/hooks/README.md):
                         one-line reminder (never blocks). Main-session citations
                         are also logged here.
 
-Both paths log NEW `[learnings-<file>.md#<N>]` citations and bump per-entry
-counts under ${HARNESS_METRICS:-~/.agent-knowledge/metrics} so consolidation can
-prune by actual usage.
+Both paths record two usage signals under ${HARNESS_METRICS:-~/.agent-knowledge/metrics}:
+  * READ frequency (primary) -- per-file counts in learning-reads.json whenever a
+    learnings-*.md file is Read. Reads are the truer usage proxy.
+  * CITATIONS (secondary) -- per-entry `[learnings-<file>.md#<N>]` counts in
+    learning-usage.json when an agent cites an entry.
+Consolidation uses these ONLY for ranking and gap-detection -- NEVER to prune or
+archive learnings (recall >> precision; a rarely-read entry may hold a critical
+once-a-year gotcha). See templates/commands/consolidate.md.
 
 Config (env):
   LEARN_GATE_DISABLE=1     -> no gating/nudging (logging still runs)
-  LEARN_METRICS_DISABLE=1  -> no citation logging
+  LEARN_METRICS_DISABLE=1  -> no citation/read logging
   LEARN_TOOLUSE_MIN  (default 8)  -> tool-use count that counts as "substantive"
   LEARN_MAIN_GAP     (default 2)  -> work-minus-persist gap that triggers the soft nudge
   HARNESS_METRICS                 -> metrics dir (default ~/.agent-knowledge/metrics)

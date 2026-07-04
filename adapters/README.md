@@ -7,7 +7,7 @@ Each adapter explains how to wire the portable harness into a specific CLI agent
 | Runtime | Primary instruction file | Agents/subagents | Skills/commands | Hooks |
 | --- | --- | --- | --- | --- |
 | Claude Code | `CLAUDE.md` or `AGENTS.md` | `.claude/agents/` | `.claude/skills/`, `.claude/commands/`, `~/.agents/skills/` | `.claude/hooks/` |
-| Codex CLI | `AGENTS.md` (root + nested), `~/.codex/AGENTS.md` | n/a (prompt-routed) | `~/.agents/skills/` (`.agents` convention) | n/a |
+| Codex CLI | `AGENTS.md` (root + nested), `~/.codex/AGENTS.md` | n/a native (dispatch via `codex-dispatch.sh`) | `~/.agents/skills/` (`.agents` convention) | `~/.codex/hooks.json` |
 | Aider | `CONVENTIONS.md` via `.aider.conf.yml` `read:` | n/a | n/a | n/a |
 | Goose | `.goosehints` or `AGENTS.md` | n/a | `goose recipes` | n/a |
 | OpenCode | `AGENTS.md` (root), `~/.config/opencode/AGENTS.md` | `.opencode/agent/` | `.opencode/command/`, `~/.agents/skills/` | n/a |

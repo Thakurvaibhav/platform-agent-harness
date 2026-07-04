@@ -67,6 +67,9 @@ Master catalog for the harness. Agents check this file **before** broad searches
 | [`skills/contract-validation/SKILL.md`](../../skills/contract-validation/SKILL.md) | Contract-driven validation workflow |
 | [`skills/upstream-triage/SKILL.md`](../../skills/upstream-triage/SKILL.md) | Third-party limitation triage: search, assess, draft redacted upstream issue (R3 reflex) |
 | [`skills/stakeholder-comms/SKILL.md`](../../skills/stakeholder-comms/SKILL.md) | Diplomatic team-facing messages about decisions/tradeoffs (R4 reflex) |
+| [`skills/stop-slop-code/SKILL.md`](../../skills/stop-slop-code/SKILL.md) | Structural code quality gate: placeholders, god functions, duplication, identity transforms |
+| [`skills/systematic-debugging/SKILL.md`](../../skills/systematic-debugging/SKILL.md) | 4-phase root cause protocol: evidence, hypotheses (3), isolated test, defense-in-depth fix |
+| [`skills/adopt-eval/SKILL.md`](../../skills/adopt-eval/SKILL.md) | Interactive tech adoption evaluation: 3-gate evidence engine, verdict-constrained archetypes, cross-model review |
 | (external) | The 18-skill Grafana bundle installed via `gcx skills install --all` → `~/.agents/skills/` |
 
 ## Domain packs
@@ -81,16 +84,17 @@ Master catalog for the harness. Agents check this file **before** broad searches
 
 | Path | Domain | Keywords | Cross-refs |
 | --- | --- | --- | --- |
-| [`agent-knowledge/references/learnings-helm-ci.md`](learnings-helm-ci.md) | YAML formatting, Helm patterns, dependency handling, GitHub Actions, workflow pinning | helm, chart, values, yaml, yamlfmt, CI, GitHub Actions, workflow, dependency, lint | `learnings-argocd.md` |
-| [`agent-knowledge/references/learnings-argocd.md`](learnings-argocd.md) | ArgoCD sync behavior, ignoreDifferences, sync-waves, values key naming | argocd, sync, ignoreDifferences, sync-wave, values key, CRD, Application | `learnings-helm-ci.md`, `learnings-progressive-delivery.md` |
+| [`agent-knowledge/references/learnings-helm-ci.md`](learnings-helm-ci.md) | YAML formatting, Helm patterns, dependency handling, GitHub Actions, workflow pinning | helm, chart, values, yaml, yamlfmt, CI, GitHub Actions, workflow, dependency, lint | `learnings-argocd.md`, `learnings-progressive-delivery.md` |
+| [`agent-knowledge/references/learnings-argocd.md`](learnings-argocd.md) | ArgoCD sync behavior, ignoreDifferences, sync-waves, values key naming | argocd, sync, ignoreDifferences, sync-wave, values key, CRD, Application | `learnings-helm-ci.md`, `learnings-progressive-delivery.md`, `learnings-operators.md` |
 | [`agent-knowledge/references/learnings-observability.md`](learnings-observability.md) | PromQL, alerting, ServiceMonitor, Grafana dashboards | prometheus, promql, alerting, grafana, dashboard, ServiceMonitor, metrics | — |
-| [`agent-knowledge/references/learnings-rollout.md`](learnings-rollout.md) | Rollout strategy, staged migrations, batch campaign hygiene | rollout, migration, batch, campaign, phased, staged, gap-fill, validation | — |
+| [`agent-knowledge/references/learnings-rollout.md`](learnings-rollout.md) | Rollout strategy, staged migrations, batch campaign hygiene | rollout, migration, batch, campaign, phased, staged, gap-fill, validation | `learnings-agent-workflow.md` |
 | [`agent-knowledge/references/learnings-progressive-delivery.md`](learnings-progressive-delivery.md) | Argo Rollouts + Gateway API plugin patterns, ArgoCD ignoreDifferences, header canary, route-split, Envoy Gateway, Flagger alternatives | argo rollouts, canary, progressive, Gateway API, httpRoute, header routing, workloadRef, setHeaderRoute, managedRoutes, Envoy Gateway, route-split, jq, ignoreDifferences, Flagger | `learnings-argocd.md`, `learnings-helm-ci.md`, `learnings-code-review.md` |
-| [`agent-knowledge/references/learnings-operators.md`](learnings-operators.md) | Operators, CRDs, policy-engine patterns (guard/mutation/audit), admission-controller cache gotchas | kyverno, tetragon, CRD, operator, policy, mutating, validating, reconciliation | `learnings-argocd.md` |
+| [`agent-knowledge/references/learnings-operators.md`](learnings-operators.md) | Operators, CRDs, policy-engine patterns (guard/mutation/audit), admission-controller cache gotchas | kyverno, tetragon, CRD, operator, policy, mutating, validating, reconciliation | `learnings-argocd.md`, `learnings-network-policy.md` |
 | [`agent-knowledge/references/learnings-k8s-sa.md`](learnings-k8s-sa.md) | ServiceAccount separation, Workload Identity (GKE WI / EKS IRSA), image-pull secrets, batch SA rollout | ServiceAccount, SA, Workload Identity, imagePullSecrets, GKE, EKS, IAM | — |
 | [`agent-knowledge/references/learnings-agent-workflow.md`](learnings-agent-workflow.md) | Sub-agent dispatch pitfalls, parallel work, knowledge capture, cross-harness, debugging | dispatch, subagent, timeout, prompt, delegation, parallel, codex, cross-harness, bd, regression, fan-out, MCP | `learnings-code-review.md`, `learnings-rollout.md`, `learnings-confluence.md` |
 | [`agent-knowledge/references/learnings-confluence.md`](learnings-confluence.md) | Confluence page surgical-edit mechanics, MCP tool availability, collision-safe anchoring | confluence, atlassian, MCP, page edit, surgical edit, storage format, difflib | `learnings-code-review.md`, `learnings-agent-workflow.md` |
-| [`agent-knowledge/references/learnings-code-review.md`](learnings-code-review.md) | PR review patterns, bot interactions, CI feedback handling | review, PR, CodeRabbit, Cursor Bugbot, CI feedback, bot, false positive | `learnings-agent-workflow.md`, `learnings-confluence.md` |
+| [`agent-knowledge/references/learnings-code-review.md`](learnings-code-review.md) | PR review patterns, bot interactions, CI feedback handling | review, PR, CodeRabbit, Cursor Bugbot, CI feedback, bot, false positive | `learnings-progressive-delivery.md`, `learnings-agent-workflow.md`, `learnings-confluence.md` |
+| [`agent-knowledge/references/learnings-network-policy.md`](learnings-network-policy.md) | Fleet NetworkPolicy strategy, self-managed Cilium (GKE + EKS), Istio-ambient coexistence, FQDN egress | Cilium, NetworkPolicy, GKE, EKS, DPv2, FQDN, toFQDNs, l7Proxy, ambient, HBONE, audit mode, fail-open | `learnings-operators.md` |
 
 ## Documentation folder convention
 
@@ -124,7 +128,7 @@ When creating domain documentation outside this repo, use these standard subfold
 | [`core/hooks/generic/pre-task-check.sh`](../../core/hooks/generic/pre-task-check.sh) | Portable session-start hook |
 | [`core/hooks/generic/post-task-memory.sh`](../../core/hooks/generic/post-task-memory.sh) | Portable `bd remember` helper with sanitization guard |
 | [`core/hooks/generic/rtk-wrapper.sh`](../../core/hooks/generic/rtk-wrapper.sh) | Portable rtk command wrapper |
-| [`core/hooks/generic/learning-gate.py`](../../core/hooks/generic/learning-gate.py) | Learning-capture gate (sub-agent hard gate + main-session soft nudge); records the citation heatmap |
+| [`core/hooks/generic/learning-gate.py`](../../core/hooks/generic/learning-gate.py) | Learning-capture gate (sub-agent hard gate + main-session soft nudge); records usage telemetry (reads + citations) |
 | [`core/hooks/factory-droid/rtk-autoprefix.py`](../../core/hooks/factory-droid/rtk-autoprefix.py) | PreToolUse hook preserving `sudo`/`env=`/`time` prefixes |
 | [`core/hooks/factory-droid/pre-compact-bd-sync.py`](../../core/hooks/factory-droid/pre-compact-bd-sync.py) | PreCompact transcript parser → bd memory + per-task comments |
 | [`core/hooks/factory-droid/post-compact-prime-reminder.sh`](../../core/hooks/factory-droid/post-compact-prime-reminder.sh) | SessionStart `bd prime` |
@@ -161,6 +165,7 @@ When creating domain documentation outside this repo, use these standard subfold
 | [`templates/commands/consolidate.md`](../../templates/commands/consolidate.md) | Knowledge consolidation command template |
 | [`templates/agents-core.template.md`](../../templates/agents-core.template.md) | Shared agent core: runtime-neutral identity, memory, search, capture (deploy to `~/.agent-knowledge/references/`) |
 | [`templates/codex-overlay.template.md`](../../templates/codex-overlay.template.md) | Codex CLI overlay: sandbox, manual rtk, `codex exec` fan-out, hooks.json wiring |
+| [`templates/factory-droid-overlay.template.md`](../../templates/factory-droid-overlay.template.md) | Factory Droid overlay: delegation routing, multi-chain orchestration, PR review dispatch, failure retrospective |
 | [`examples/README.md`](../../examples/README.md) | Worked example catalog |
 | [`examples/helm-chart-upgrade.md`](../../examples/helm-chart-upgrade.md) | End-to-end Helm chart upgrade flow exercising 6 sub-agents |
 | [`examples/alert-investigation.md`](../../examples/alert-investigation.md) | Alert RCA via the gcx bundled skills |
@@ -170,3 +175,5 @@ When creating domain documentation outside this repo, use these standard subfold
 | Path | Purpose |
 | --- | --- |
 | [`sanitization/prepublish-checklist.md`](../../sanitization/prepublish-checklist.md) | Pre-publish gate: trufflehog + gitleaks + local denylist + format check |
+| [`sanitization/check-index.py`](../../sanitization/check-index.py) | Verifies every path referenced in this index.md exists |
+| [`sanitization/check-format.py`](../../sanitization/check-format.py) | Verifies no trailing whitespace / missing trailing newline across the repo |
