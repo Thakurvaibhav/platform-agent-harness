@@ -28,9 +28,11 @@ temp/
 # Graphify generated output from real repos
 graphify-out/
 
-# Runtime-generated citation heatmap (keep README + .gitkeep only)
+# Runtime-generated usage metrics (keep README + .gitkeep only)
 agent-knowledge/metrics/learning-usage.json
 agent-knowledge/metrics/learning-citations.jsonl
+agent-knowledge/metrics/learning-reads.json
+agent-knowledge/metrics/learning-reads.jsonl
 
 # Tool/vendor caches
 node_modules/

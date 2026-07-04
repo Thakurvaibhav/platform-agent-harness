@@ -1,5 +1,7 @@
 # ArgoCD Learnings
 
+See also: `learnings-helm-ci.md`, `learnings-progressive-delivery.md`, `learnings-operators.md`
+
 Numbered, append-only. **Update the existing entry — never duplicate.**
 
 ## Sync & ordering
