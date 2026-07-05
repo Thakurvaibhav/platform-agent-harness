@@ -28,6 +28,8 @@ Master catalog for the harness. Agents check this file **before** broad searches
 | [`agent-knowledge/scripts/codex-session-prime.sh`](../scripts/codex-session-prime.sh) | Codex SessionStart hook: warms bd hive, emits valid JSON hook output |
 | [`agent-knowledge/scripts/auto-consolidate.sh`](../scripts/auto-consolidate.sh) | Scheduled, threshold-guarded knowledge consolidation (launchd/cron runner) |
 | [`agent-knowledge/metrics/README.md`](../metrics/README.md) | Usage metrics explainer: per-file read counts + append-only citation log |
+| [`agent-knowledge/reading/index.md`](../reading/index.md) | Reading-notes corpus catalog: external-source distilled notes (separate trust tier from learnings) |
+| [`agent-knowledge/reading/_template.md`](../reading/_template.md) | Reading-note template: frontmatter + TL;DR + takeaways + "how this applies" + cross-links |
 
 ## Core protocols
 
@@ -70,6 +72,7 @@ Master catalog for the harness. Agents check this file **before** broad searches
 | [`skills/stop-slop-code/SKILL.md`](../../skills/stop-slop-code/SKILL.md) | Structural code quality gate: placeholders, god functions, duplication, identity transforms |
 | [`skills/systematic-debugging/SKILL.md`](../../skills/systematic-debugging/SKILL.md) | 4-phase root cause protocol: evidence, hypotheses (3), isolated test, defense-in-depth fix |
 | [`skills/adopt-eval/SKILL.md`](../../skills/adopt-eval/SKILL.md) | Interactive tech adoption evaluation: 3-gate evidence engine, verdict-constrained archetypes, cross-model review |
+| [`skills/ingest-reading/SKILL.md`](../../skills/ingest-reading/SKILL.md) | Ingest an external URL/file into the reading-notes corpus: fetch → distill → vet interactively → register (Karpathy LLM-wiki, separate trust tier) |
 | (external) | The 18-skill Grafana bundle installed via `gcx skills install --all` → `~/.agents/skills/` |
 
 ## Domain packs
