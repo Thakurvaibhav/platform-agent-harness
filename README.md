@@ -102,12 +102,12 @@ For a public companion repo using this exact operating model, see [`Thakurvaibha
 | --- | --- | --- |
 | Agent prompts | [`core/agents/`](core/agents/) | 7 specialist sub-agents (planner, researcher, helm, argocd, platform/observability, PR reviewer, general-engineer) with explicit "when to invoke / when NOT to invoke" boundaries |
 | Protocols | [`core/protocols/`](core/protocols/) | 8 canonical rules: harness-pillars, delegation, bd-and-memory, rtk-command-policy, graphify-first, pr-review-loop, parallel-dispatch, safety-and-handoff |
-| Skills | [`skills/`](skills/) | 11 portable executable playbooks (shiny-engineer, create-pr, helm-upgrade, k8s-debug, graphify, contract-validation, adopt-eval, upstream-triage, stakeholder-comms, stop-slop-code, systematic-debugging); observability skills live in `gcx skills install` |
+| Skills | [`skills/`](skills/) | 12 portable executable playbooks (shiny-engineer, create-pr, helm-upgrade, k8s-debug, graphify, contract-validation, adopt-eval, upstream-triage, stakeholder-comms, stop-slop-code, systematic-debugging, ingest-reading); observability skills live in `gcx skills install` |
 | Domain packs | [`domain-packs/`](domain-packs/) | Kubernetes safety, Helm essentials, observability-via-gcx — focused, not exhaustive |
 | Hooks | [`core/hooks/`](core/hooks/) | Transcript-parsing pre-compact memory snapshot, rtk autoprefix, context-threshold warning, learning-capture gate |
 | Tools | [`tools/`](tools/) | One-pagers for bd, Graphify, rtk, gcx with upstream install links |
 | Adapters | [`adapters/`](adapters/) | Concrete wiring for 6 CLI agent runtimes |
-| Agent knowledge | [`agent-knowledge/`](agent-knowledge/) | Shared, runtime-neutral knowledge home (see [`agent-knowledge/README.md`](agent-knowledge/README.md)): `references/` (hand-curated `index.md`, `log.md`, numbered `learnings-*.md` — Karpathy LLM Wiki pattern), `scripts/` (knowledge-search, drift-check, learn, codex-dispatch, codex-session-prime, auto-consolidate), `metrics/` (read-frequency + citation telemetry) |
+| Agent knowledge | [`agent-knowledge/`](agent-knowledge/) | Shared, runtime-neutral knowledge home (see [`agent-knowledge/README.md`](agent-knowledge/README.md)): `references/` (hand-curated `index.md`, `log.md`, numbered `learnings-*.md` — Karpathy LLM Wiki pattern), `scripts/` (knowledge-search, drift-check, learn, codex-dispatch, codex-session-prime, auto-consolidate), `metrics/` (read-frequency + citation telemetry), `reading/` (external-source distilled notes, separate trust tier) |
 | Templates | [`templates/`](templates/) | `AGENTS.template.md` to drop into your repo + dispatch / handoff / validation contracts |
 | Examples | [`examples/`](examples/) | 2 end-to-end worked stories: Helm chart upgrade and alert investigation |
 | Sanitization | [`sanitization/`](sanitization/) | Pre-publish gate using trufflehog + gitleaks + local denylist |
