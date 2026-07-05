@@ -15,6 +15,7 @@ A runtime points *at* this home; it does not own a private copy.
 | [`references/`](references/) | Always-load protocols (the `index.md` catalog, `log.md` chronology) + topic learnings (`learnings-*.md`) + tool guides. The hand-curated [Karpathy LLM Wiki](https://gist.github.com/karpathy/442a6bf555914893e9891c11519de94f)-style knowledge base (see [`references/README.md`](references/README.md)). |
 | [`scripts/`](scripts/) | `knowledge-search.sh` (search bd memories + learnings + domain docs), `drift-check.sh` (staleness warnings), `learn.sh` (one-liner learning capture), `codex-dispatch.sh` (cross-runtime sub-agent parity), `codex-session-prime.sh` (Codex SessionStart bd-prime hook), `auto-consolidate.sh` (scheduled consolidation runner). The knowledge scripts honor the `HARNESS_REFS` env var and default to this home's `references/`. |
 | [`metrics/`](metrics/) | Usage telemetry written by the learning-gate hook: per-file read counts (`learning-reads.json`/`.jsonl`, primary) + per-entry citation counts (`learning-usage.json`/`learning-citations.jsonl`). Drives consolidation ranking + gap-detection (never pruning). See [`metrics/README.md`](metrics/README.md). |
+| [`reading/`](reading/) | External-source reading notes (distilled, vetted articles/papers/talks) — a **separate trust tier** from `references/` (external, curated, not yet proven in your stack). Written by the `ingest-reading` skill; cataloged in [`reading/index.md`](reading/index.md). |
 
 ## How each runtime reaches it
 
@@ -44,7 +45,7 @@ for what.
 ## Deployment note
 
 This `agent-knowledge/` directory is the **template** for the deployed home. At
-install time you create a real home — e.g. `~/.agent-knowledge/{references,scripts,metrics}`
+install time you create a real home — e.g. `~/.agent-knowledge/{references,scripts,metrics,reading}`
 (any path works) — copy or seed these contents into it, and point every runtime
 at that path (Factory via symlinks, Claude via direct paths, generic via
 `HARNESS_REFS`). Runtime wiring lives in [`adapters/`](../adapters/) and
