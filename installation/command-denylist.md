@@ -71,6 +71,10 @@ The canonical translation of the **Always deny** mutating set into Claude Code's
 ]
 ```
 
+## Codex CLI `execpolicy`
+
+Codex enforces the same **Always deny** set at runtime via execpolicy `prefix_rule(..., decision="forbidden")` rules in `~/.codex/rules/*.rules` — and this holds **even under `sandbox_mode = "danger-full-access"`**. See [`adapters/codex-cli/README.md`](../adapters/codex-cli/README.md#command-denylist-execpolicy--enforce-the-deny-set-even-under-full-access) for the rule syntax, offline validation (`codex execpolicy check`), and the prefix-match limitations. Keep the forbidden set in sync with the **Always deny** table above.
+
 ## Conditional deny
 
 Allow only after explicit confirmation in the prompt:

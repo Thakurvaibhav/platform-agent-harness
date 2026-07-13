@@ -2,6 +2,8 @@
 
 Numbered, append-only. **Update the existing entry — never duplicate.**
 
+See also: `learnings-envoy-gateway.md`
+
 ## PromQL & rate intervals
 
 1. **Always verify metric names exist before writing alerts.** A typo silently produces a no-op alert that never fires. Verify with:

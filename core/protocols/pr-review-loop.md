@@ -26,6 +26,14 @@ The orchestrator (or the agent that opened the PR) decides whether to dispatch [
 - Worker-sub-agent PRs: dispatch when the original task was non-trivial.
 - Cross-cutting refactors: dispatch regardless of size.
 
+### Review depth tiers
+
+The reviewer self-triages (its Step 0.5), but name the tier you expect in the dispatch prompt so a mismatch surfaces. Effort scales with blast radius:
+
+- **sensitive** — RBAC, secrets, NetworkPolicy, admission/policy controllers, CRD/operator config, any production-cluster manifest, auth/ingress filter config. Gets **rendered proof + cross-model verify** of every blocking finding. Prefer a stronger reviewer model when the runtime supports it.
+- **standard** — everything else non-trivial; rendered proof required if it touches chart templates or values.
+- **trivial** — see *Never dispatch*.
+
 ## Dispatch prompt template
 
 ```markdown
@@ -33,7 +41,10 @@ Goal: Review and fix PR <url>
 Context: <one-line summary of the original task>
 Key files: <paths most relevant to the change>
 Constraints: <what to preserve / not touch>
-Protocol: Review diff, fix blocking issues, check CI, iterate at most 2 times, then hand off to human.
+Tier: <standard | sensitive>   # sensitive → expect rendered proof + cross-model verify
+Protocol: Triage tier, render proof at merge-base for chart/values PRs, review, cross-verify
+  blocking findings (sensitive tier), fix blocking issues, reply to AND resolve every bot thread,
+  check CI, iterate at most 2 times, then hand off to human.
 Verify by:
 - <check 1>: <pass/fail criterion>
 - <check 2>: <pass/fail criterion>
@@ -50,7 +61,7 @@ Public PR-comment bots (e.g. `cursor[bot]`, `coderabbitai[bot]`) post findings s
 1. Identify expected bots from the repo's review config.
 2. Wait up to a budgeted window (e.g. 10 minutes total, polling in parallel) for each bot to post a review, top-level comment, or inline comment.
 3. Read all bot findings into the review context before doing its own pass.
-4. Reply once per bot finding using the categories below, citing fix commits or specific technical evidence.
+4. Reply once per bot finding using the categories below, citing fix commits or specific technical evidence — then **resolve the thread** (bot resolve command, or the host's `resolveReviewThread` API) so the PR hands off with zero open bot threads. Only resolve a finding you actually addressed.
 
 | Category | When to use |
 | --- | --- |
@@ -80,6 +91,8 @@ Never silently ignore a bot finding. If you have nothing to say, choose `Disagre
 ```markdown
 ## PR Review Summary
 
+**Tier**: <trivial | standard | sensitive>
+
 ### What was reviewed
 - <areas>
 
@@ -87,7 +100,13 @@ Never silently ignore a bot finding. If you have nothing to say, choose `Disagre
 - <bot>: <posted N findings | timed out | not present>
 
 ### Direct replies posted to bots
-- <bot>: <fixed M | acknowledged K | disagreed L | out-of-scope J>
+- <bot>: <fixed M | acknowledged K | disagreed L | out-of-scope J> · threads resolved <R>/<total>
+
+### Rendered proof (chart/values PRs)
+- <chart @ env, merge-base→HEAD, N manifests changed, control empty | N/A>
+
+### Cross-model verify (sensitive tier)
+- <per blocking finding: confirmed / refuted / split | N/A>
 
 ### Blocking issues fixed
 - <issue> — fixed in <sha>

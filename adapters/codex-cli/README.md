@@ -71,6 +71,39 @@ writable_roots = ["<repo>/.beads"]
 
 Always smoke-test bd access after changing sandbox config: `codex exec "bd prime --memories-only"`.
 
+### Command denylist (execpolicy) — enforce the deny set even under full access
+
+`danger-full-access` removes the sandbox, so nothing stops a mutating command. Codex has a **separate** enforcement layer — execpolicy — that still applies. Use it to translate [`installation/command-denylist.md`](../../installation/command-denylist.md) into a runtime deny set that hard-blocks dangerous commands regardless of sandbox mode. This is how Codex gets the same **shared safety model** Claude Code has via `permissions.deny` — not just the shared bd hive.
+
+Codex auto-loads `~/.codex/rules/*.rules` at runtime. Add `decision="forbidden"` prefix rules:
+
+```python
+# ~/.codex/rules/default.rules  (auto-loaded; forbidden blocks even under danger-full-access)
+prefix_rule(pattern=["kubectl", "apply"],  decision="forbidden")
+prefix_rule(pattern=["kubectl", "delete"], decision="forbidden")
+prefix_rule(pattern=["kubectl", "patch"],  decision="forbidden")
+# … the rest of the kubectl mutating verbs (create/replace/edit/scale/rollout/set/
+#    annotate/label/taint/cordon/uncordon/drain) from installation/command-denylist.md
+prefix_rule(pattern=["helm", "upgrade"],   decision="forbidden")
+prefix_rule(pattern=["helm", "install"],   decision="forbidden")
+prefix_rule(pattern=["helm", "uninstall"], decision="forbidden")
+prefix_rule(pattern=["git", "push", "--force"],            decision="forbidden")
+prefix_rule(pattern=["git", "push", "--force-with-lease"], decision="forbidden")
+# Reads (kubectl get/describe/logs, helm template/lint) are not matched → allowed.
+```
+
+**Validate offline before installing** — no live command runs:
+
+```bash
+codex execpolicy check --rules ~/.codex/rules/default.rules kubectl apply -f x.yaml   # -> "forbidden"
+codex execpolicy check --rules ~/.codex/rules/default.rules kubectl get pods           # -> no match (allowed)
+```
+
+**Limitations (be honest about them):**
+- The keyword is `decision="forbidden"` — not `deny`/`reject` (those fail to parse).
+- `prefix_rule` matches the **literal argv prefix**, so wrapper forms (`sudo …`, `env X=Y …`, `bash -c "…"`, a read-only wrapper like `rtk …`) are **not** caught. Mirror any wrapper your harness uses idiomatically with its own `<wrapper> kubectl apply` rules; the rest rely on convention.
+- A trailing-arg target (e.g. deny push to `main` specifically) is **not** expressible as a prefix — rely on the remote's branch protection for that.
+
 ## Hooks
 
 Wire hooks via `~/.codex/hooks.json`:
