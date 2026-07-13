@@ -2,7 +2,7 @@
 
 Argo Rollouts + Gateway API plugin patterns, pitfalls, and ArgoCD integration. Numbered, append-only. **Update the existing entry — never duplicate.**
 
-See also: `learnings-argocd.md`, `learnings-helm-ci.md`, `learnings-code-review.md`
+See also: `learnings-argocd.md`, `learnings-helm-ci.md`, `learnings-code-review.md`, `learnings-envoy-gateway.md`
 
 ## Gateway API plugin (`argoproj-labs/gatewayAPI`)
 
