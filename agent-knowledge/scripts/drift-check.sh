@@ -2,10 +2,15 @@
 # drift-check.sh — Detect staleness in the knowledge harness
 #
 # Run at session start/resume. Outputs warnings for:
+#   FRESHNESS:
 #   1. Stale graphify graph (>7 days behind latest commit)
 #   2. Learnings files not updated despite recent activity
 #   3. bd memory bloat (>60 memories)
 #   4. Consolidation overdue (>7 days)
+#   CONSISTENCY (cross-reference integrity, not just age):
+#   5. Learnings file exists but is not indexed in index.md (discovery gap)
+#   6. index.md references a learnings file that does not exist (dangling)
+#   7. Asymmetric cross-ref: A's "See also:" lists B, but B does not list A back
 #
 # Environment:
 #   HARNESS_REFS        — path to the knowledge home's references/ dir
@@ -102,7 +107,10 @@ check_memory_count() {
 # --- 4. Consolidation overdue ---
 check_consolidation_freshness() {
     local last_consol
-    last_consol=$(bd memories consolidation 2>/dev/null | grep -oE "[0-9]{4}-[0-9]{2}-[0-9]{2}" | head -1 || echo "")
+    # Anchor to the canonical `meta/last-consolidation` memory — `bd memories consolidation`
+    # fuzzy-matches ANY memory containing "consolidation", so a bare date|head -1 grabs the
+    # first date from an unrelated memory. Pin to the key's content line.
+    last_consol=$(bd memories consolidation 2>/dev/null | grep -A1 "meta/last-consolidation" | grep -oE "[0-9]{4}-[0-9]{2}-[0-9]{2}" | head -1 || echo "")
     if [ -z "$last_consol" ]; then
         WARNINGS+=("DRIFT: No consolidation ever recorded. Run /consolidate")
         return
@@ -119,6 +127,41 @@ check_consolidation_freshness() {
     fi
 }
 
+# --- 5-7. Reference consistency (index integrity + cross-ref symmetry) ---
+check_reference_consistency() {
+    local index="$REFS_DIR/index.md"
+    [ -d "$REFS_DIR" ] || return
+    [ -f "$index" ] || { WARNINGS+=("DRIFT: index.md missing at $index"); return; }
+
+    # 5. Every learnings-*.md on disk is referenced in index.md
+    for f in "$REFS_DIR"/learnings-*.md; do
+        [ -f "$f" ] || continue
+        local base; base="$(basename "$f")"
+        grep -q "$base" "$index" || WARNINGS+=("DRIFT: $base exists but is not indexed in index.md (discovery gap)")
+    done
+
+    # 6. Every learnings-*.md named in index.md exists on disk
+    local ref
+    for ref in $(grep -oE 'learnings-[a-z0-9-]+\.md' "$index" | sort -u); do
+        [ -f "$REFS_DIR/$ref" ] || WARNINGS+=("DRIFT: index.md references $ref but the file does not exist (dangling)")
+    done
+
+    # 7. "See also:" cross-ref symmetry — if A lists B, B should list A
+    for f in "$REFS_DIR"/learnings-*.md; do
+        [ -f "$f" ] || continue
+        local a; a="$(basename "$f")"
+        local seealso; seealso="$(grep -m1 -i 'See also:' "$f")"
+        [ -n "$seealso" ] || continue
+        local b
+        for b in $(printf '%s' "$seealso" | grep -oE 'learnings-[a-z0-9-]+\.md' | sort -u); do
+            [ "$b" = "$a" ] && continue
+            [ -f "$REFS_DIR/$b" ] || continue
+            grep -m1 -i 'See also:' "$REFS_DIR/$b" | grep -q "$a" \
+                || WARNINGS+=("DRIFT: cross-ref asymmetry — $a lists $b, but $b's 'See also:' omits $a")
+        done
+    done
+}
+
 # --- Run all checks ---
 for repo in $REPOS; do
     [ -d "$repo" ] && check_graph_freshness "$repo"
@@ -126,6 +169,7 @@ done
 check_learnings_freshness
 check_memory_count
 check_consolidation_freshness
+check_reference_consistency
 
 # --- Output ---
 if [ ${#WARNINGS[@]} -eq 0 ]; then

@@ -42,6 +42,18 @@ If you find a new review bot on a PR that's not on this list, note it in your su
 
 Execute these steps in order. **Do not skip steps.**
 
+### Step 0.5: Triage blast radius → pick review depth
+
+Classify the PR first — effort scales with what can actually break. A docs PR and a production-RBAC PR must not get identical treatment.
+
+| Tier | PR matches | Depth |
+| --- | --- | --- |
+| **trivial** | docs/comments-only, or a single value change <10 lines with no template change | Cap bot-wait at ~2 min (Step 2.5). Light read. Skip rendered proof (Step 2.6) and cross-model verify (Step 3.5). |
+| **standard** | anything not trivial or sensitive | Full flow. Rendered proof (Step 2.6) required if it touches chart templates or values. |
+| **sensitive** | RBAC/Role/ClusterRole, secrets, NetworkPolicy, admission/policy controllers, CRD/operator config, **any production-cluster manifest**, or auth/ingress filter config | Full flow + **rendered proof mandatory** (Step 2.6) + **cross-model verify** of every blocking finding (Step 3.5). |
+
+State the chosen tier in the summary comment. **When in doubt between standard and sensitive, pick sensitive.** If the dispatch prompt named a tier that conflicts with what the diff shows, trust the diff and note the discrepancy.
+
 ### Step 1: Understand the PR
 
 ```bash
@@ -78,7 +90,43 @@ Other automated reviewers often post findings several minutes after the PR opens
 4. Once **all expected bots are done** (posted or timed out), proceed.
 5. Track which bots posted vs timed out — you'll list both in your summary so silent gaps are visible.
 
+**Done-detection caveats — a bot can be "done" without a new comment appearing:**
+
+- **CodeRabbit sometimes updates its existing "review in progress" comment in place** (common on config-only PRs) — the comment count stays 1 and the reviews list stays empty. Detect completion by the comment **body** containing the walkthrough/summary marker, not by a count change.
+- **Cursor Bugbot's ground-truth commit is its footer** (`Reviewed … for commit <SHA>`), not the visible `diff_hunk`. If that SHA is not current `HEAD`, Bugbot scanned a stale commit and its findings may already be fixed — re-check against `HEAD` before treating them as live.
+- **Security scanners on config-only PRs** often post only a "scanning…" comment with nothing following — that IS done; don't wait the full budget.
+
 Read all bot findings into your review context before Step 3.
+
+### Step 2.6: Render proof at merge-base (mandatory for standard+sensitive PRs touching chart templates or values)
+
+Reading a Helm/values source diff is **not** proof of its rendered effect — a values change can be inert (disabled component, wrong key, deep-merge override) or blast wider than it looks. Produce a **rendered manifest diff** and review that alongside the source diff.
+
+1. Anchor at the **merge-base**, not the immediate parent (with multiple commits, the parent only proves the last commit is conservative):
+
+   ```bash
+   BASE=$(git merge-base origin/main HEAD)
+   ```
+
+2. Render the affected chart at `BASE` and at `HEAD` for the value set the PR changes. Use a detached worktree for `BASE` so you never mutate the review checkout:
+
+   ```bash
+   git worktree add -d /tmp/rp_base "$BASE"
+   helm template <chart> -f /tmp/rp_base/<chart>/values/<env>.yaml > /tmp/rp_base.yaml
+   helm template <chart> -f <chart>/values/<env>.yaml               > /tmp/rp_head.yaml
+   git worktree remove /tmp/rp_base
+   diff -u /tmp/rp_base.yaml /tmp/rp_head.yaml
+   ```
+
+   (Render every environment the PR changes, not just one. If your runtime compresses/truncates command output, disable that for these renders — a truncated manifest silently drops later templates and produces a false "no change" verdict.)
+
+3. **Negative control (non-negotiable).** Render an *untouched* chart both sides; its diff must be empty. A clean diff on the changed chart is only trustworthy once the control proves the render harness actually surfaces changes (right path, subchart enabled, no silent no-op).
+
+4. Review the **rendered diff** for the Step 3 categories. Cite rendered hunks, not just source lines.
+
+5. **Source changed but rendered diff empty → the change is inert** (component disabled, wrong values key, deep-merge didn't take). That is a **blocking** finding unless the PR intends a no-op and says so.
+
+Record a proof line for the summary: `Rendered proof: <chart> @ <env>, merge-base <sha>→HEAD — N manifests changed; negative control empty.`
 
 ### Step 3: Review
 
@@ -95,6 +143,26 @@ For each issue, classify as:
 
 - **Blocking** — must fix before merge (bugs, security, correctness).
 - **Non-blocking** — should fix but won't break things.
+
+**Ground current-state claims live, not from the diff.** Any finding that asserts "the current value is X" on an infra PR must be checked against the running config (`kubectl get -o yaml`, or the rendered `BASE` from Step 2.6) — a chart default or live override can make a repo-grep wrong. Tag anything you could not verify as `UNVERIFIED (assumption)` rather than asserting it as fact.
+
+### Step 3.5: Cross-model verify (sensitive tier only)
+
+For sensitive-tier PRs, do **not** assert a blocking finding — or a clean "no blocking issues" verdict — on one model's judgment alone. A different model catches what this one rationalized.
+
+For **each blocking finding**, dispatch an independent refutation to a different model/runtime than your own (e.g. [`agent-knowledge/scripts/codex-dispatch.sh`](../../agent-knowledge/scripts/codex-dispatch.sh), or your runtime's cross-model equivalent). Prompt it to **refute**:
+
+```
+Adversarially verify this PR-review finding. PR: <url>. Finding: <finding + file:line + rendered-proof hunk>.
+Try to REFUTE it: is it a real blocking issue at the merge-base, or a false positive / already-fixed-in-a-later-commit / out-of-scope?
+Ground against the live file (git show origin/<branch>:<path>) and a render — not the bot diff_hunk. Default to REFUTED if uncertain.
+```
+
+- **Confirmed** → keep blocking; tag the reply/summary `cross-verified`.
+- **Refuted** → downgrade to non-blocking or drop; record the disagreement in the summary.
+- **Split** → surface both positions in the summary for the human; never silently pick a side.
+
+If there are **zero blocking findings** on a sensitive PR, run one cross-model completeness pass: *"What blocking issue did the first reviewer miss?"* — verify the absence, don't assume it. Cross-verify blocking findings only, never nits. This runs **before** Step 4, so confirmed findings are what you fix and reply to.
 
 ### Step 4: Fix blocking issues, then reply to bot findings
 
@@ -143,6 +211,23 @@ Reply rules:
 
 Track replies posted per bot — you'll report it in the summary.
 
+**4c. Resolve each thread after replying — a reply alone leaves the finding open.**
+
+Drive every bot finding to a resolved thread so the PR hands off clean, not with a wall of open threads:
+
+- **CodeRabbit**: after you reply, trigger its resolve by commenting `@coderabbitai resolve` on the thread once addressed (it marks resolved on its next pass). For a Disagree, `@coderabbitai` with the technical reason so it acknowledges rather than re-flags.
+- **Cursor Bugbot**: does not auto-resolve and only re-scans on a new push. After a fix push it re-scans; for a **Disagree** (no push), resolve the thread yourself via GraphQL:
+
+  ```bash
+  # enumerate threads
+  gh api graphql -f query='{repository(owner:"<o>",name:"<r>"){pullRequest(number:<n>){reviewThreads(first:100){nodes{id isResolved comments(first:1){nodes{author{login} body}}}}}}}'
+  # resolve one you have addressed
+  gh api graphql -f query='mutation($t:ID!){resolveReviewThread(input:{threadId:$t}){thread{isResolved}}}' -f t=<threadId>
+  ```
+
+- **Only resolve a thread you have actually addressed** (Fixed / Disagree-with-reason / Acknowledged). Never resolve a finding you ignored.
+- Track resolved-vs-open per bot. **Target: zero unresolved bot threads at hand-off.** Any left open must be listed in the summary with the reason (e.g. "awaiting Bugbot re-scan after fix push `<sha>`").
+
 ### Step 5: Check CI status
 
 ```bash
@@ -178,6 +263,7 @@ The comment contains:
 ## PR Review Summary (automated)
 
 **Reviewer**: pr-reviewer
+**Tier**: <trivial | standard | sensitive>
 **Iterations**: <1 or 2>
 
 ### Bot reviews ingested
@@ -185,8 +271,14 @@ The comment contains:
 - `coderabbitai[bot]`: <posted N findings | timed out after 10m | not present>
 
 ### Direct replies posted to bots
-- `cursor[bot]`: <N fixed | M acknowledged | K disagreed | L out-of-scope>
-- `coderabbitai[bot]`: <N fixed | M acknowledged | K disagreed | L out-of-scope>
+- `cursor[bot]`: <N fixed | M acknowledged | K disagreed | L out-of-scope> · threads resolved <R>/<total>
+- `coderabbitai[bot]`: <N fixed | M acknowledged | K disagreed | L out-of-scope> · threads resolved <R>/<total>
+
+### Rendered proof (standard+sensitive PRs touching charts/values)
+- <`<chart> @ <env>, merge-base <sha>→HEAD — N manifests changed; negative control empty`, or "N/A — no chart/values change">
+
+### Cross-model verify (sensitive tier only)
+- <per blocking finding: `confirmed` / `refuted — dropped` / `split — both positions below`, or "N/A — not sensitive tier">
 
 ### What was reviewed
 - <areas>
