@@ -1,6 +1,6 @@
 # ArgoCD Learnings
 
-See also: `learnings-helm-ci.md`, `learnings-progressive-delivery.md`, `learnings-operators.md`
+See also: `learnings-helm-ci.md`, `learnings-progressive-delivery.md`, `learnings-operators.md`, `learnings-crossplane.md`
 
 Numbered, append-only. **Update the existing entry — never duplicate.**
 

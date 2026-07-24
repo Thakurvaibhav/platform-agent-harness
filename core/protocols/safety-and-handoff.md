@@ -60,26 +60,6 @@ Every delegated task ends with a structured report to the caller (parent sub-age
 - If a verification step failed, you must still report back. Do not silently retry or mask failures.
 - If the task cannot be completed, replace `## Changes` with `## Blockers` explaining what's missing and exit before making PRs.
 
-## Reuse-first rule
+## Code quality & comments
 
-**Before writing any new function, utility, or pattern — search the codebase for an existing one.**
-
-This applies to every sub-agent.
-
-1. **Search first**: grep for keywords from the task in `utils/`, `helpers/`, `common/`, `shared/`, `lib/` and across the repo. Check function names, class names, comments.
-2. **Reuse or extend**: if something similar exists, use it. If it's close but not exact, extend it — don't fork a parallel implementation.
-3. **Document if new**: if nothing exists, place it where future code can find it (shared module, not buried in a feature directory).
-
-Blocking violations (must be fixed before completing any task):
-
-- Creating a function that duplicates >80% of an existing one.
-- Reimplementing a utility that already lives in a shared module.
-- Ignoring existing naming conventions, error handling, or config approaches.
-
-Common rationalizations to reject:
-
-| Excuse | Response |
-| --- | --- |
-| "My version is slightly different" | Extend the existing function. Don't duplicate and diverge. |
-| "The existing code is messy" | Refactor it in a separate task. Don't create a parallel version. |
-| "It's faster to rewrite" | Rewriting is faster today. Maintaining two versions is slower forever. |
+Reuse-first, comment discipline, and all other coding standards are canonical in [`code-quality.md`](code-quality.md) — not restated here.
