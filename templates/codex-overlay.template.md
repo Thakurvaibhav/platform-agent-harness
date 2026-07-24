@@ -3,8 +3,11 @@
 **Single source of truth:** Read `~/.agent-knowledge/references/shared-protocols-core.md`
 (or your equivalent shared core) at the start of every session -- it holds the
 shared, harness-neutral protocols (identity, startup, bd hive, prior-art search,
-knowledge capture, delegation philosophy). This overlay adds ONLY Codex-specific
-mechanics.
+knowledge capture, delegation philosophy). For engineering work also read
+[`core/protocols/code-quality.md`](../core/protocols/code-quality.md) — the canonical
+coding standards (assumptions, simplicity, reuse-first, surgical changes, comments,
+verification, reflexes) that Claude, Codex, and Factory all follow. This overlay adds
+ONLY Codex-specific mechanics.
 
 ## Memory: bd hive is canonical -- ignore native Codex memory
 

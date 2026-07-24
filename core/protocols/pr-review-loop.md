@@ -34,6 +34,24 @@ The reviewer self-triages (its Step 0.5), but name the tier you expect in the di
 - **standard** — everything else non-trivial; rendered proof required if it touches chart templates or values.
 - **trivial** — see *Never dispatch*.
 
+### Review style: single vs Parallax
+
+The reviewer runs in one of two styles (its **Operating modes**), set independently from the tier:
+
+- **Parallax** (default for standard/sensitive) — two independent model lenses on the same PR, posted as **two separately-branded reviews**:
+  - **🔍 correctness lens (Claude)** — the reviewer's own pass (claims, wiring, conventions, rendered proof; refute stale bot findings).
+  - **🧨 adversarial lens (Codex)** — an independent [`agent-knowledge/scripts/codex-dispatch.sh`](../../agent-knowledge/scripts/codex-dispatch.sh) pass in a read-only worktree at the merge-base that tries to *break* head against the PR's claims (helm dep build/lint/template, negative controls, guard fail-closed tests, per-env render matrix). It never sees the correctness lens's findings; divergence is signal — both are posted even when they agree.
+- **single** — the one-lens flow (reviewer only). Use for the **trivial** tier or when you pass `single`.
+
+Two entry points feed the reviewer:
+
+| Entry point | Who opened the PR | Style + action mode |
+| --- | --- | --- |
+| **Automatic** (orchestrator) | one of our own sub-agents | **`parallax` + `fix`** — the reviewer may push fixes to our branch. |
+| **Manual** (`parallax-review` skill) | an external author | **`parallax` + `review-only`** — comment-only; **never push** to someone else's branch, so the two branded reviews are the whole deliverable. |
+
+Set `Style:` and `Mode:` explicitly in the dispatch prompt (below). For a `sensitive` PR, prefer a stronger reviewer model for the correctness lens when the runtime supports it.
+
 ## Dispatch prompt template
 
 ```markdown
@@ -41,10 +59,13 @@ Goal: Review and fix PR <url>
 Context: <one-line summary of the original task>
 Key files: <paths most relevant to the change>
 Constraints: <what to preserve / not touch>
-Tier: <standard | sensitive>   # sensitive → expect rendered proof + cross-model verify
-Protocol: Triage tier, render proof at merge-base for chart/values PRs, review, cross-verify
-  blocking findings (sensitive tier), fix blocking issues, reply to AND resolve every bot thread,
-  check CI, iterate at most 2 times, then hand off to human.
+Tier: <standard | sensitive>   # sensitive → expect rendered proof + adversarial lens
+Style: <parallax | single>     # parallax → two branded lenses (correctness + adversarial)
+Mode: <fix | review-only>      # review-only (external PR) → comment-only, never push
+Protocol: Triage tier, render proof at merge-base for chart/values PRs, run the correctness pass,
+  dispatch the independent adversarial (Codex) lens for parallax, fix blocking issues (fix mode only),
+  reply to AND resolve every bot thread, check CI, iterate at most 2 times, post the two branded
+  lenses (parallax), then hand off to human.
 Verify by:
 - <check 1>: <pass/fail criterion>
 - <check 2>: <pass/fail criterion>
@@ -123,3 +144,24 @@ Never silently ignore a bot finding. If you have nothing to say, choose `Disagre
 ### Status
 Ready for human review / Has unresolved items
 ```
+
+### Parallax output shape (parallax style)
+
+In parallax style the reviewer posts **two separately-branded reviews** in addition to (or, in `review-only`, in place of) the summary above. Each carries a stable HTML marker for later tooling:
+
+```markdown
+<!-- parallax:correctness -->
+## 🔍 Parallax · correctness lens (Claude)
+**Verdict:** <N/N offline checks pass | M blocking issue(s) found>
+- Rendered proof: <chart @ env, merge-base→HEAD, N manifests changed, negative control empty | N/A>
+- Claims verified / bot findings adjudicated / blocking / non-blocking
+```
+
+```markdown
+<!-- parallax:adversarial -->
+## 🧨 Parallax · adversarial lens (Codex)
+**Verdict:** <no required change found after reproduction | required change: …>
+<Codex's reproduced evidence + break-attempts, verbatim>
+```
+
+The adversarial lens is posted **verbatim** from the Codex run — never softened or re-rationalized. If the two lenses disagree, the split is surfaced for the human to adjudicate, never silently reconciled.

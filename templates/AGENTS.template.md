@@ -10,7 +10,7 @@ Use this file as the root instruction contract for CLI agents working in platfor
 
 At session start or resume, every agent — main session and sub-agent — does the following before any task work:
 
-1. Read [`core/protocols/bd-and-memory.md`](../core/protocols/bd-and-memory.md) for the shared protocols: code quality (Assumptions, Simplicity, Reuse-First, Surgical Changes), constraints, bd workflow, memory taxonomy, verification (goal-driven execution), and the completion checklist.
+1. Read [`core/protocols/code-quality.md`](../core/protocols/code-quality.md) for the canonical coding standards (Assumptions, Simplicity, Reuse-First, Surgical Changes, Comments, Verification, Standing reflexes R1–R4) — the main session and every engineering sub-agent follow it. Read [`core/protocols/bd-and-memory.md`](../core/protocols/bd-and-memory.md) for constraints, bd workflow, memory taxonomy, and the completion checklist.
 2. Read [`agent-knowledge/references/index.md`](../agent-knowledge/references/index.md) to discover available reference docs — agents check the index **before** broad searches so existing knowledge is reused, not re-derived.
 3. **Knowledge search** — run [`agent-knowledge/scripts/knowledge-search.sh`](../agent-knowledge/scripts/knowledge-search.sh) `<task keywords>` to find prior art across bd memories, learnings files, and domain docs.
 4. Read [`agent-knowledge/references/clusters.md`](../agent-knowledge/references/clusters.md) (or your repo's equivalent) before any cluster-scoped decision.

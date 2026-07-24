@@ -1,6 +1,6 @@
 # Helm, YAML & CI Learnings
 
-See also: `learnings-argocd.md`, `learnings-progressive-delivery.md`, `learnings-envoy-gateway.md`
+See also: `learnings-argocd.md`, `learnings-progressive-delivery.md`, `learnings-envoy-gateway.md`, `learnings-crossplane.md`
 
 Numbered, append-only. **Update the existing entry — never duplicate.**
 
