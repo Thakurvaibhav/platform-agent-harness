@@ -1,6 +1,6 @@
 # Operators, CRDs & Policy Engine Learnings
 
-See also: `learnings-argocd.md`, `learnings-network-policy.md`
+See also: `learnings-argocd.md`, `learnings-network-policy.md`, `learnings-crossplane.md`
 
 Numbered, append-only. **Update the existing entry — never duplicate.**
 

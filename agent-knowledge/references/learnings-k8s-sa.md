@@ -2,6 +2,8 @@
 
 Read this file when working on ServiceAccount separation, cloud Workload Identity (GKE WI, EKS IRSA, AKS WI), image-pull secrets, or cloud-IAM bindings.
 
+See also: `learnings-crossplane.md`
+
 Numbered, append-only. **Update the existing entry — never duplicate.**
 
 ## SA separation patterns
@@ -41,3 +43,5 @@ Numbered, append-only. **Update the existing entry — never duplicate.**
 12. **Per-service SA validation is a 4-step check.** (1) SA exists with the correct cloud IAM annotation. (2) Deployment `serviceAccountName` matches and all replicas Ready. (3) Pod health — all Running, 0 restarts, no old-ReplicaSet stragglers. (4) Logs spot-check for IAM auth regressions.
 
 13. **Bundle-enablement matrix determines actual blast radius.** A host-cluster values-file edit is a no-op if that cluster doesn't have the corresponding ArgoCD Application (bundle) enabled. Check the matrix before dispatching.
+
+14. **Resolve an EKS cluster's IRSA OIDC provider ARN even when `iam:ListOpenIDConnectProviders` is DENIED** (a scoped SSO role often lacks it): (1) get the issuer — `aws eks describe-cluster --name <cluster> --query cluster.identity.oidc.issuer`, strip `https://` → issuer host; (2) the provider ARN is deterministically `arn:aws:iam::<acct>:oidc-provider/<issuer-host>`; (3) CONFIRM authoritatively by reading an existing IRSA role's trust policy — `aws iam get-role --role-name <role> --query Role.AssumeRolePolicyDocument.Statement[].Principal.Federated` (its `StringEquals` condition keys give `<issuer-host>:sub` / `:aud`). Useful for filling an OIDC block (e.g. a Crossplane `EnvironmentConfig`) without the list permission.

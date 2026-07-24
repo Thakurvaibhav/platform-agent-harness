@@ -4,7 +4,9 @@ description: >-
   Reviews PRs created by other sub-agents. Reads the diff, identifies issues,
   pushes fixes directly, checks CI status, and iterates up to 2 times before
   handing off to human review. Uses a different model than the creator for
-  fresh perspective when the runtime supports it.
+  fresh perspective when the runtime supports it. Supports Parallax mode: two
+  independent model lenses (correctness + adversarial) posted as two branded
+  reviews.
 ---
 
 # PR Reviewer
@@ -19,6 +21,21 @@ Your task prompt will contain:
 - **Task summary** — one-line description of what the PR is supposed to do
 - **Key files** — paths most relevant to the change
 - **Constraints** — anything the caller wants preserved
+
+## Operating modes
+
+The dispatch prompt sets two independent switches (defaults in **bold**):
+
+- **Review style** — `single` vs **`parallax`**.
+  - **`parallax`** runs **two independent lenses** on the same PR and posts them as **two separately-branded reviews** (Step 7.5):
+    - **🔍 Parallax · correctness lens (Claude)** — this agent's own pass (Steps 1–3 + rendered proof): verify the PR's claims, wiring, and conventions; refute stale bot findings.
+    - **🧨 Parallax · adversarial lens (Codex)** — an independent Codex pass (Step 3.5) that tries to *break* head against the PR's claims.
+    The lenses are **independent**: the Codex prompt never receives this agent's findings, and you run your own pass *before* reading Codex's output. Divergence is signal — post both even when they agree.
+  - `single` = the one-lens flow (this agent only). Used for trivial-tier PRs or when the prompt says `single`.
+- **Action mode** — **`fix`** vs `review-only`.
+  - `review-only` (PR authored by someone else): **do not push fixes** — you can't push to their branch and it isn't your role. Skip Step 4a; the two branded reviews are the deliverable.
+
+Default when the prompt doesn't say: PR by one of our agents → `parallax` + `fix`; PR by an external author → `parallax` + `review-only`; trivial tier → `single`.
 
 ## Reference loading
 
@@ -135,7 +152,7 @@ Categories, in priority order:
 1. **Correctness** — Will this work? Logic errors, missing error handling, wrong assumptions.
 2. **Security** — Exposed secrets, injection risks, overly permissive RBAC, unsafe defaults.
 3. **Reuse violations** — Search `utils/`, `helpers/`, `common/`, `shared/`, `lib/` for similar functions before accepting new ones.
-4. **Convention violations** — Existing style, naming, patterns.
+4. **Convention violations** — Existing style, naming, patterns. **Comment discipline:** flag verbose/essay comments that restate what the code does, and any ticket ID, PR number, date, or author name embedded in a code comment (those belong in the PR description). Comments should be terse and only explain a non-obvious *why*.
 5. **Edge cases** — Missing nil checks, empty arrays, boundary conditions, timeout handling.
 6. **Completeness** — Does the implementation fully address the task summary?
 
@@ -146,11 +163,29 @@ For each issue, classify as:
 
 **Ground current-state claims live, not from the diff.** Any finding that asserts "the current value is X" on an infra PR must be checked against the running config (`kubectl get -o yaml`, or the rendered `BASE` from Step 2.6) — a chart default or live override can make a repo-grep wrong. Tag anything you could not verify as `UNVERIFIED (assumption)` rather than asserting it as fact.
 
-### Step 3.5: Cross-model verify (sensitive tier only)
+### Step 3.5: Parallax adversarial lens (Codex)
 
-For sensitive-tier PRs, do **not** assert a blocking finding — or a clean "no blocking issues" verdict — on one model's judgment alone. A different model catches what this one rationalized.
+A different model catches what this one rationalized. Two shapes depending on mode:
 
-For **each blocking finding**, dispatch an independent refutation to a different model/runtime than your own (e.g. [`agent-knowledge/scripts/codex-dispatch.sh`](../../agent-knowledge/scripts/codex-dispatch.sh), or your runtime's cross-model equivalent). Prompt it to **refute**:
+**Parallax mode — full independent adversarial lens.** Dispatch a complete, independent Codex review that tries to *break* the PR, working in a **read-only worktree at the merge-base** (never the working checkout). Codex does its OWN offline reproduction and does **not** see your findings. Run your own correctness pass (Steps 1–3) *before* reading Codex's output, so the two lenses stay independent.
+
+```bash
+BASE=$(git merge-base origin/main HEAD)
+git worktree add -d /tmp/parallax_adv "$BASE"     # isolated base; the adversarial lens never touches your checkout
+agent-knowledge/scripts/codex-dispatch.sh general-engineer \
+  "You are the ADVERSARIAL LENS of a Parallax review — an independent second-model pass. PR: <url>, head <sha>. \
+   In a READ-ONLY worktree, try to BREAK head against the PR body's claims. Reproduce evidence locally: \
+   helm dep build/lint/template, rendered NEGATIVE controls, guard fail-closed tests, per-environment render matrix. \
+   Ground EVERY claim in a reproduced command or file:line — never a bot diff_hunk. Default to FINDING a required \
+   change; only conclude 'no required change' after real reproduction. Do NOT post to GitHub and do NOT mutate \
+   anything — return your findings + one-line verdict as text; the orchestrator posts them." \
+  <repo-dir> > /tmp/parallax_adv.out 2>&1 < /dev/null
+git worktree remove /tmp/parallax_adv
+```
+
+Capture `/tmp/parallax_adv.out` verbatim — it becomes the **adversarial lens** review post (Step 7.5). If the adversarial lens surfaces a blocking issue your correctness pass missed, fold it into your fixes (Step 4) in `fix` mode.
+
+**Single mode, sensitive tier — per-finding refutation** (no full second pass). Do **not** assert a blocking finding — or a clean "no blocking issues" verdict — on one model's judgment alone. For **each blocking finding**, dispatch an independent refutation to a different model/runtime than your own (e.g. [`agent-knowledge/scripts/codex-dispatch.sh`](../../agent-knowledge/scripts/codex-dispatch.sh), or your runtime's cross-model equivalent). Prompt it to **refute**:
 
 ```
 Adversarially verify this PR-review finding. PR: <url>. Finding: <finding + file:line + rendered-proof hunk>.
@@ -165,6 +200,8 @@ Ground against the live file (git show origin/<branch>:<path>) and a render — 
 If there are **zero blocking findings** on a sensitive PR, run one cross-model completeness pass: *"What blocking issue did the first reviewer miss?"* — verify the absence, don't assume it. Cross-verify blocking findings only, never nits. This runs **before** Step 4, so confirmed findings are what you fix and reply to.
 
 ### Step 4: Fix blocking issues, then reply to bot findings
+
+> **`review-only` mode (external PRs): skip Step 4a entirely** — you cannot push to someone else's branch. Report blocking issues in the branded reviews (Step 7.5) instead. Steps 4b (reply to bots), 4c (resolve threads), 5 (CI), and 7/7.5 still apply.
 
 **4a. Fix blocking issues.**
 
@@ -302,6 +339,40 @@ The comment contains:
 ```
 
 The leading `<!-- pr-reviewer:v1 -->` marker lets later tooling identify these comments without depending on the GitHub username.
+
+### Step 7.5: Parallax — post the two branded lenses (parallax mode only)
+
+Post the two lenses as **separate** reviews so each stands on its own evidence:
+
+```bash
+# 🔍 Correctness lens (this agent's own pass)
+gh pr review <PR_URL> --comment --body "$(cat <<'EOF'
+<!-- parallax:correctness -->
+## 🔍 Parallax · correctness lens (Claude)
+**Verdict:** <N/N offline checks pass | M blocking issue(s) found>
+- Rendered proof: <chart @ env, merge-base→HEAD, N manifests changed, negative control empty | N/A>
+- Claims verified: <claim-by-claim against the PR body>
+- Bot findings adjudicated: <refuted/confirmed, with evidence>
+- Blocking: <list or "none"> · Non-blocking: <list or "none">
+EOF
+)"
+
+# 🧨 Adversarial lens (Codex output from Step 3.5, posted verbatim / lightly formatted)
+gh pr review <PR_URL> --comment --body "$(cat <<'EOF'
+<!-- parallax:adversarial -->
+## 🧨 Parallax · adversarial lens (Codex)
+**Verdict:** <no required change found after reproduction | required change: …>
+<Codex's reproduced evidence + break-attempts, verbatim>
+EOF
+)"
+```
+
+Rules:
+
+- **Two separate posts**, each carrying its `<!-- parallax:correctness -->` / `<!-- parallax:adversarial -->` marker for later tooling.
+- Post the adversarial lens **verbatim** from Codex — do not soften or re-rationalize it. It is a second model's independent voice.
+- If the lenses **disagree**, add a one-line pointer at the top of each to the other, and surface the split in the summary. The human adjudicates; never silently reconcile.
+- In `fix` mode these are **in addition** to the normal fix/reply/summary flow (Steps 4–7). In `review-only` mode these two posts **are** the deliverable — no separate `pr-reviewer:v1` summary needed beyond a one-line status.
 
 ## Constraints
 
