@@ -23,7 +23,15 @@ trufflehog filesystem "$ROOT" --no-update --fail
 gitleaks detect --no-git --redact --verbose --source "$ROOT"
 
 # 3. Local denylist (your real cluster names, ticket prefixes, domains)
-test -f "$ROOT/.redaction-denylist" && rg -nFf "$ROOT/.redaction-denylist" "$ROOT" --glob '!__pycache__' --glob '!.git' || echo "no local denylist"
+#    Blank lines MUST be stripped: rg -Ff treats an empty pattern as match-everything,
+#    so a single blank line makes this step report every line in the repo and a real
+#    hit becomes invisible in the noise.
+if [ -f "$ROOT/.redaction-denylist" ]; then
+  grep -v '^[[:space:]]*$' "$ROOT/.redaction-denylist" > /tmp/denylist-patterns.txt
+  rg -nFf /tmp/denylist-patterns.txt "$ROOT" --glob '!__pycache__' --glob '!.git'
+else
+  echo "no local denylist"
+fi
 
 # 4. Formatting (whitespace, trailing newlines)
 python3 sanitization/check-format.py "$ROOT"
@@ -36,6 +44,8 @@ git diff --check
 ```
 
 Any non-empty output from steps 1–3 or non-zero exit from steps 4–6 is a **blocking** finding.
+
+**Keep denylist patterns specific.** A short fragment (say, four letters of a customer name) will false-match ordinary English and train you to ignore step 3 — which defeats the whole gate. Prefer whole identifiers.
 
 ## Bootstrap the local denylist
 

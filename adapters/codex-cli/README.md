@@ -152,10 +152,19 @@ Claude can dispatch Codex as an adversarial reviewer for a fresh-model perspecti
 ```
 
 Key gotchas:
-- **stdin MUST be closed** (`< /dev/null`) or `codex exec` hangs printing "Reading additional input from stdin..."
+- **stdin MUST be closed** (`< /dev/null`) — the script does this for you; raw `codex exec` callers must remember it or the process hangs printing "Reading additional input from stdin..."
 - **`--skip-git-repo-check`** is required for non-git target dirs
 - Concurrent workers writing distinct bd keys do NOT race (Dolt serializes writes)
 - Tell the worker NOT to `bd remember` if the doc itself IS the artifact
+- Always wrap in `timeout <sec>` and redirect to a file — never pipe to `head`/`tail`, which buffers, truncates findings, and masks the exit code
+
+### Depth cap
+
+Because a worker can shell out to `codex-dispatch.sh` itself, nesting is unbounded by default. The script tracks `HARNESS_DEPTH` — a hop counter incremented and exported on every dispatch — and refuses (exit 3) at depth ≥ 2. A worker launched from the main session runs at 1; its own worker at 2; that worker cannot dispatch again.
+
+Treat the cap as a **backstop, not the control**. A worker running a role prompt that describes fan-out will attempt to fan out and simply fail at the ceiling. Put `Do not dispatch further workers.` in the prompt of any worker whose role could recurse.
+
+Override for a deliberately deeper run by exporting a lower `HARNESS_DEPTH`, but understand what you lose: no orchestrator sees the inner workers, and nothing accounts for their cost.
 
 This pattern is used by the `adopt-eval` skill for mandatory cross-model peer review before human handoff.
 
