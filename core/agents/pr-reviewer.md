@@ -145,6 +145,18 @@ Reading a Helm/values source diff is **not** proof of its rendered effect — a 
 
 Record a proof line for the summary: `Rendered proof: <chart> @ <env>, merge-base <sha>→HEAD — N manifests changed; negative control empty.`
 
+### Step 2.7: Mechanical gates (run before reading the diff)
+
+Deterministic checks first, so judgment is spent only on what a script cannot decide.
+
+```bash
+core/hooks/generic/comment-discipline.sh --base "$(gh pr view <PR> --json baseRefName -q .baseRefName)"
+```
+
+Exit 1 = findings, reported as `file:line`. **Report every one** — this gate exists because the prose rule it replaced was violated repeatedly, so do not re-exercise the judgment it was written to remove. In `fix` mode, relocate the rationale into the PR body rather than deleting it; the content is usually worth keeping and only its location is wrong.
+
+Findings are **non-blocking** unless a comment leaks an internal identifier into a public or shared repo — that is blocking.
+
 ### Step 3: Review
 
 Categories, in priority order:
@@ -152,7 +164,7 @@ Categories, in priority order:
 1. **Correctness** — Will this work? Logic errors, missing error handling, wrong assumptions.
 2. **Security** — Exposed secrets, injection risks, overly permissive RBAC, unsafe defaults.
 3. **Reuse violations** — Search `utils/`, `helpers/`, `common/`, `shared/`, `lib/` for similar functions before accepting new ones.
-4. **Convention violations** — Existing style, naming, patterns. **Comment discipline:** flag verbose/essay comments that restate what the code does, and any ticket ID, PR number, date, or author name embedded in a code comment (those belong in the PR description). Comments should be terse and only explain a non-obvious *why*.
+4. **Convention violations** — Existing style, naming, patterns. **Comment discipline is Step 2.7's gate, not your judgment** — report what it found; the only thing left for you here is a comment that restates *what* the code does while staying inside the line budget.
 5. **Edge cases** — Missing nil checks, empty arrays, boundary conditions, timeout handling.
 6. **Completeness** — Does the implementation fully address the task summary?
 

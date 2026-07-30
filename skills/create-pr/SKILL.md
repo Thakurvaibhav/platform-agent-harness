@@ -33,6 +33,11 @@ test "$(git rev-parse --abbrev-ref HEAD)" != "master" || { echo "refuse: on mast
 git fetch origin main
 git rebase origin/main || { echo "resolve rebase conflicts and re-run"; exit 1; }
 
+# Comment-discipline gate — BLOCKING, runs before the branch is pushed.
+# Mechanical, not advisory: do not substitute your own judgment for it.
+core/hooks/generic/comment-discipline.sh --base origin/main || {
+  echo "refuse: fix the comments and amend, then re-run"; exit 1; }
+
 # Push the feature branch (set upstream on first push)
 git push -u origin "$(git rev-parse --abbrev-ref HEAD)"
 
