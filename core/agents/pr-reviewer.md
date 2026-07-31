@@ -232,13 +232,17 @@ For each finding raised by a known bot, post a threaded reply.
 
   ```bash
   gh api repos/<owner>/<repo>/pulls/<num>/comments/<comment-id>/replies \
-    -f body="🤖 <reply text>"
+    -f body="<reply text>
+
+🤖"
   ```
 
 - **Top-level review comments** (BugBot summary, CodeRabbit walkthrough):
 
   ```bash
-  gh pr comment <PR_URL> --body "🤖 @<bot-handle> <reply text>"
+  gh pr comment <PR_URL> --body "@<bot-handle> <reply text>
+
+🤖"
   ```
 
 Reply categories — pick exactly one per finding:
@@ -309,7 +313,7 @@ The comment contains:
 
 ```markdown
 <!-- pr-reviewer:v1 -->
-## 🤖 PR Review Summary (automated)
+## PR Review Summary (automated)
 
 **Reviewer**: pr-reviewer
 **Tier**: <trivial | standard | sensitive>
@@ -360,21 +364,25 @@ Post the two lenses as **separate** reviews so each stands on its own evidence:
 # 🔍 Correctness lens (this agent's own pass)
 gh pr review <PR_URL> --comment --body "$(cat <<'EOF'
 <!-- parallax:correctness -->
-## 🤖 🔍 Parallax · correctness lens (Claude)
+## 🔍 Parallax · correctness lens (Claude)
 **Verdict:** <N/N offline checks pass | M blocking issue(s) found>
 - Rendered proof: <chart @ env, merge-base→HEAD, N manifests changed, negative control empty | N/A>
 - Claims verified: <claim-by-claim against the PR body>
 - Bot findings adjudicated: <refuted/confirmed, with evidence>
 - Blocking: <list or "none"> · Non-blocking: <list or "none">
+
+🤖
 EOF
 )"
 
 # 🧨 Adversarial lens (Codex output from Step 3.5, posted verbatim / lightly formatted)
 gh pr review <PR_URL> --comment --body "$(cat <<'EOF'
 <!-- parallax:adversarial -->
-## 🤖 🧨 Parallax · adversarial lens (Codex)
+## 🧨 Parallax · adversarial lens (Codex)
 **Verdict:** <no required change found after reproduction | required change: …>
 <Codex's reproduced evidence + break-attempts, verbatim>
+
+🤖
 EOF
 )"
 ```
