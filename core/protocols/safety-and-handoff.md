@@ -27,6 +27,19 @@ Operating rules every sub-agent must apply, and the structured handoff format ev
 - Before any commit that changes examples, references, or templates, run [`sanitization/prepublish-checklist.md`](../../sanitization/prepublish-checklist.md): `trufflehog`, `gitleaks`, the local denylist, formatting check.
 - Synthetic placeholders in public examples: `<company>`, `<cluster>`, `<env-cluster>`, `<namespace>`, `<service>`, `<TICKET-KEY>`.
 
+## Agent attribution on GitHub
+
+**Every piece of GitHub content an agent posts carries the 🤖 emoji in its body.** PR descriptions, review comments, review bodies, replies to bot threads, issue comments, upstream issues — no exceptions, including one-line replies.
+
+Anything posted goes out under the *user's* GitHub identity. A teammate reading the thread cannot tell an agent-written reply from a human-written one, and that ambiguity costs the user, not the agent: it lets an agent's mistake read as their considered opinion, and it lets agreement read as human review that never happened. The marker is what keeps the record honest.
+
+Placement:
+
+- **Short bodies and bot-thread replies** — lead with it: `🤖 <reply text>`.
+- **Structured reviews and PR descriptions** — add `🤖` to the header line, or close with a footer: `---` then `🤖 Posted by <agent> via <runtime>.`
+
+Never strip it because a body reads cleaner without it, and never post under a framing that implies a human wrote it. A user may waive it for a specific comment — that is their call; say what you are doing and do it.
+
 ## Handoff contract
 
 Every delegated task ends with a structured report to the caller (parent sub-agent or main session). Use this exact format so chained delegation (`task-planner` → specialist → `general-engineer`) can be parsed reliably.

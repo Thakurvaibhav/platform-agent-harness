@@ -64,6 +64,9 @@ gh pr create \
 ## Risk
 
 - <one line: low / medium / high and the smallest unit that could regress>
+
+---
+🤖 Opened by <agent> via <runtime> on behalf of @<github-user>.
 EOF
 )"
 

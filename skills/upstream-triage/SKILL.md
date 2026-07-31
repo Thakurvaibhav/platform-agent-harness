@@ -23,7 +23,7 @@
    - Tracked + fix imminent: link/subscribe, don't file; note the workaround is interim.
    - Untracked (or self-closed/stale) + it costs you: draft an issue.
 5. **Draft (generic, redacted).** Title + body with: a short summary, a MINIMAL repro using placeholder names (`svc-stable`/`svc-canary`, `/a`, `/b` -- NO internal service/cluster/org/host names), a link to any prior/related/closed issue, the proposed enhancement, the current workaround, and an offer to send a PR. Strip every internal identifier.
-6. **Draft and confirm -- then file.** Present the draft + target repo to the user; file only on explicit go: `gh issue create --repo <owner/repo> --title "<t>" --body-file <f>`. Default is draft-and-confirm; never silently auto-file under the user's identity. Confirm the `gh` account first.
+6. **Draft and confirm -- then file.** Present the draft + target repo to the user; file only on explicit go: `gh issue create --repo <owner/repo> --title "<t>" --body-file <f>`. Default is draft-and-confirm; never silently auto-file under the user's identity. Confirm the `gh` account first. **Close the body with `🤖 Filed by <agent> via <runtime> on behalf of @<github-user>.`** — this lands in a stranger's repo under the user's name, so maintainers deserve to know an agent drafted it, and it sets expectations for the follow-up thread. See *Agent attribution on GitHub* in [`core/protocols/safety-and-handoff.md`](../../core/protocols/safety-and-handoff.md).
 7. **Close the loop.** Link the filed issue wherever the limitation is recorded (decision memory, Slack message, PR), and `bd remember` it.
 
 ## Output
