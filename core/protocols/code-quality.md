@@ -27,7 +27,10 @@ Minimum code that solves the task. Nothing speculative.
 
 **Reuse-first.** Before writing any new function, utility, or pattern — search the codebase for an existing one.
 
-1. **Search first**: grep keywords in `utils/`, `helpers/`, `common/`, `shared/`, `lib/` and across the repo.
+1. **Search first — in the shape the repo actually has.** For application code: `utils/`, `helpers/`, `common/`, `shared/`, `lib/`. **In an infrastructure repo those directories often do not exist** — one Helm monorepo has zero `utils/`, `common/`, `shared/` or `lib/` directories and 141 `_helpers.tpl` files. Grepping the canonical list, finding nothing, and calling that diligence is the most common way this rule gets satisfied without being followed. In a chart, search:
+   - the chart's own `_helpers.tpl` — the define you need usually already exists,
+   - every level of `values.yaml` for the key you are about to add (`grep -n '<key>:'`) — a duplicate key at a second level silently wins or loses by YAML ordering,
+   - **the chart's structural shape** — component-keyed (`<chart>.components.<name>`) vs flat. Writing a flat singleton into a component-keyed chart is a rewrite, not a tweak.
 2. **Reuse or extend**: if something similar exists, use it. If close but not exact, extend it — don't fork a parallel implementation.
 3. **Document if new**: place it where future code can find it (shared module, not buried in a feature directory).
 
