@@ -1,15 +1,15 @@
 #!/usr/bin/env bash
 # comment-discipline.sh — mechanical gate for code-comment discipline.
 #
-# Enforces the two rules in shared-protocols-core.md that authors reliably
-# self-exempt from, by turning them into counts instead of judgment calls:
+# Enforces the comment rules in code-quality.md that authors reliably self-exempt
+# from, by turning them into counts instead of judgment calls:
 #   1. No ticket IDs, PR numbers, dates, or author names in code comments.
-#   2. No comment block longer than MAX_LINES (default 2). Need a third line?
-#      It is PR-description material, not source.
+#   2. No comment block longer than MAX_LINES (default 2).
+#   3. No high comment density per file — the default is NO comment, and a
+#      ceiling alone does not catch many small comments that should not exist.
 #
-# Rule 2 exists because "terse" and "one line where one line works" are
-# judgments, and every author of a 10-line block believes theirs is the
-# justified exception. A line count cannot be argued with.
+# These are counts because "terse" is a judgment, and every author of a 10-line
+# block believes theirs is the justified exception.
 #
 # Usage:
 #   comment-discipline.sh                    # diff vs merge-base with origin/main
@@ -107,6 +107,12 @@ findings = []
 run = []          # consecutive added comment lines: (lineno, text)
 lineno = 0
 
+# Per-file added-line tallies. The length ceiling bounds one block; this catches
+# the other failure — many small comments in code that asked for none.
+density = {}
+DENSITY_MIN_LINES = 4       # below this, a high ratio is just a small diff
+DENSITY_RATIO     = 0.35
+
 def flush():
     global run
     if path and len(run) > MAX:
@@ -144,7 +150,9 @@ for raw in sys.stdin:
     if line.startswith("+"):
         lineno += 1
         text = line[1:]
+        d = density.setdefault(path, [0, 0])
         if is_comment(text, path):
+            d[0] += 1
             run.append((lineno, text))
             for rx, label in BANNED:
                 if rx.search(text):
@@ -152,6 +160,8 @@ for raw in sys.stdin:
                                      text.strip()))
                     break
         else:
+            if text.strip():
+                d[1] += 1
             flush()
     elif line.startswith("-"):
         continue          # removed line: no effect on the added-run
@@ -160,6 +170,14 @@ for raw in sys.stdin:
         flush()
 
 flush()
+
+for f, (c, code) in sorted(density.items()):
+    total = c + code
+    if c >= DENSITY_MIN_LINES and total and (float(c) / total) > DENSITY_RATIO:
+        findings.append((f, 0, 0,
+                         "comment density %d%% (%d comment / %d added lines) — default is none"
+                         % (round(100.0 * c / total), c, total),
+                         "a comment must earn its place; match the surrounding density"))
 
 if not findings:
     print("comment-discipline: clean")
@@ -172,7 +190,7 @@ for p, ln, _n, why, snippet in findings:
     print("  %s:%d" % (p, ln))
     print("      %s" % why)
     print("      %s\n" % snippet)
-print("Rules: no ticket IDs / PR numbers / dates / authors in code comments;")
-print("max %d lines per comment block. Longer rationale belongs in the PR body." % MAX)
+print("Rules: default is NO comment; ceiling %d lines when one is warranted;" % MAX)
+print("never a ticket ID / PR number / date / author. Rationale goes in the PR body.")
 sys.exit(1)
 '
