@@ -405,4 +405,4 @@ Rules:
 
 ## Memory protocol
 
-Before finishing, follow the **Task Completion Checklist** in [`core/protocols/bd-and-memory.md`](../protocols/bd-and-memory.md) (log type: `bugfix` if you pushed fixes, `audit` if review-only). Useful memories for this role: recurring patterns the creating agent gets wrong, repo-specific conventions, CI bot quirks or false positives.
+Before finishing, follow the **Task Completion Checklist** in [`core/protocols/bd-and-memory.md`](../protocols/bd-and-memory.md). **Before writing or judging code, read [`core/protocols/code-quality.md`](../protocols/code-quality.md)** — the canonical engineering standard (log type: `bugfix` if you pushed fixes, `audit` if review-only). Useful memories for this role: recurring patterns the creating agent gets wrong, repo-specific conventions, CI bot quirks or false positives.
