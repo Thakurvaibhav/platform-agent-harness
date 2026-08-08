@@ -17,8 +17,8 @@
 set -o pipefail
 
 REFS_DIR="${HARNESS_REFS:-$HOME/.agent-knowledge/references}"
-K8S_DIR="/Users/vaibhavthakur/Desktop/Work/Writer/git-repos/k8s"
-DT_DIR="/Users/vaibhavthakur/Desktop/Work/Writer/git-repos/devops-terraform"
+# Repo whose .beads hive the memory/consolidation checks read from.
+INFRA_DIR="${HARNESS_REPO:-$HOME/repos/infra}"
 WARNINGS=()
 
 # --- Helper: get file mtime as epoch ---
@@ -72,15 +72,17 @@ check_learnings_freshness() {
         fi
     done
 
-    if [ "$oldest_days" -gt 30 ]; then
-        WARNINGS+=("DRIFT: $oldest_file not updated in ${oldest_days}d — may have stale entries")
+    # mtime is a weak staleness proxy — a correct, stable file needs no edits. Only flag
+    # genuine abandonment, so this stays signal rather than a recurring session-start warning.
+    if [ "$oldest_days" -gt 120 ]; then
+        WARNINGS+=("DRIFT: $oldest_file not updated in ${oldest_days}d — check it is still accurate")
     fi
 }
 
 # --- 3. Memory bloat ---
 check_memory_count() {
     local count
-    count=$(cd "$K8S_DIR" 2>/dev/null && bd memories 2>/dev/null | grep -c "^### " 2>/dev/null || true)
+    count=$(cd "$INFRA_DIR" 2>/dev/null && bd memories 2>/dev/null | grep -c "^### " 2>/dev/null || true)
     count="${count##*$'\n'}"  # take last line if multi-line
     count="${count:-0}"
     if [ "$count" -gt 60 ]; then
@@ -94,7 +96,7 @@ check_consolidation_freshness() {
     # Anchor to the canonical `meta/last-consolidation` memory — `bd memories consolidation`
     # fuzzy-matches ANY memory containing "consolidation", so a bare date|head -1 grabs the
     # first date from an unrelated memory. Pin to the key's content line.
-    last_consol=$(cd "$K8S_DIR" 2>/dev/null && bd memories consolidation 2>/dev/null | grep -A1 "meta/last-consolidation" | grep -oE "[0-9]{4}-[0-9]{2}-[0-9]{2}" | head -1 || echo "")
+    last_consol=$(cd "$INFRA_DIR" 2>/dev/null && bd memories consolidation 2>/dev/null | grep -A1 "meta/last-consolidation" | grep -oE "[0-9]{4}-[0-9]{2}-[0-9]{2}" | head -1 || echo "")
     if [ -z "$last_consol" ]; then
         WARNINGS+=("DRIFT: No consolidation ever recorded. Run /consolidate")
         return
@@ -152,8 +154,7 @@ check_reference_consistency() {
 # so the routing itself is asserted, not assumed.
 check_standard_routing() {
     local std="$REFS_DIR/code-quality.md"
-    # Runtime-specific; override for non-Claude harnesses.
-    local agents_dir="${HARNESS_AGENTS:-$HOME/.claude/agents}"
+    local agents_dir="$HOME/.claude/agents"
     [ -f "$std" ] || { WARNINGS+=("DRIFT: code-quality.md missing at $std"); return; }
     [ -d "$agents_dir" ] || return
 
@@ -168,14 +169,12 @@ check_standard_routing() {
             || WARNINGS+=("DRIFT: agent '$base' does not reference code-quality.md (standard will not reach it)")
     done
 
-    grep -q "code-quality.md" "${HARNESS_MAIN_PROMPT:-$HOME/.claude/AGENTS.md}" 2>/dev/null \
-        || WARNINGS+=("DRIFT: main-session prompt does not reference code-quality.md")
+    grep -q "code-quality.md" "$HOME/.claude/AGENTS.md" 2>/dev/null \
+        || WARNINGS+=("DRIFT: Fox AGENTS.md does not reference code-quality.md")
     grep -q "code-quality.md" "$HOME/.agent-knowledge/scripts/codex-dispatch.sh" 2>/dev/null \
         || WARNINGS+=("DRIFT: codex-dispatch.sh preamble does not name code-quality.md (Codex workers get no standard)")
 }
 
-check_graph_freshness "$K8S_DIR"
-check_graph_freshness "$DT_DIR"
 check_learnings_freshness
 check_memory_count
 check_consolidation_freshness

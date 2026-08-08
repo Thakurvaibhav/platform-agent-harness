@@ -16,6 +16,7 @@ A portable, runtime-neutral behavioral specification and coordination protocol f
 | **Hand-curated knowledge base** ([`agent-knowledge/references/`](agent-knowledge/references/)) — markdown-only `index.md`, `log.md`, and numbered `learnings-*.md` agents read before they grep the repo. Adapted from [Karpathy's LLM Wiki](https://gist.github.com/karpathy/442a6bf555914893e9891c11519de94f). |
 | **3x+ wall-clock speedup** on N-cluster validation via parallel sub-agent dispatch ([`core/protocols/parallel-dispatch.md`](core/protocols/parallel-dispatch.md)). |
 | **Second-agent PR review** with structured bot-reply protocol ([`core/protocols/pr-review-loop.md`](core/protocols/pr-review-loop.md)). |
+| Design | [`core/protocols/design-framework.md`](core/protocols/design-framework.md) | Requirements lock, constraint inventory (hard/convention/preference), candidate shapes, multi-model judge panel. Driven by the [`design`](skills/design/) skill. |
 | **18 observability skills** install via `gcx skills install --all` — no vendoring. |
 
 ---
