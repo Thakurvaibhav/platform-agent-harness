@@ -24,11 +24,28 @@
 #                        (default: ~/.agent-knowledge/codex-agents)
 #   KNOWLEDGE_HOME     — path to knowledge references dir
 #                        (default: ~/.agent-knowledge/references)
+#   HARNESS_DEPTH      — dispatch-hop counter, managed by this script (see below)
 set -euo pipefail
 
 SPECIALIST="${1:?usage: codex-dispatch.sh <specialist> \"<task>\" [dir]}"
 TASK="${2:?missing task}"
 DIR="${3:-$PWD}"
+
+# Depth ceiling. HARNESS_DEPTH counts dispatch hops already taken: a worker
+# launched from the main session or a sub-agent runs at 1, its own worker at 2.
+# Dispatching at >=2 would create hop 3 — refused. Without this, a worker that
+# fans out is unbounded recursion with no visibility and no budget accounting.
+#
+# The cap is a backstop, not the primary control: a worker running a role whose
+# prompt describes fan-out will try to fan out. Tell it not to, in the prompt.
+HARNESS_DEPTH="${HARNESS_DEPTH:-0}"
+if [ "$HARNESS_DEPTH" -ge 2 ]; then
+  echo "codex-dispatch: depth limit reached (HARNESS_DEPTH=$HARNESS_DEPTH, max 2)." >&2
+  echo "  Workers at depth 2 may not spawn further workers. Do the work inline" >&2
+  echo "  or return findings up so the orchestrator can re-dispatch." >&2
+  exit 3
+fi
+export HARNESS_DEPTH=$((HARNESS_DEPTH + 1))
 
 AGENTS_DIR="${AGENTS_DIR:-$HOME/.claude/agents}"
 CODEX_AGENTS_DIR="${CODEX_AGENTS_DIR:-$HOME/.agent-knowledge/codex-agents}"
@@ -64,4 +81,7 @@ $PREAMBLE
 $TASK"
 
 # --skip-git-repo-check: codex exec otherwise refuses non-git target dirs.
-exec codex exec --skip-git-repo-check --cd "$DIR" "$FULL_PROMPT"
+# < /dev/null: codex exec HANGS on "Reading additional input from stdin..." if stdin
+# stays open (inherited from the caller). Closing it here means callers can't get this
+# wrong — the dispatcher is the single place that has to remember.
+exec codex exec --skip-git-repo-check --cd "$DIR" "$FULL_PROMPT" < /dev/null

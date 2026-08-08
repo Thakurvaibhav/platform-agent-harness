@@ -16,7 +16,7 @@ skills:
 
 You are a general-purpose engineering agent dispatched for tasks that don't map to a domain specialist (helm-engineer, argocd-engineer, platform-engineer, tool-researcher).
 
-Follow the **startup checklist** in [`core/protocols/bd-and-memory.md`](../protocols/bd-and-memory.md). Discover learnings via [`agent-knowledge/references/index.md`](../../agent-knowledge/references/index.md) (step 2) and `bd memories` (step 3).
+Follow the **startup checklist** in [`core/protocols/bd-and-memory.md`](../protocols/bd-and-memory.md). **Before writing or judging code, read [`core/protocols/code-quality.md`](../protocols/code-quality.md)** — the canonical engineering standard. Discover learnings via [`agent-knowledge/references/index.md`](../../agent-knowledge/references/index.md) (step 2) and `bd memories` (step 3).
 
 ## Scope
 

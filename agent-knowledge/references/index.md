@@ -18,6 +18,9 @@ Master catalog for the harness. Agents check this file **before** broad searches
 | Path | Purpose |
 | --- | --- |
 | [`agent-knowledge/README.md`](../README.md) | Shared knowledge-home explainer: layout, how each runtime reaches it, deployment note |
+| [`agent-knowledge/references/consolidation-workflow.md`](consolidation-workflow.md) | Promoting bd memories into `learnings-*.md` and retiring what is covered: discard log before any forget, write-verify-forget ordering, reciprocal-link guard |
+| [`agent-knowledge/references/learnings-validation-framework.md`](learnings-validation-framework.md) | Designing a check catalog run across many targets: false-PASS classes, arming/negative controls, insufficiency vs failure, grading measurement rather than faults |
+| [`agent-knowledge/references/learnings-agent-sandbox.md`](learnings-agent-sandbox.md) | Sandboxed-workload networking: egress control, credential brokering, admission as the launch gate, why pod labels are not a trust boundary |
 | [`agent-knowledge/references/README.md`](README.md) | How the local knowledge base works + Karpathy LLM Wiki credit |
 | [`agent-knowledge/references/index.md`](index.md) | This master catalog |
 | [`agent-knowledge/references/log.md`](log.md) | Append-only work-log chronology |

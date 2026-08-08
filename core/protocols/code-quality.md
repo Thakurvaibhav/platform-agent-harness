@@ -27,7 +27,10 @@ Minimum code that solves the task. Nothing speculative.
 
 **Reuse-first.** Before writing any new function, utility, or pattern — search the codebase for an existing one.
 
-1. **Search first**: grep keywords in `utils/`, `helpers/`, `common/`, `shared/`, `lib/` and across the repo.
+1. **Search first — in the shape the repo actually has.** For application code: `utils/`, `helpers/`, `common/`, `shared/`, `lib/`. **In an infrastructure repo those directories often do not exist** — one Helm monorepo has zero `utils/`, `common/`, `shared/` or `lib/` directories and 141 `_helpers.tpl` files. Grepping the canonical list, finding nothing, and calling that diligence is the most common way this rule gets satisfied without being followed. In a chart, search:
+   - the chart's own `_helpers.tpl` — the define you need usually already exists,
+   - every level of `values.yaml` for the key you are about to add (`grep -n '<key>:'`) — a duplicate key at a second level silently wins or loses by YAML ordering,
+   - **the chart's structural shape** — component-keyed (`<chart>.components.<name>`) vs flat. Writing a flat singleton into a component-keyed chart is a rewrite, not a tweak.
 2. **Reuse or extend**: if something similar exists, use it. If close but not exact, extend it — don't fork a parallel implementation.
 3. **Document if new**: place it where future code can find it (shared module, not buried in a feature directory).
 
@@ -42,8 +45,10 @@ Reject these rationalizations: "My version is slightly different" (extend instea
 Touch only what you must. Every changed line traces to the task.
 
 - No reformatting or refactoring adjacent code.
-- **Comments: terse, and only for a non-obvious *why*.** A comment explains *why* (a real constraint, gotcha, or deliberate deviation) — it NEVER restates *what* the code already says. Match the surrounding comment density; if the neighboring code has no comments, add none. One line where one line works — no multi-sentence essays, no step-by-step narration, no changelog prose in the source.
+- **Comments: the default is NONE.** Code says *what*. A comment exists only when there is a non-obvious *why* — a real constraint, a gotcha, a deliberate deviation. If you cannot name that why in one line, there probably isn't one. Match the surrounding density: if the neighbouring code carries no comments, add none. A comment that restates the code is worse than no comment — it is a second thing to keep true.
 - **No ticket IDs, PR numbers, dates, or author names in code comments.** Issue keys (`<TICKET-123>`), PR links, and "added on `<date>`" belong in the **commit message and PR description**, NOT the source — they rot, add noise, and leak internal references into shared/public code. Tempted to write `# <TICKET-123>: does X`? Put the ticket in the PR body; the comment (if any) states only the non-obvious *why*.
+- **Ceiling: 2 lines per comment block** when one is warranted. A third line means it is PR-description material, not source. This is a count, not a call — "terse" and "one line where one line works" are judgments, and every author of a 10-line block believes theirs is the justified exception. **Relocate** the rationale to the PR body; do not delete it.
+- **Gate it, don't eyeball it:** [`core/hooks/generic/comment-discipline.sh`](../hooks/generic/comment-discipline.sh) checks all three rules against a diff (banned refs, block length, per-file density) (`--staged`, `--base <ref>`, or a diff on stdin); exit 1 = findings. The `create-pr` skill runs it before push and `pr-reviewer` runs it at review. The prose version of these two rules alone was not enough — real PRs shipped 10-line comment blocks carrying issue keys, twice, including once through a manual correction pass. A line count cannot be argued with; an adjective can.
 - Do not include fields/defaults the existing pattern omits — explicit defaults cause permadiffs in ArgoCD.
 - Match existing style exactly even if you would do it differently.
 - Remove only imports/variables/functions that YOUR changes made unused. Do not remove pre-existing dead code unless the task asks for it.

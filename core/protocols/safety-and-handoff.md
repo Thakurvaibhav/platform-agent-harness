@@ -27,6 +27,26 @@ Operating rules every sub-agent must apply, and the structured handoff format ev
 - Before any commit that changes examples, references, or templates, run [`sanitization/prepublish-checklist.md`](../../sanitization/prepublish-checklist.md): `trufflehog`, `gitleaks`, the local denylist, formatting check.
 - Synthetic placeholders in public examples: `<company>`, `<cluster>`, `<env-cluster>`, `<namespace>`, `<service>`, `<TICKET-KEY>`.
 
+## Agent attribution: 🤖 sign-off
+
+**Anything an agent authors and posts under the user's identity ends with 🤖 on its own last line.** Not inline, not buried in a footnote — the last line.
+
+Covers **chat** (Slack/Teams messages, drafts, thread replies, canvases) and **code review** (review comments, review bodies, replies to bot threads, issue comments, upstream issues). Applies to drafts handed up for approval exactly as to messages sent directly — users forward drafts as-is.
+
+**Commit messages and PR descriptions are excluded** where the runtime already stamps them (`Co-Authored-By`, a generated-by footer). Double-marking adds noise, not signal. If your runtime stamps nothing, add the sign-off there too.
+
+Anything posted goes out under the *user's* account and reads as written by them. That ambiguity costs the user, not the agent: a wrong or blunt review reads as their considered opinion, and an agreement reads as human review that never happened. It is worst on someone else's PR, where it spends their credibility with a colleague.
+
+**If something already went out unmarked, edit it in** rather than leaving the record inconsistent:
+
+```bash
+gh api -X PATCH repos/<org>/<repo>/issues/comments/<id> -f body="<original>
+
+🤖"
+```
+
+Never strip it because a message reads cleaner without it. A user may waive it for a specific message — that is their call; say what you are doing and do it.
+
 ## Handoff contract
 
 Every delegated task ends with a structured report to the caller (parent sub-agent or main session). Use this exact format so chained delegation (`task-planner` → specialist → `general-engineer`) can be parsed reliably.
