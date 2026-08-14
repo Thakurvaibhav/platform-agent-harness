@@ -36,14 +36,28 @@ echo ""
 # --- Section 1: bd memories ---
 echo "### bd memories"
 echo ""
-BD_OUTPUT=$(bd memories 2>/dev/null || echo "")
-if [ -n "$BD_OUTPUT" ]; then
-    MATCHES=$(echo "$BD_OUTPUT" | grep -iE "$PATTERN" 2>/dev/null || true)
-    if [ -n "$MATCHES" ]; then
-        echo "$MATCHES" | head -30
-    else
-        echo "(no matches in bd memories)"
-    fi
+# `bd memories` prints key and body on separate lines, so a line-wise grep
+# returns one or the other. Match whole records instead.
+BD_JSON=$(bd memories --json 2>/dev/null || echo "")
+if [ -n "$BD_JSON" ]; then
+    printf '%s' "$BD_JSON" | PATTERN="$PATTERN" /usr/bin/python3 -c '
+import json, os, re, sys
+try: d = json.load(sys.stdin)
+except Exception: print("(bd memories unreadable)"); raise SystemExit
+items = d.items() if isinstance(d, dict) else [(m.get("key"), m.get("content","")) for m in d]
+rx = re.compile(os.environ["PATTERN"], re.I)
+hits = [(k, str(v)) for k, v in items if k and (rx.search(k) or rx.search(str(v)))]
+if not hits:
+    print("(no matches in bd memories)"); raise SystemExit
+CAP = 25
+for k, body in hits[:CAP]:
+    body = " ".join(body.split())
+    print("  %s" % k)
+    print("    %s" % (body[:320] + ("\u2026" if len(body) > 320 else "")))
+if len(hits) > CAP:
+    print()
+    print("  ... %d more matches not shown — narrow the query or use: bd memories <keyword>" % (len(hits) - CAP))
+'
 else
     echo "(bd memories unavailable)"
 fi
