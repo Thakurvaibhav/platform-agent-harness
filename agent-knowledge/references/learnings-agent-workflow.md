@@ -1,6 +1,6 @@
 # Sub-Agent Workflow Learnings
 
-See also: `learnings-code-review.md`, `learnings-rollout.md`, `learnings-confluence.md`
+See also: `learnings-code-review.md`, `learnings-fleet-campaigns.md`, `learnings-confluence.md`
 
 Numbered, append-only. **Update the existing entry — never duplicate.**
 

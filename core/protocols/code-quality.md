@@ -4,11 +4,6 @@ The single canonical home for coding guidelines and engineering standards. **Eve
 
 ## Assumptions
 
-**Don't assume. Don't hide confusion. Surface tradeoffs.**
-
-- State assumptions explicitly before executing; log them in `bd comments`.
-- If multiple valid interpretations exist, present them — don't pick silently.
-- If a simpler approach exists than what was requested, say so.
 - If confused, stop and name what's unclear. Never fabricate context.
 - Before starting work that might have prior art (rollout, research, upgrade, playbook), check [`agent-knowledge/references/index.md`](../../agent-knowledge/references/index.md) for an existing doc on the topic. Read the relevant doc before writing anything from scratch.
 - Verify metric names: `curl -s <pod-ip>:<port>/metrics | grep <metric>`.
@@ -21,8 +16,6 @@ Minimum code that solves the task. Nothing speculative.
 
 - No features or templates beyond what was asked. If the task says "create 5 alerts," create exactly 5.
 - No abstractions for single-use code. No "flexibility" or "configurability" that wasn't requested.
-- No error handling for impossible scenarios.
-- If you wrote 200 lines and it could be 50, rewrite it.
 - Test: "Would a senior engineer say this is overcomplicated?" If yes, simplify.
 
 **Reuse-first.** Before writing any new function, utility, or pattern — search the codebase for an existing one.

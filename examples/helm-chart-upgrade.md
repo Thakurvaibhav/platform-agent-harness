@@ -20,7 +20,7 @@ Main session activates the `task-planner` (via the runtime's delegation mechanis
 
 - [`agent-knowledge/references/index.md`](../agent-knowledge/references/index.md) — looks for prior `<example-operator>` learnings. Finds two:
   - `learnings-helm-ci.md#3`: "Always run `helm dep build` before lint/template."
-  - `learnings-rollout.md#2`: "Operator upgrades touching CRDs need phased per-env rollout."
+  - `learnings-fleet-campaigns.md#2`: "Operator upgrades touching CRDs need phased per-env rollout."
 - [`agent-knowledge/references/clusters.md`](../agent-knowledge/references/clusters.md) — confirms `<example-operator>` is enabled on `<dev>`, `<stag>`, `<prod>` clusters.
 - Existing chart at `charts/<example-operator>/Chart.yaml` — currently pinned to `1.4.0`.
 
