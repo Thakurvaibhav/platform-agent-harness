@@ -71,6 +71,17 @@ Domain-specific checks:
 - Alerts: PromQL syntactically valid; metric names exist in the target datasource.
 - Enablement: pods Ready, zero restarts, operator logs clean (see Post-Deploy Validation in [`safety-and-handoff.md`](safety-and-handoff.md)).
 
+### Checks that measure something
+
+A check that measures by grepping a tool's human-readable output silently becomes a no-op when that tool changes its format — and it fails in the reassuring direction. Three of this harness's own gates carried that defect at once: two memory-bloat guards that counted with `grep -c` against output the tool had stopped emitting, and a usage counter that credited a read whenever a filename *appeared*, so a file that had never existed outranked three real ones. All three reported health.
+
+- **Count from a machine-readable surface** (`--json`, `-o jsonpath`, an API), never from formatted text. Formatted output is a UI; it changes without notice and without an error.
+- **Measure the outcome, not the intent.** A tool call is emitted whether or not it succeeded; a filename in a command may be what is being *searched for* rather than read. Assert the thing actually happened — the file exists, the resource is there, the count came back.
+- **Distinguish zero from could-not-measure.** Return a sentinel when the measurement itself fails and WARN on it. A check that could not run must never render as a pass.
+- **Test every threshold check with a control that forces it to fire**, plus one that breaks the measurement. A gate whose failure mode is silence is indistinguishable from a healthy system, so a green run proves nothing until you have seen the gate go red on demand.
+
+This is the same non-vacuity requirement R1 states for rendered changes, applied to the checks themselves: a threshold that has never fired has not been shown capable of firing, exactly as a validation suite that cannot fail is indistinguishable from a perfect one. See [`learnings-validation-framework.md`](../../agent-knowledge/references/learnings-validation-framework.md) items 23 ("absence reads as pass" at every layer) and 24 (prove non-vacuity; one known-bad input per question the tool asks).
+
 ## Standing engineering reflexes
 
 Apply on context, no prompt needed. These fire alongside any verification work.

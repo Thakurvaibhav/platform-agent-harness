@@ -2,7 +2,7 @@
 
 Durable, vendor-neutral patterns for migrating services from a legacy Envoy/ingress config to Envoy Gateway `HTTPRoute` resources, and for validating auth on the migrated routes. Applies to any Gateway API + Envoy Gateway setup with an external-authorization (`ext-authz`) `SecurityPolicy` layer.
 
-See also: `learnings-helm-ci.md` (Helm deep-merge), `learnings-observability.md`, `learnings-progressive-delivery.md` (Gateway API canary routing), `learnings-code-review.md`.
+See also: `learnings-helm-ci.md` (Helm deep-merge), `learnings-observability.md`, `learnings-progressive-delivery.md` (Gateway API canary routing), `learnings-code-review.md`, `learnings-agentgateway.md`, `learnings-istio.md`.
 
 ## HTTPRoute status & XDS
 
@@ -37,3 +37,8 @@ See also: `learnings-helm-ci.md` (Helm deep-merge), `learnings-observability.md`
 ## Deployment-aware validation
 
 12. **A missing HTTPRoute is only a failure if the service is actually DEPLOYED on that cluster — check deployments/pods first.** Not every service runs on every cluster. If undeployed, its paths correctly fall through to the legacy fallback (which may return 200 without auth) — expected, not an auth gap, because no backend exists there. Classify: route-missing + deployed = FAILURE (auth gap); route-missing + not-deployed = NOT APPLICABLE. Only run auth tests on paths that have a direct HTTPRoute on that specific cluster.
+
+## Incident-signature traps
+
+13. **During an ext-authz fail-closed incident, downstream p99 latency can DROP rather than spike — a low-latency signal that looks like evidence the auth layer isn't involved is actually the fingerprint of it failing closed.** When the ext-authz backend starts erroring and its "ok" counter pins to zero, the proxy's fail-closed local 4xx responses are fast (no round-trip to the real backend), so the overall downstream request-time percentile falls at the same time the 4xx rate rises in lockstep with the ext-authz error rate. The diagnostic signature for "ext-authz is failing closed and rejecting everything" is precisely: error counter up, ok counter at zero, latency DOWN, 4xx rate up — the intuitive read ("latency is fine, must not be this layer") is backwards for this specific failure mode.
+    - **Companion trap:** a range query whose end time is set past the environment's actual current time makes monotonic counters (like an uptime gauge) flatline identically across every series at the query's cutoff instant — that is query staleness, not evidence every instance restarted at the same moment.

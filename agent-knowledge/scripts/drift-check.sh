@@ -82,9 +82,23 @@ check_learnings_freshness() {
 # --- 3. Memory bloat ---
 check_memory_count() {
     local count
-    count=$(cd "$INFRA_DIR" 2>/dev/null && bd memories 2>/dev/null | grep -c "^### " 2>/dev/null || true)
+    # Count from --json, never by grepping human-readable output: a format change
+    # silently returns 0, and a check that can only under-report reads as a pass.
+    count=$(cd "$INFRA_DIR" 2>/dev/null && bd memories --json 2>/dev/null \
+            | python3 -c 'import json,sys
+try:
+    d=json.load(sys.stdin)
+    print(len(d) if isinstance(d,(dict,list)) else 0)
+except Exception:
+    print(-1)' 2>/dev/null || echo -1)
     count="${count##*$'\n'}"  # take last line if multi-line
     count="${count:-0}"
+    # -1 means the measurement itself failed. Say so rather than passing silently:
+    # a check that could not run must never render as a pass.
+    if [ "$count" -lt 0 ]; then
+        WARNINGS+=("DRIFT: bd memory count UNAVAILABLE (bd memories --json failed) — bloat check did not run")
+        return
+    fi
     if [ "$count" -gt 60 ]; then
         WARNINGS+=("DRIFT: $count bd memories (threshold: 60). Consider running /consolidate")
     fi

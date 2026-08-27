@@ -18,6 +18,8 @@
 #   CONSOLIDATE_DRYRUN      — set to "1" for report-only no-mutation pass
 #   WORKFLOW_PATH           — path to consolidation-workflow.md
 #                             (default: $HOME/.agent-knowledge/references/consolidation-workflow.md)
+#
+# Exit codes: 0 = ran or below threshold, 2 = could not measure / bad RUNNER.
 set -uo pipefail
 
 export PATH="/opt/homebrew/bin:/usr/local/bin:/usr/bin:/bin:/usr/sbin:/sbin:$PATH"
@@ -38,13 +40,28 @@ notify() {
   osascript -e "display notification \"$1\" with title \"Auto-consolidate\"" 2>/dev/null || true
 }
 
+# Count from --json, never by grepping human-readable output: a format change
+# turns the guard silently into 0. Returns -1 when the measurement itself fails.
 mem_count() {
-  bd prime --memories-only 2>/dev/null \
-    | grep -oE 'Persistent Memories \([0-9]+\)' | grep -oE '[0-9]+' | head -1
+  bd memories --json 2>/dev/null \
+    | python3 -c 'import json,sys
+try:
+    d=json.load(sys.stdin)
+    print(len(d) if isinstance(d,(dict,list)) else 0)
+except Exception:
+    print(-1)' 2>/dev/null || echo -1
 }
 
-COUNT="$(mem_count)"; COUNT="${COUNT:-0}"
+COUNT="$(mem_count)"; COUNT="${COUNT##*$'\n'}"; COUNT="${COUNT:-0}"
 echo "[$(date)] memory count=$COUNT threshold=$THRESHOLD runner=$RUNNER" | tee -a "$LOG"
+
+# A failed measurement is NOT a pass. Exiting 0 here would recreate the exact bug
+# this block replaces.
+if [ "$COUNT" -lt 0 ]; then
+  echo "[$(date)] WARN: bd memory count UNAVAILABLE (bd memories --json failed) — cannot evaluate threshold; not consolidating" | tee -a "$LOG"
+  notify "Auto-consolidate: memory count unavailable — check bd"
+  exit 2
+fi
 
 if [ "$COUNT" -lt "$THRESHOLD" ]; then
   echo "[$(date)] below threshold — skipping (no consolidation needed)" | tee -a "$LOG"

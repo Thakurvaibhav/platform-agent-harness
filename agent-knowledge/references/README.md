@@ -8,6 +8,10 @@ A small, markdown-only knowledge base that the agents read **before** searching 
 | [`log.md`](log.md) | Append-only chronology of non-trivial work (one line per task). Audit trail. |
 | `learnings-*.md` | Numbered, append-only learnings per domain. Each item is a self-contained insight. |
 
+## Scope: this is the *portable* tier
+
+Everything here must survive a change of employer. Method, protocol, and third-party behavior belong in these files; facts true of one estate — cluster registries, account IDs, inventories, metric allowlists, and every "X does not exist" claim — belong in [`../orgs/<org>/`](../orgs/README.md). The rule that decides which is which, plus the basename-collision and tombstoning constraints that make a split survivable, is [`core/protocols/knowledge-tiers.md`](../../core/protocols/knowledge-tiers.md).
+
 ## Inspiration
 
 This is a direct adaptation of [**Andrej Karpathy's LLM Wiki**](https://gist.github.com/karpathy/442a6bf555914893e9891c11519de94f) pattern: keep knowledge in plain markdown, hand-curated, and let the LLM query it instead of building a RAG pipeline over it. The harness applies that idea to multi-agent platform engineering:
@@ -52,6 +56,7 @@ So `bd` memories are the firehose; `learnings-*.md` is the curated stream that f
 - **Update the existing entry — never duplicate.** If a new finding refines an existing item, edit that item.
 - Each item is self-contained: a future session must understand it without context.
 - If a new finding conflicts with an existing entry, flag the conflict in the handoff (`CONFLICT: ... vs learnings-<file>.md#<n>`). The human decides; do not silently rewrite.
+- **Never renumber.** Entries are cited by bare `#N` from bd memories, PR comments, and transcripts no rewrite can reach. When an item moves to the org tier, leave a tombstone at its old number — `12. MOVED → \`orgs/<org>/istio.md#4\`` — rather than closing the gap. A renumbered file does not produce broken references; it produces confidently wrong ones.
 
 ### Promotion path (`bd remember` → `learnings-*.md`)
 

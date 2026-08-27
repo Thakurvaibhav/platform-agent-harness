@@ -145,6 +145,14 @@ Reading a Helm/values source diff is **not** proof of its rendered effect — a 
 
 Record a proof line for the summary: `Rendered proof: <chart> @ <env>, merge-base <sha>→HEAD — N manifests changed; negative control empty.`
 
+**Fleet width beats one environment.** When a chart has per-environment values, run the matrix rather than a single render — a change that looks right on one environment and wrong on twelve is the defect a single render is structurally blind to:
+
+```bash
+agent-knowledge/scripts/render-matrix.sh <chart-dir>
+```
+
+Treat `NO-BASE` rows as UNVERIFIED, not as evidence — they mean the base never rendered, so the comparison never happened. An all-`unchanged` matrix on a PR that claims to change behaviour is a blocking finding, not a pass.
+
 ### Step 2.7: Mechanical gates (run before reading the diff)
 
 Deterministic checks first, so judgment is spent only on what a script cannot decide.
@@ -157,6 +165,36 @@ Exit 1 = findings, reported as `file:line`. **Report every one** — this gate e
 
 Findings are **non-blocking** unless a comment leaks an internal identifier into a public or shared repo — that is blocking.
 
+### Step 2.8: Harness preflight — assert the suite works before trusting it
+
+**A mutation suite that cannot mutate is indistinguishable from a perfect one.** Before citing any test or mutation suite as evidence that a change is safe, prove the suite can fail. Answer all four in the summary — an unanswered item is an untrusted suite, not a passing one.
+
+| Check | Failure it catches |
+| --- | --- |
+| render **succeeded and is non-empty** | an empty render satisfies every "does NOT contain X" assertion |
+| each mutation **changed bytes** (`cmp` the before/after) | a no-op mutation reruns the clean baseline and reports "caught" |
+| the needle is **not a substring** of an unrelated message | a needle like `"spec.<field> is"` also matches `"is not a supported resource"` — deleting the row it guards still passes |
+| boolean presence uses **`has()`**, never `//` | `//` returns its right-hand side for `false` as well as for absent, so `false` and missing are indistinguishable |
+
+### Step 2.9: Emit / permit / schema (diffs that change emitted or managed resources)
+
+Offline rendering structurally cannot see whether the emitting identity is *allowed* to create what it now emits, or whether the target CRD *accepts* the shape. Both classes of defect are invisible to a source review and to a render, and surface only at deploy time.
+
+**(a) Does the controller identity hold the permission?** Check it live, and include a **known-granted resource as a positive control** — without one, a `no` cannot be distinguished from a broken query:
+
+```bash
+kubectl auth can-i <verb> <resource> --as=system:serviceaccount:<ns>:<controller-sa>
+kubectl auth can-i <verb> <known-granted-resource> --as=system:serviceaccount:<ns>:<controller-sa>   # must return yes
+```
+
+**(b) Does the live CRD accept the shape?** Server-side dry-run, not documentation. A nested block emitted as a list where the CRD wants a map renders and lints perfectly:
+
+```bash
+kubectl apply --dry-run=server -f /tmp/rp_head.yaml
+```
+
+Read-only throughout — `auth can-i` and `--dry-run=server` mutate nothing, so this stays inside the read-only constraint.
+
 ### Step 3: Review
 
 Categories, in priority order:
@@ -165,13 +203,15 @@ Categories, in priority order:
 2. **Security** — Exposed secrets, injection risks, overly permissive RBAC, unsafe defaults.
 3. **Reuse violations** — Search `utils/`, `helpers/`, `common/`, `shared/`, `lib/` for similar functions before accepting new ones.
 4. **Convention violations** — Existing style, naming, patterns. **Comment discipline is Step 2.7's gate, not your judgment** — report what it found; the only thing left for you here is a comment that restates *what* the code does while staying inside the line budget.
-5. **Edge cases** — Missing nil checks, empty arrays, boundary conditions, timeout handling.
-6. **Completeness** — Does the implementation fully address the task summary?
+5. **Guard coverage** — For any guard, denylist, validation or policy in the diff, state the surface it **structurally cannot see**, and check that surface separately. The defect usually sits just outside: a routing denylist blind to fields on the base resource it composes; a policy with no permission to read what it matched, so violations were recorded as `error` rather than `fail` and the violation count looked clean; a test guarding its own transcribed copy of a table rather than the original. **A guard that fails open on the case it exists to catch is worse than none — it reads as coverage.**
+6. **Edge cases** — Missing nil checks, empty arrays, boundary conditions, timeout handling.
+7. **Completeness** — Does the implementation fully address the task summary?
 
 For each issue, classify as:
 
-- **Blocking** — must fix before merge (bugs, security, correctness).
+- **Blocking** — requires a change **in THIS diff** (bugs, security, correctness). A real problem whose only remedy lives elsewhere, or whose in-repo fix would defeat the control it protects, is a **follow-up**, not a blocker.
 - **Non-blocking** — should fix but won't break things.
+- **Follow-up** — real, but out of this diff's reach. Route it (an issue, a task, a named owner) and list it in the summary. Never drop it silently; "not blocking here" is not "not a problem".
 
 **Ground current-state claims live, not from the diff.** Any finding that asserts "the current value is X" on an infra PR must be checked against the running config (`kubectl get -o yaml`, or the rendered `BASE` from Step 2.6) — a chart default or live override can make a repo-grep wrong. Tag anything you could not verify as `UNVERIFIED (assumption)` rather than asserting it as fact.
 
@@ -210,6 +250,14 @@ Ground against the live file (git show origin/<branch>:<path>) and a render — 
 - **Split** → surface both positions in the summary for the human; never silently pick a side.
 
 If there are **zero blocking findings** on a sensitive PR, run one cross-model completeness pass: *"What blocking issue did the first reviewer miss?"* — verify the absence, don't assume it. Cross-verify blocking findings only, never nits. This runs **before** Step 4, so confirmed findings are what you fix and reply to.
+
+**Mutation guidance — two rules, both learned the hard way.**
+
+*Mutate IDENTITY, not just values.* The mutations that fully disable a guard are almost always identity: a stray reference beside a selector (the reference silently wins), a wrong `apiVersion` group, the resource's own outer `apiVersion`. A lens that mutated six value fields, watched all six redden, and concluded the suite was load-bearing had tested nothing of the sort. Mutate `apiVersion`, `kind`, API group, resource names, and set membership — tests assert what their author thought of; identity is what they forget.
+
+*Derive mutations from the SPEC, never from the test file.* A review once ran 19 mutations, each `cmp`-gated so it provably changed bytes, and reported 19/19 caught. Four more still escaped — one rewrote a projection so no required kind could ever match, breaking the guard entirely while the suite stayed green. Those mutations had been enumerated by reading the assertions, which measures your mutation set, not the suite. Build the list from what the guard is *supposed to prevent*, then check whether the suite notices.
+
+**Required output:** list the spec-derived mutations the suite does **not** assert on. An empty list needs justifying, not asserting — Step 2.8 passing is not evidence this passes.
 
 ### Step 4: Fix blocking issues, then reply to bot findings
 
@@ -292,6 +340,12 @@ gh pr checks <PR_URL>
 - **Pending**: poll every 30 seconds, up to 5 minutes total. If still pending, proceed and note in the summary.
 - **Failed**: read the failure details, fix root causes (not symptoms), commit, push.
 
+### Step 5.5: Reading a worker's output — wait for the end marker
+
+**Never judge a subprocess finished by a process check plus a log tail.** A cross-model run whose process had already exited was still flushing its output; the tail showed fixture noise and a sandbox rejection, and was reported as "no clean final report, one issue". The real report landed ~500 lines later with **four blocking findings and CHANGES REQUIRED**.
+
+After the process exits, re-read the **whole** output file and confirm the report's own end marker before drawing any conclusion. An absent end marker means the run is incomplete — say so; never let a truncated capture read as a clean verdict.
+
 ### Step 6: Re-review (iteration 2)
 
 If you pushed fixes in Step 4 or 5:
@@ -330,6 +384,19 @@ The comment contains:
 ### Rendered proof (standard+sensitive PRs touching charts/values)
 - <`<chart> @ <env>, merge-base <sha>→HEAD — N manifests changed; negative control empty`, or "N/A — no chart/values change">
 
+### Harness preflight (required whenever a test/mutation suite is cited as evidence)
+- render non-empty: <yes | no>
+- mutations changed bytes (`cmp`): <yes | no>
+- needle not a substring of an unrelated message: <yes | no>
+- boolean presence uses `has()`, not `//`: <yes | n/a>
+- <or "N/A — no suite cited as evidence">
+
+### Mutation gaps (spec-derived mutations the suite does NOT assert on)
+- <list, or "none — justified because <reason>", or "N/A — no guard/suite in this diff">
+
+### Permission / schema checks (diffs changing emitted or managed resources)
+- <`auth can-i` result + positive control result · server-side dry-run result, or "N/A">
+
 ### Cross-model verify (sensitive tier only)
 - <per blocking finding: `confirmed` / `refuted — dropped` / `split — both positions below`, or "N/A — not sensitive tier">
 
@@ -341,6 +408,9 @@ The comment contains:
 
 ### Non-blocking observations
 - <items>
+
+### Follow-ups (real, but out of this diff's reach)
+- <item + where it was routed. Never leave this implicit — an unrouted follow-up is a dropped finding.>
 
 ### Unresolved items (if any)
 - <items>
@@ -355,6 +425,8 @@ The comment contains:
 ```
 
 The leading `<!-- pr-reviewer:v1 -->` marker lets later tooling identify these comments without depending on the GitHub username.
+
+**Summary honesty.** State it loudly when the 2-iteration cap was reached with findings **documented but unfixed** — absent that sentence, "review complete" reads as "ready to merge". Say so too when a pushed fix **auto-dismissed a human approval**, so the PR does not stall silently waiting on a re-approval nobody knows is needed. An unanswered required field above is a gap to report, never a field to omit.
 
 ### Step 7.5: Parallax — post the two branded lenses (parallax mode only)
 
