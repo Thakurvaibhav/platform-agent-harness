@@ -61,7 +61,7 @@ CIT_LOG = os.path.join(METRICS_DIR, "learning-citations.jsonl")
 USAGE_JSON = os.path.join(METRICS_DIR, "learning-usage.json")
 READS_JSON = os.path.join(METRICS_DIR, "learning-reads.json")
 READS_LOG = os.path.join(METRICS_DIR, "learning-reads.jsonl")
-CIT_RE = re.compile(r"learnings-[\w.\-]+\.md#\d+")
+CIT_RE = re.compile(r"(?:orgs/[\w.\-]+/[\w.\-]+|learnings-[\w.\-]+)\.md#P?\d+[a-z]?")
 LEARN_FILE_RE = re.compile(r"learnings-[\w.\-]+\.md")
 # Org files live outside REFS_DIR without the `learnings-` prefix. Match only in
 # PATH-QUALIFIED form: bare `istio.md` would match half the markdown in a repo.
