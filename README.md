@@ -18,6 +18,7 @@ A portable, runtime-neutral behavioral specification and coordination protocol f
 | **Second-agent PR review** with structured bot-reply protocol ([`core/protocols/pr-review-loop.md`](core/protocols/pr-review-loop.md)). |
 | Design | [`core/protocols/design-framework.md`](core/protocols/design-framework.md) | Requirements lock, constraint inventory (hard/convention/preference), candidate shapes, multi-model judge panel. Driven by the [`design`](skills/design/) skill. |
 | **18 observability skills** install via `gcx skills install --all` — no vendoring. |
+| **Survives a job change.** Knowledge splits into a portable tier (`references/`) and a per-org instance tier ([`agent-knowledge/orgs/`](agent-knowledge/orgs/)), with one switch ([`agent-knowledge/env.sh`](agent-knowledge/env.sh)) for every machine path — see [`core/protocols/knowledge-tiers.md`](core/protocols/knowledge-tiers.md) and the runbook at [`installation/new-org-setup.md`](installation/new-org-setup.md). |
 
 ---
 
@@ -102,13 +103,13 @@ For a public companion repo using this exact operating model, see [`Thakurvaibha
 | Layer | Path | What it provides |
 | --- | --- | --- |
 | Agent prompts | [`core/agents/`](core/agents/) | 7 specialist sub-agents (planner, researcher, helm, argocd, platform/observability, PR reviewer, general-engineer) with explicit "when to invoke / when NOT to invoke" boundaries |
-| Protocols | [`core/protocols/`](core/protocols/) | 9 canonical rules: harness-pillars, code-quality, delegation, bd-and-memory, rtk-command-policy, graphify-first, pr-review-loop, parallel-dispatch, safety-and-handoff |
-| Skills | [`skills/`](skills/) | 13 portable executable playbooks (shiny-engineer, create-pr, helm-upgrade, k8s-debug, graphify, contract-validation, adopt-eval, upstream-triage, stakeholder-comms, stop-slop-code, systematic-debugging, ingest-reading, parallax-review); observability skills live in `gcx skills install` |
+| Protocols | [`core/protocols/`](core/protocols/) | 10 canonical rules: harness-pillars, code-quality, delegation, bd-and-memory, knowledge-tiers, rtk-command-policy, graphify-first, pr-review-loop, parallel-dispatch, safety-and-handoff |
+| Skills | [`skills/`](skills/) | 15 portable executable playbooks (shiny-engineer, create-pr, helm-upgrade, k8s-debug, graphify, contract-validation, adopt-eval, upstream-triage, stakeholder-comms, stop-slop-code, systematic-debugging, ingest-reading, design, parallax-review, verify-claims); observability skills live in `gcx skills install` |
 | Domain packs | [`domain-packs/`](domain-packs/) | Kubernetes safety, Helm essentials, observability-via-gcx — focused, not exhaustive |
 | Hooks | [`core/hooks/`](core/hooks/) | Transcript-parsing pre-compact memory snapshot, rtk autoprefix, context-threshold warning, learning-capture gate |
 | Tools | [`tools/`](tools/) | One-pagers for bd, Graphify, rtk, gcx with upstream install links |
 | Adapters | [`adapters/`](adapters/) | Concrete wiring for 6 CLI agent runtimes |
-| Agent knowledge | [`agent-knowledge/`](agent-knowledge/) | Shared, runtime-neutral knowledge home (see [`agent-knowledge/README.md`](agent-knowledge/README.md)): `references/` (hand-curated `index.md`, `log.md`, numbered `learnings-*.md` — Karpathy LLM Wiki pattern), `scripts/` (knowledge-search, drift-check, learn, codex-dispatch, codex-session-prime, auto-consolidate), `metrics/` (read-frequency + citation telemetry), `reading/` (external-source distilled notes, separate trust tier) |
+| Agent knowledge | [`agent-knowledge/`](agent-knowledge/) | Shared, runtime-neutral knowledge home (see [`agent-knowledge/README.md`](agent-knowledge/README.md)): `references/` (**portable tier** — hand-curated `index.md`, `log.md`, numbered `learnings-*.md` — Karpathy LLM Wiki pattern), `orgs/<org>/` (**instance tier** — cluster registries, inventories, anything true of one estate), `env.sh` (the single switch for machine paths + `ACTIVE_ORG`), `scripts/` (knowledge-search, drift-check, learn, codex-dispatch, codex-session-prime, auto-consolidate), `metrics/` (read-frequency + citation telemetry), `reading/` (external-source distilled notes, separate trust tier) |
 | Templates | [`templates/`](templates/) | `AGENTS.template.md` to drop into your repo + dispatch / handoff / validation contracts |
 | Examples | [`examples/`](examples/) | 2 end-to-end worked stories: Helm chart upgrade and alert investigation |
 | Sanitization | [`sanitization/`](sanitization/) | Pre-publish gate using trufflehog + gitleaks + local denylist |

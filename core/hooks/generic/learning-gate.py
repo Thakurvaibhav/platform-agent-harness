@@ -30,6 +30,8 @@ Config (env):
   LEARN_TOOLUSE_MIN  (default 8)  -> tool-use count that counts as "substantive"
   LEARN_MAIN_GAP     (default 2)  -> work-minus-persist gap that triggers the soft nudge
   HARNESS_METRICS                 -> metrics dir (default ~/.agent-knowledge/metrics)
+  HARNESS_REFS                    -> learnings dir (default ~/.agent-knowledge/references)
+  HARNESS_ORGS                    -> org tier dir (default ~/.agent-knowledge/orgs)
 
 PORTABILITY NOTE: this parser targets Claude-Code-style JSONL transcripts
 (one JSON object per line; assistant turns carry message.content[] blocks with
@@ -47,12 +49,27 @@ import sys
 METRICS_DIR = os.environ.get(
     "HARNESS_METRICS", os.path.expanduser("~/.agent-knowledge/metrics")
 )
+REFS_DIR = os.environ.get(
+    "HARNESS_REFS", os.path.expanduser("~/.agent-knowledge/references")
+)
+# Optional per-organization knowledge tier: `orgs/<org>/<file>.md`. Dormant
+# until such a directory exists — the predicates below simply never match.
+ORGS_DIR = os.environ.get(
+    "HARNESS_ORGS", os.path.expanduser("~/.agent-knowledge/orgs")
+)
 CIT_LOG = os.path.join(METRICS_DIR, "learning-citations.jsonl")
 USAGE_JSON = os.path.join(METRICS_DIR, "learning-usage.json")
 READS_JSON = os.path.join(METRICS_DIR, "learning-reads.json")
 READS_LOG = os.path.join(METRICS_DIR, "learning-reads.jsonl")
-CIT_RE = re.compile(r"learnings-[\w.\-]+\.md#\d+")
+CIT_RE = re.compile(r"(?:orgs/[\w.\-]+/[\w.\-]+|learnings-[\w.\-]+)\.md#P?\d+[a-z]?")
 LEARN_FILE_RE = re.compile(r"learnings-[\w.\-]+\.md")
+# Org files live outside REFS_DIR without the `learnings-` prefix. Match only in
+# PATH-QUALIFIED form: bare `istio.md` would match half the markdown in a repo.
+ORG_FILE_RE = re.compile(r"orgs/[\w.\-]+/[\w.\-]+\.md")
+# A search *for* a filename is not a read of it: `grep 'learnings-foo.md' *.md`
+# looks for the name inside other files, and counting it ranks phantoms.
+SEARCH_RE = re.compile(r"\b(?:grep|rg|ag|ack|fgrep|egrep)\b")
+QUOTED_RE = re.compile(r"""'[^']*'|"[^"]*\"""")
 TMP = "/tmp"
 
 
@@ -61,6 +78,56 @@ def _envint(name, default):
         return int(os.environ.get(name, default))
     except (TypeError, ValueError):
         return default
+
+
+def is_real_learnings_file(name, path=""):
+    """Outcome check: the referenced learnings file must actually EXIST.
+
+    A `Read` tool_use is emitted even when the read FAILED because the file was
+    not there, so counting the intent credits reads that never happened. Prefer
+    the literal path the agent used — layouts differ (in-repo
+    `agent-knowledge/references/` vs the `$HARNESS_REFS` home) — and fall back to
+    REFS_DIR for the bare names extracted from a shell command.
+    """
+    if path and os.path.isfile(os.path.expanduser(path)):
+        return True
+    return bool(name) and os.path.isfile(os.path.join(REFS_DIR, os.path.basename(name)))
+
+
+def is_real_org_file(rel, path=""):
+    """Same outcome check for the org tier: `orgs/<org>/<file>.md` must exist."""
+    if path and os.path.isfile(os.path.expanduser(path)):
+        return True
+    return bool(rel) and os.path.isfile(
+        os.path.join(ORGS_DIR, rel.split("orgs/", 1)[-1])
+    )
+
+
+def org_key(rel):
+    """Metrics key for an org file: `orgs/<org>/<file>.md`, NOT the basename.
+
+    Org files deliberately share basenames ACROSS organizations
+    (`orgs/org-a/istio.md` vs `orgs/org-b/istio.md`), so a basename key would
+    merge two organizations' read counts into one meaningless number.
+    """
+    return "orgs/" + rel.split("orgs/", 1)[-1]
+
+
+def learnings_reads_in_cmd(cmd):
+    """Learnings files READ by a shell command, excluding search patterns and phantoms."""
+    quoted = [m.span() for m in QUOTED_RE.finditer(cmd)] if SEARCH_RE.search(cmd) else []
+    out = []
+    for m in LEARN_FILE_RE.finditer(cmd):
+        if any(qs < m.start() < qe for qs, qe in quoted):
+            continue  # inside a search pattern, not a path being read
+        if is_real_learnings_file(m.group(0)):
+            out.append(m.group(0))
+    for m in ORG_FILE_RE.finditer(cmd):
+        if any(qs < m.start() < qe for qs, qe in quoted):
+            continue
+        if is_real_org_file(m.group(0)):
+            out.append(org_key(m.group(0)))
+    return out
 
 
 def parse_transcript(path):
@@ -95,25 +162,37 @@ def parse_transcript(path):
                 inp = b.get("input", {}) if isinstance(b.get("input"), dict) else {}
                 if name == "Read":
                     fp = str(inp.get("file_path", ""))
-                    m = LEARN_FILE_RE.search(fp)
-                    if m:
-                        learnings_reads.append(m.group(0))
+                    base = os.path.basename(fp)
+                    if (base.startswith("learnings-") and base.endswith(".md")
+                            and is_real_learnings_file(base, fp)):
+                        learnings_reads.append(base)
+                    else:
+                        om = ORG_FILE_RE.search(fp)
+                        if om and is_real_org_file(om.group(0), fp):
+                            learnings_reads.append(org_key(om.group(0)))
                 elif name in ("Edit", "Write", "NotebookEdit", "MultiEdit", "Create"):
                     mutations += 1
                     fp = str(inp.get("file_path", ""))
                     # Any recognized knowledge store counts as persistence:
-                    # shared learnings files, or a runtime-native project memory file.
+                    # shared learnings files, the org tier, or a runtime-native
+                    # project memory file. Writing an org file IS capture.
                     if (("learnings-" in fp and fp.endswith(".md"))
+                            or (ORG_FILE_RE.search(fp) and fp.endswith(".md"))
                             or ("/memory/" in fp and fp.endswith(".md"))):
                         learnings_writes += 1
                 elif name in ("Bash", "Execute"):
                     cmd = str(inp.get("command", ""))
                     # `learn.sh` wraps `bd remember`, so match it too.
-                    if ("bd remember" in cmd or "bd comments add" in cmd
-                            or "learn.sh" in cmd):
+                    is_persist = ("bd remember" in cmd or "bd comments add" in cmd
+                                  or "learn.sh" in cmd)
+                    if is_persist:
                         bd_remembers += 1
                     if re.search(r"\bgit commit\b", cmd) or "gh pr create" in cmd:
                         commits_prs += 1
+                    # Shell reads (cat/less/awk/...), per file. Skip persist commands:
+                    # a `bd remember` body QUOTES a filename as a citation, not a read.
+                    if not is_persist:
+                        learnings_reads.extend(learnings_reads_in_cmd(cmd))
     return {
         "tool_uses": tool_uses, "mutations": mutations, "commits_prs": commits_prs,
         "bd_remembers": bd_remembers, "learnings_writes": learnings_writes,
