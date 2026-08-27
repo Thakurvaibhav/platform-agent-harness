@@ -8,8 +8,8 @@ At the start of every task, every sub-agent must:
 
 1. Read this file (bd workflow, constraints, checklists) and — for engineering work — [`code-quality.md`](code-quality.md) (the canonical coding standards: assumptions, simplicity, reuse-first, surgical changes, comments, verification, reflexes R1–R4).
 2. Read [`agent-knowledge/references/index.md`](../../agent-knowledge/references/index.md) to discover available reference docs, project documentation, and topic learnings. From the "Topic learnings" table, load every learnings file whose domain overlaps with your assigned task. When uncertain, load it.
-3. **Knowledge search** — run [`agent-knowledge/scripts/knowledge-search.sh`](../../agent-knowledge/scripts/knowledge-search.sh) `<2-3 task keywords>` to find prior art across bd memories, learnings files, and domain docs simultaneously. This catches matches that keyword-only `bd memories <term>` would miss.
-4. Read [`agent-knowledge/references/clusters.md`](../../agent-knowledge/references/clusters.md) (or the repo equivalent) before any cluster-scoped decision.
+3. **Knowledge search** — run [`agent-knowledge/scripts/knowledge-search.sh`](../../agent-knowledge/scripts/knowledge-search.sh) `<2-3 task keywords>` to find prior art across bd memories, the portable learnings tier, **every** org's instance tier, reading notes, and domain docs simultaneously. This catches matches that keyword-only `bd memories <term>` would miss.
+4. Read `agent-knowledge/orgs/<ACTIVE_ORG>/clusters.md` (or the repo equivalent) before any cluster-scoped decision. If it is missing or empty, say "no cluster registry for this org" — never infer cluster identity from cluster names ([`knowledge-tiers.md`](knowledge-tiers.md)).
 5. **Drift check** (orchestrator only, at session start/resume) — run [`agent-knowledge/scripts/drift-check.sh`](../../agent-knowledge/scripts/drift-check.sh). If warnings are found, surface them to the user before starting work.
 
 Non-engineering sub-agents (`task-planner`, `tool-researcher`): read Constraints, bd context, Learnings protocol, Task completion checklist, and the Handoff contract (in [`safety-and-handoff.md`](safety-and-handoff.md)). Skip [`code-quality.md`](code-quality.md), Git worktree protocol, Amending existing PRs, Base pre-completion checklist, and Post-deploy validation.
@@ -152,11 +152,14 @@ Four stores, each with a distinct scope. Route every fact to exactly one — nev
 | Store | Scope | Use for |
 | --- | --- | --- |
 | **bd / beads** | Cross-runtime (git-synced via the repo's `.beads`) | Default for operational state (task progress, PRs, environments) and findings still uncertain or likely to change. The firehose. |
-| **`learnings-*.md`** (`agent-knowledge/references/`) | Cross-runtime, citation-measured, durable | Reusable, generalized engineering patterns: gotchas, non-obvious fixes, decisions + rationale. The curated stream. |
+| **`learnings-*.md`** (`agent-knowledge/references/`) | Cross-runtime, citation-measured, durable — **portable across employers** | Reusable, generalized engineering patterns: gotchas, non-obvious fixes, decisions + rationale. The curated stream. |
+| **`orgs/<ACTIVE_ORG>/*.md`** (`agent-knowledge/orgs/`) | Cross-runtime, durable, **true of one estate only** | Cluster registries, account IDs, fleet inventories, metric allowlists, alert routes, per-service tables — and every **absence claim** ("metric X does not exist"), which is a fact about one configuration, not about the tool. |
 | **runtime-native memory** (e.g. a runtime's own project memory) | Runtime-only **and** cwd-scoped | ONLY runtime/config facts specific to this machine or runtime (hook wiring, local paths, settings). **Never** domain knowledge or anything another runtime would want. |
 | **`agent-knowledge/references/` docs** | Cross-runtime, stable reference | Protocols, cluster/inventory tables, tool guides — slow-changing reference material, not per-session findings. |
 
-Rule of thumb: reusable engineering knowledge → learnings; operational or uncertain → bd; runtime-only config trivia → native memory; stable reference material → reference docs.
+Rule of thumb: reusable engineering knowledge → learnings; facts about this estate → the org tier; operational or uncertain → bd; runtime-only config trivia → native memory; stable reference material → reference docs.
+
+Splitting the durable row in two is the **knowledge-tier** model. When a fact could plausibly go either way, apply the payload/locator rule in [`knowledge-tiers.md`](knowledge-tiers.md): if the separable content *is* the estate data, it is instance; if a cluster or path is named as the site of proof for a general claim, it is portable. Tie-breaker: *would a reader at a different company act differently because of this?*
 
 ## Knowledge ingest (immediate synthesis)
 

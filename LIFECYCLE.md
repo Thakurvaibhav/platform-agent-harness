@@ -122,6 +122,8 @@ With this loop:
 
 `bd remember` is the **firehose** — fast, per-session, captured without overthinking format. The [Karpathy LLM Wiki](https://gist.github.com/karpathy/442a6bf555914893e9891c11519de94f)-style local knowledge base in [`agent-knowledge/references/`](agent-knowledge/references/) is the **curated stream** — numbered, append-only `learnings-*.md` files that future agents read first. The promotion path (recurring `bd` memory → numbered learning) is documented in [`agent-knowledge/references/README.md`](agent-knowledge/references/README.md). Together they cover both "what I just learned" and "what we have always known."
 
+The curated stream itself has two tiers, because they have opposite lifetimes: [`agent-knowledge/references/`](agent-knowledge/references/) holds **portable** method and vendor behavior that follows you to the next job, while `agent-knowledge/orgs/<org>/` holds **instance** facts — cluster registries, account IDs, inventories — that die with the estate but stay searchable as precedent. Compaction is the loop that survives a context reset; the tier split is the one that survives a *job change*. Rules in [`core/protocols/knowledge-tiers.md`](core/protocols/knowledge-tiers.md), migration runbook in [`installation/new-org-setup.md`](installation/new-org-setup.md).
+
 ### Explicit post-task step (every sub-agent)
 
 The end of every non-trivial task runs the four-step **Task Completion Checklist** (canonical in [`core/protocols/bd-and-memory.md`](core/protocols/bd-and-memory.md)):

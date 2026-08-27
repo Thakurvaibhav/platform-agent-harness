@@ -1,0 +1,30 @@
+# Workload Debugging Learnings
+
+See also: `learnings-observability.md`, `learnings-helm-ci.md`, `learnings-k8s-sa.md`
+
+Kubernetes workload debugging patterns where the obvious check reports the opposite of the real state -- probe and restart semantics, native-sidecar visibility, image-level container-start failures, resource-constrained scheduling, and recognising when a client-reported error is actually correct.
+
+Numbered, append-only. **Update the existing entry — never duplicate.**
+
+## Probes and pod status
+
+1. **A failing STARTUP PROBE can masquerade as a healthy pod: if the container exits 0 on `SIGTERM`, the kubelet's probe-triggered kill shows up as `Running` with a CLIMBING RESTART COUNT -- not `CrashLoopBackOff`.** The diagnostic that names it immediately: the restart interval equals `failureThreshold x periodSeconds` exactly (a `failureThreshold: 20`, `periodSeconds: 15` probe restarts the container every 300 seconds, on the dot). Confirm the actual failing path from INSIDE the pod before touching the chart -- `kubectl exec ... -- wget -qO- -S localhost:<port>/<path>` against the exact probe endpoint. A common root cause: the chart's probe path does not match the path the application actually serves (probing `/health` when the app serves `/api/<service>/health`).
+
+2. **`kubectl ... -o jsonpath='{.spec.containers[*].name}'` returns a FALSE NEGATIVE for native (Kubernetes 1.29+) sidecars.** Native sidecars live in `.spec.initContainers` with `restartPolicy: Always`, so `.spec.containers` lists only the main application container while the pod still reports e.g. `3/3 Ready`. An investigation that inspects only `.spec.containers` can wrongly conclude a workload has no connection to a companion process -- a proxy, a log shipper, a database sidecar -- that is in fact running right next to it. **Correct check: query `.spec.initContainers[*]` too -- or simply trust the mismatch itself**, since fewer containers listed than the pod's own Ready count reports means native sidecars are present.
+
+## Container never starts — causes that live in the image
+
+3. **Two "the pod is scheduled but the container never runs" causes that live in the IMAGE, not the chart or manifest:**
+    - **A required environment variable with no usable default.** A vendored SDK can validate-and-require an env var whose documented development default is inert because the image sets `NODE_ENV=production` (or an equivalent production-mode flag) which disables dev defaults. The pod clears scheduling and container creation, then `CrashLoopBackOff`s with a "missing required environment variable" message and a non-zero exit code. **Fix: set the variable explicitly wherever the workload is enabled, and make the chart's own default a LOUD sentinel value (e.g. `CHANGE_ME_<VAR>`) so a missing override fails at render time, not at runtime** -- a chart with no key for the variable at all only surfaces the defect live, in production.
+    - **`CreateContainerConfigError: container has runAsNonRoot and image will run as root`** happens when the pod spec sets `runAsNonRoot: true` with no `runAsUser`, AND the image itself declares no `USER` -- so the kubelet resolves uid 0 from the image's own config and refuses to start it. **The fix belongs on the image side**: adding a non-root `USER` directive after any layers that need root (package installs, build steps) is normally sufficient, and several common base images already ship a pre-created non-root user for exactly this reason. **You can prove the fix works without a full rebuild**: build a minimal image on the same base with and without the `USER` directive and compare `docker inspect --format '{{.Config.User}}'` between the two.
+
+## Scheduling and capacity
+
+4. **Constrained-resource headroom (GPU, or any schedulable resource limited to a subset of nodes) must be filtered through the workload's own `nodeSelector`/`tolerations`/affinity rules before you call it available -- never computed fleet-wide.** A cluster-wide "N allocatable minus M allocated" can show free capacity that the workload in question structurally cannot reach, because the free unit sits on a nodepool the workload's own selector excludes. **Second, equally load-bearing half: if the compatible nodepool is healthy and simply below its configured maximum, a pending pod is "Pending until cluster-autoscaler scales up," not structurally deadlocked** -- check autoscaler headroom (max nodes vs current nodes on the compatible pool) before reporting a scheduling failure as a hard deadlock. Report those as the two different states they are.
+
+## When the error is correct
+
+5. **A "read-after-write race" hypothesis for an intermittent 404-after-create is refutable two cheap ways, before reaching for retries or backend changes: infra topology and client source.**
+    - **Infra:** if the service's database access path points only at a primary/writer instance -- no read-replica pool, no replica connection string in play -- there is no replica for a read to lag behind, so a replication-lag explanation is off the table by construction.
+    - **Source:** read the client at the exact version deployed. If the client generates the entity's id on its own side, seeds an optimistic local cache with it, and only THEN makes the backend call that would actually create the row, then a request racing ahead of that backend call is hitting a row that genuinely does not exist yet -- the 404 is architecturally correct, not a race.
+    - **When the 404 is correct, the real defect is almost always in the banner or error-handling path, not the backend.** Suppression logic keyed to a client-local flag (a `sessionStorage` entry, an in-memory variable) silently stops working the moment the same action happens in another tab, for another user, after a reload, or via a shared link -- and a short retry policy then surfaces a dead-end error banner for what is functionally just a timing issue on first load. **General rule: once a not-found response is shown to be architecturally correct, stop tuning the backend and go read the client's retry and suppression policy instead.**

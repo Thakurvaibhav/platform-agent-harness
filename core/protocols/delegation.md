@@ -91,7 +91,7 @@ Append this block to every sub-agent dispatch. It primes the sub-agent on shared
 - Read `core/protocols/bd-and-memory.md` for shared protocols (code quality, bd, verification, completion).
 - Read `agent-knowledge/references/index.md` to discover available reference docs.
 - Run `agent-knowledge/scripts/knowledge-search.sh <task keywords>` to find prior art across memories, learnings, and docs.
-- Read `agent-knowledge/references/clusters.md` (or the repo equivalent) for cluster details, if the task is cluster-scoped.
+- Read `agent-knowledge/orgs/<ACTIVE_ORG>/clusters.md` (or the repo equivalent) for cluster details, if the task is cluster-scoped. Cluster registries are instance knowledge, never the portable tier — see [`knowledge-tiers.md`](knowledge-tiers.md).
 - If `graphify-out/graph.json` exists in the repo, load it for architecture and dependency questions.
 - **Prior art citation**: Before implementing, if a learnings entry is relevant, cite it as `[learnings-<file>.md#<N>]` in your output and build on it rather than re-deriving.
 
