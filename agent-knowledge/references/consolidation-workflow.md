@@ -69,9 +69,23 @@ Steps:
     verified "export retained N memories" did not hold minutes later, because a subsequent plain
     `bd export` had rewritten the file to issues-only. Nothing is lost while the store is
     authoritative, but **a cold start rebuilds from that file and would restore an empty hive.**
-    Final assertion, after every writer has finished:
-    `awk '!/"_type":"issue"/' .beads/issues.jsonl | wc -l` must be non-zero.
-    Fix is simply re-running `bd export --all -o .beads/issues.jsonl`.
+    Final assertion, after every writer has finished — **parse, never grep**:
+
+    ```sh
+    python3 -c "import json;print(sum(1 for l in open('.beads/issues.jsonl') if l.strip() and json.loads(l).get('_type')!='issue'))"
+    ```
+
+    Must be non-zero. An `awk`/`grep` line filter counts **blank lines** as memories — one issue
+    plus two stray newlines reports 2 against a true count of 0 — so it returns a reassuring
+    non-zero for exactly the issues-only file this assertion exists to reject. If the command
+    raises instead of printing, the file is malformed: that is *could not measure*, which must
+    never collapse to "zero".
+
+    **The fix is not a single command.** `bd export --all -o .beads/issues.jsonl` writes the full
+    file and `bd`'s own default-path auto-export then rewrites it issues-only within the same
+    second. Export to a **scratch** path, verify it by parsing, `cp` it over
+    `.beads/issues.jsonl`, verify again, and **run no further `bd` command** — a read-only
+    `bd memories --json` has been enough to re-break it.
 
 Classification guidance:
 - Completed project summaries ("COMPLETE", "all PRs merged", batch records) -> STALE
