@@ -12,8 +12,8 @@ At session start or resume, every agent — main session and sub-agent — does 
 
 1. Read [`core/protocols/code-quality.md`](../core/protocols/code-quality.md) for the canonical coding standards (Assumptions, Simplicity, Reuse-First, Surgical Changes, Comments, Verification, Standing reflexes R1–R4) — the main session and every engineering sub-agent follow it. Read [`core/protocols/bd-and-memory.md`](../core/protocols/bd-and-memory.md) for constraints, bd workflow, memory taxonomy, and the completion checklist.
 2. Read [`agent-knowledge/references/index.md`](../agent-knowledge/references/index.md) to discover available reference docs — agents check the index **before** broad searches so existing knowledge is reused, not re-derived.
-3. **Knowledge search** — run [`agent-knowledge/scripts/knowledge-search.sh`](../agent-knowledge/scripts/knowledge-search.sh) `<task keywords>` to find prior art across bd memories, learnings files, and domain docs.
-4. Read [`agent-knowledge/references/clusters.md`](../agent-knowledge/references/clusters.md) (or your repo's equivalent) before any cluster-scoped decision.
+3. **Knowledge search** — run [`agent-knowledge/scripts/knowledge-search.sh`](../agent-knowledge/scripts/knowledge-search.sh) `<task keywords>` to find prior art across bd memories, the portable learnings tier, every org's instance tier, reading notes, and domain docs.
+4. Read `agent-knowledge/orgs/<ACTIVE_ORG>/clusters.md` (or your repo's equivalent) before any cluster-scoped decision. Cluster registries, account IDs, and inventories are **instance** knowledge and live in the org tier, never in the portable `references/` tier — see [`core/protocols/knowledge-tiers.md`](../core/protocols/knowledge-tiers.md). If the file is missing or empty, say so; never infer cluster identity from cluster names.
 5. If `graphify-out/graph.json` exists in the repo, load it for architecture and dependency questions.
 6. **Drift check** (orchestrator only, at session start/resume) — run [`agent-knowledge/scripts/drift-check.sh`](../agent-knowledge/scripts/drift-check.sh). Surface warnings to the user before starting work. Do not auto-fix without approval.
 
