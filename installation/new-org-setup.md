@@ -212,12 +212,15 @@ ls -d "${HARNESS_HOME:-$HOME/.agent-knowledge}"/orgs/*/
 
 ```sh
 bd memories --json | jq 'keys|length'
-awk '!/"_type":"issue"/' "$BEADS_DB/issues.jsonl" | wc -l
+python3 -c "import json;print(sum(1 for l in open('$BEADS_DB/issues.jsonl') if l.strip() and json.loads(l).get('_type')!='issue'))"
 ```
 
 **Expected:** both non-zero. The second is the important one — see §7.
 **If the first is 0 but the second is not:** the database server is not running, or `BEADS_DB` is wrong.
 **If the second is 0:** stop. Do not start `bd`. Go to §7.
+**If the second raises instead of printing a number:** the file is malformed. That is *could not measure*, not zero — inspect it, and treat it as neither a pass nor a fail.
+
+**Count by parsing, never with `awk` or `grep`.** A line filter counts **blank lines** as memories: one issue plus two stray newlines reports 2 when the true count is 0. The false answer is always the reassuring one, on exactly the file this check exists to reject.
 
 ### 6. No previous-machine paths left in live config
 
@@ -255,10 +258,23 @@ Finally:
 **An export that omits memories writes an empty corpus.** On a cold start `bd` rebuilds the database from `.beads/issues.jsonl`. If that file came from an issues-only export, the entire memory hive is **silently gone** — no error, no warning, just an empty corpus that looks like a fresh install.
 
 ```sh
-awk '!/"_type":"issue"/' "$BEADS_DB/issues.jsonl" | wc -l    # MUST be non-zero
+python3 -c "import json;print(sum(1 for l in open('$BEADS_DB/issues.jsonl') if l.strip() and json.loads(l).get('_type')!='issue'))"    # MUST be non-zero
 ```
 
-**If it is zero:** do not start `bd` — the cold start is what does the damage. Re-export from the source machine with the flag that includes memories, and stop the database server before copying `.beads`.
+**Parse, do not grep.** An `awk`/`grep` line filter counts blank lines as memories and returns a reassuring non-zero for a file holding none — a false pass on the exact file this assertion exists to reject.
+
+**If it is zero:** do not start `bd` — the cold start is what does the damage. Recover from the source machine with the only procedure that holds:
+
+```sh
+bd dolt stop
+bd export --all -o /tmp/full.jsonl     # a SCRATCH path, never .beads/issues.jsonl
+python3 -c "import json;print(sum(1 for l in open('/tmp/full.jsonl') if l.strip() and json.loads(l).get('_type')!='issue'))"
+cp /tmp/full.jsonl "$BEADS_DB/issues.jsonl"
+python3 -c "import json;print(sum(1 for l in open('$BEADS_DB/issues.jsonl') if l.strip() and json.loads(l).get('_type')!='issue'))"
+# then run NO further bd command
+```
+
+**Exporting straight at the canonical path does not stick.** `bd export --all -o .beads/issues.jsonl` writes the full file, and the tool's own default-path auto-export rewrites it issues-only within the same second. Intermittent — it will not reproduce on demand, and it has left the canonical file issues-only more than once, days apart. Exporting to a different path is stable and a plain `cp` does not race. Even a *read-only* `bd memories --json` afterwards has been enough to re-break it, so the final "run no further command" step is load-bearing rather than caution. Stop the database server before copying `.beads`.
 
 **Editing a runtime's hooks config re-arms its trust prompt.** Headless execution then **skips untrusted hooks**, so a capture gate becomes a no-op and workers stop persisting learnings entirely. No error; the workers keep returning plausible output and the knowledge just never lands. After any hooks-config edit, have the user run one interactive session and accept the prompt, then dispatch one trivial worker and confirm the memory count went up. **A worker that returns text is not evidence the gate ran.** If you cannot confirm it, say so: *"capture gate: UNVERIFIED."*
 
