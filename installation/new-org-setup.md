@@ -266,13 +266,15 @@ python3 -c "import json;print(sum(1 for l in open('$BEADS_DB/issues.jsonl') if l
 **If it is zero:** do not start `bd` — the cold start is what does the damage. Recover from the source machine with the only procedure that holds:
 
 ```sh
-bd dolt stop
 bd export --all -o /tmp/full.jsonl     # a SCRATCH path, never .beads/issues.jsonl
 python3 -c "import json;print(sum(1 for l in open('/tmp/full.jsonl') if l.strip() and json.loads(l).get('_type')!='issue'))"
+bd dolt stop                           # stop the server BEFORE touching .beads
 cp /tmp/full.jsonl "$BEADS_DB/issues.jsonl"
 python3 -c "import json;print(sum(1 for l in open('$BEADS_DB/issues.jsonl') if l.strip() and json.loads(l).get('_type')!='issue'))"
 # then run NO further bd command
 ```
+
+**The order is load-bearing.** Export while the database server is still up, verify, and only then stop it and copy. Stopping first would make the export itself run against a stopped server, and it would put a tool invocation *after* the file is in place — which is the thing that re-breaks it.
 
 **Exporting straight at the canonical path does not stick.** `bd export --all -o .beads/issues.jsonl` writes the full file, and the tool's own default-path auto-export rewrites it issues-only within the same second. Intermittent — it will not reproduce on demand, and it has left the canonical file issues-only more than once, days apart. Exporting to a different path is stable and a plain `cp` does not race. Even a *read-only* `bd memories --json` afterwards has been enough to re-break it, so the final "run no further command" step is load-bearing rather than caution. Stop the database server before copying `.beads`.
 
