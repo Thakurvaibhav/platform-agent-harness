@@ -107,61 +107,71 @@ Never silently ignore a bot finding. If you have nothing to say, choose `Disagre
 6. Completeness against the original task summary
 7. Validation and CI status
 
-## Reviewer output
+## Posted output format
+
+Everything the reviewer posts on a PR — summary comment and both lenses — is **folded by actionability, not by summary-vs-detail**. Above the fold goes what a human must act on; everything else collapses into `<details>`. Nothing is deleted: it moves inside a fold at full length, and a collapsed block is still a posted claim the reviewer is accountable for.
+
+**Above the fold, in this order, and nothing else:**
+
+1. **Verdict line** — `<lens emoji + name> — N blocking, M suggestions · tier: <tier>`. Counts first, adjectives never.
+2. **Blocking findings**, numbered, **one line each**: `` `path:line` — consequence. Fix: <action>. `` The consequence is the point — "nodeAffinity pins a deleted pool" is a description, "unschedulable" is why someone keeps reading. A finding with no statable consequence is not blocking; demote it.
+3. **Visible blocking findings cap at 5.** Number 6 onward go under `<details><summary>N further blocking findings</summary>`.
+4. **`Unresolved:`** — one line, always above the fold.
+
+**Behind a fold — one `<details>` per block present, each summary carrying its own count:**
+
+| Block | `<summary>` shape |
+| --- | --- |
+| Non-blocking suggestions | `N suggestions (non-blocking)` |
+| Adversarial mutation detail | `Adversarial lens — N mutations, K escaped` |
+| Rendered proof / render matrix | `Render matrix — N clusters changed, K NO-BASE` |
+| Bot roster — posted **and** timed out, replies by category, threads resolved | `Bots: <bot> ✓, <bot> timed out` |
+| Tier rationale, claims verified, mechanical gates, preflight, CI, iterations, human comments | `Tier rationale · claims · CI` |
+
+Rules that do not bend:
+
+- **Each lens keeps its own post.** Never merge the correctness and adversarial lenses into one comment — the same fold is applied twice.
+- **Unresolved items, and a 2-iteration cap hit with findings still unfixed, stay above the fold.** Collapsed, "review complete" reads as "ready to merge".
+- **A `<details>` block whose count is 0 is omitted**, not posted empty.
+- **The 🤖 sign-off is the last line of every post, outside every fold** ([`safety-and-handoff.md`](safety-and-handoff.md)).
+- When the lenses disagree, each post carries a one-line `Lens split: …` pointer to the other, above the fold. The human adjudicates; never silently reconcile.
+- GitHub needs a blank line after `<details>` and before `</details>` for Markdown inside the fold to render.
+
+### Summary comment shape
 
 ```markdown
-## PR Review Summary
+<!-- pr-reviewer:v1 -->
+🔧 pr-reviewer — N blocking, M suggestions · tier: <trivial | standard | sensitive>
 
-**Tier**: <trivial | standard | sensitive>
+**Blocking**
+1. `path:line` — <consequence>. Fix: <action>. <Fixed in `<sha>` | UNFIXED — iteration cap>
 
-### What was reviewed
-- <areas>
+<details><summary>M suggestions (non-blocking)</summary> … </details>
+<details><summary>Render matrix — N clusters changed, K NO-BASE</summary> … </details>
+<details><summary>Bots: <bot> ✓, <bot> timed out</summary> … </details>
+<details><summary>Tier rationale · claims · CI</summary> … </details>
 
-### Bot reviews ingested
-- <bot>: <posted N findings | timed out | not present>
+**Unresolved**: <one line, or "none">
 
-### Direct replies posted to bots
-- <bot>: <fixed M | acknowledged K | disagreed L | out-of-scope J> · threads resolved <R>/<total>
-
-### Rendered proof (chart/values PRs)
-- <chart @ env, merge-base→HEAD, N manifests changed, control empty | N/A>
-
-### Cross-model verify (sensitive tier)
-- <per blocking finding: confirmed / refuted / split | N/A>
-
-### Blocking issues fixed
-- <issue> — fixed in <sha>
-
-### Non-blocking observations
-- <items or "None.">
-
-### Unresolved items
-- <items or "None.">
-
-### CI status
-- <pass / fail / pending / no checks>
-
-### Status
-Ready for human review / Has unresolved items
+🤖
 ```
+
+The `<!-- pr-reviewer:v1 -->` marker lets later tooling identify these comments without depending on the account name.
 
 ### Parallax output shape (parallax style)
 
-In parallax style the reviewer posts **two separately-branded reviews** in addition to (or, in `review-only`, in place of) the summary above. Each carries a stable HTML marker for later tooling:
+In parallax style the reviewer posts **two separately-branded reviews**, each folded exactly as above and each carrying a stable HTML marker:
 
 ```markdown
 <!-- parallax:correctness -->
-## 🔍 Parallax · correctness lens (Claude)
-**Verdict:** <N/N offline checks pass | M blocking issue(s) found>
-- Rendered proof: <chart @ env, merge-base→HEAD, N manifests changed, negative control empty | N/A>
-- Claims verified / bot findings adjudicated / blocking / non-blocking
+🔍 Parallax · correctness lens — N blocking, M suggestions · tier: <tier>
 ```
 
 ```markdown
 <!-- parallax:adversarial -->
-## 🧨 Parallax · adversarial lens (Codex)
-**Verdict:** <no required change found after reproduction | required change: …>
-<Codex's reproduced evidence + break-attempts, verbatim>
+🧨 Parallax · adversarial lens — N blocking, M suggestions · tier: <tier>
 ```
 
-The adversarial lens is posted **verbatim** from the Codex run — never softened or re-rationalized. If the two lenses disagree, the split is surfaced for the human to adjudicate, never silently reconciled.
+The correctness lens folds render proof, bot adjudication, and tier rationale. The adversarial lens folds its mutation detail (`Adversarial lens — N mutations, K escaped`) and reproduction log.
+
+**The adversarial report is posted verbatim inside its folds** — never softened or re-rationalized. The above-fold lines are a lossless index into that text: a finding may be re-worded into the `location — consequence. Fix:` shape, but never dropped, downgraded, or re-ranked. Demoting another model's call defeats the reason a second lens was paid for.

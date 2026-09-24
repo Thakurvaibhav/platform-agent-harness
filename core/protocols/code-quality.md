@@ -2,6 +2,22 @@
 
 The single canonical home for coding guidelines and engineering standards. **Every engineering sub-agent and the main session follows this** (non-engineering agents like `task-planner` may skip it — see the startup checklist in [`bd-and-memory.md`](bd-and-memory.md)). Other protocols reference this file; they do not restate it.
 
+A repo's own standards file (`CODING_STANDARDS.md`, `CONTRIBUTING.md`, or its nearest `AGENTS.md`) is repo-specific ground truth and **outranks this one on conflict** — this file is the harness-wide default, not an override.
+
+## What earns a place in this file
+
+A rule belongs here only if it is **mechanically checkable** or **short enough to survive attention decay**. Everything else is decoration that makes the file longer and less read.
+
+Rules that failed in practice failed for three reasons, never for lack of documentation:
+
+| Failure mode | Fix |
+| --- | --- |
+| The rule never *reached* the agent | fix the routing, not the wording |
+| The rule was *unfalsifiable* ("be terse") | convert it to a count a script can check |
+| The agent had no *context* left to apply it | fix what is eating the context |
+
+When a documented rule keeps getting violated, ask **which enforcement point was supposed to fire, and did it run** — before touching the prose.
+
 ## Assumptions
 
 - If confused, stop and name what's unclear. Never fabricate context.
@@ -9,6 +25,16 @@ The single canonical home for coding guidelines and engineering standards. **Eve
 - Verify metric names: `curl -s <pod-ip>:<port>/metrics | grep <metric>`.
 - Verify upstream values paths: `helm show values <repo>/<chart> --version <ver> | grep <path>`.
 - If the task feels wrong, log the concern and proceed with your best judgment. Do NOT silently reinterpret.
+- **Carry the confidence label into shipped text.** A PR body, review, or design doc that states an *inferred* behaviour as fact is the same defect as an unverified assumption in code — mark it inferred, or verify it (R2).
+
+## Changing what you did not build
+
+A knowledge-search miss means **we have not learned it** — never that it is novel. The thinner the org tier, the more often that misfires.
+
+- Before calling something wrong, find out why it is that way — `git log` / `git blame` on the file, the ticket, the PR that introduced it. The reasons predate you.
+- If that turns up nothing, ask. "What drove this?" costs one message; "this is wrong" costs credibility when the answer is a constraint you could not see.
+- Check a finding is not already known before presenting it as one. A tracked ticket turns a discovery into noise.
+- Weight, not volume. A few well-evidenced points land; broad commentary reads as narration.
 
 ## Simplicity
 
@@ -41,7 +67,7 @@ Touch only what you must. Every changed line traces to the task.
 - **Comments: the default is NONE.** Code says *what*. A comment exists only when there is a non-obvious *why* — a real constraint, a gotcha, a deliberate deviation. If you cannot name that why in one line, there probably isn't one. Match the surrounding density: if the neighbouring code carries no comments, add none. A comment that restates the code is worse than no comment — it is a second thing to keep true.
 - **No ticket IDs, PR numbers, dates, or author names in code comments.** Issue keys (`<TICKET-123>`), PR links, and "added on `<date>`" belong in the **commit message and PR description**, NOT the source — they rot, add noise, and leak internal references into shared/public code. Tempted to write `# <TICKET-123>: does X`? Put the ticket in the PR body; the comment (if any) states only the non-obvious *why*.
 - **Ceiling: 2 lines per comment block** when one is warranted. A third line means it is PR-description material, not source. This is a count, not a call — "terse" and "one line where one line works" are judgments, and every author of a 10-line block believes theirs is the justified exception. **Relocate** the rationale to the PR body; do not delete it.
-- **Gate it, don't eyeball it:** [`core/hooks/generic/comment-discipline.sh`](../hooks/generic/comment-discipline.sh) checks all three rules against a diff (banned refs, block length, per-file density) (`--staged`, `--base <ref>`, or a diff on stdin); exit 1 = findings. The `create-pr` skill runs it before push and `pr-reviewer` runs it at review. The prose version of these two rules alone was not enough — real PRs shipped 10-line comment blocks carrying issue keys, twice, including once through a manual correction pass. A line count cannot be argued with; an adjective can.
+- **Gate it, don't eyeball it:** [`core/hooks/generic/comment-discipline.sh`](../hooks/generic/comment-discipline.sh) checks all four rules against a diff (banned refs, block length, per-file density, and a 13-line ceiling on a Python **function or function-body** docstring — module and class docstrings are exempt at any length) (`--staged`, `--base <ref>`, or a diff on stdin); exit 1 = findings. Without the docstring rule an author moves the essay from a `#` block into a triple-quoted string and passes untouched. The `create-pr` skill runs it before push and `pr-reviewer` runs it at review. The prose version of these two rules alone was not enough — real PRs shipped 10-line comment blocks carrying issue keys, twice, including once through a manual correction pass. A line count cannot be argued with; an adjective can.
 - Do not include fields/defaults the existing pattern omits — explicit defaults cause permadiffs in ArgoCD.
 - Match existing style exactly even if you would do it differently.
 - Remove only imports/variables/functions that YOUR changes made unused. Do not remove pre-existing dead code unless the task asks for it.
@@ -70,6 +96,12 @@ Domain-specific checks:
 - ArgoCD: `helm template <argo-apps-release> <argo-apps-chart> -f values.<cluster>.yaml` renders correctly.
 - Alerts: PromQL syntactically valid; metric names exist in the target datasource.
 - Enablement: pods Ready, zero restarts, operator logs clean (see Post-Deploy Validation in [`safety-and-handoff.md`](safety-and-handoff.md)).
+
+### Test volume
+
+Test the **contract**, not the implementation. The reliable tell that this was ignored is bulk — tests pinning module structure, exact internal call arguments, or library behaviour already covered elsewhere.
+
+[`core/hooks/generic/test-discipline.sh`](../hooks/generic/test-discipline.sh) bounds it mechanically: added test LOC must stay within `220 + 1.2 x added prod LOC`. The allowance is **affine, not a ratio** — a single test carries a fixed scaffolding cost (imports, fixtures, parametrize tables) that does not shrink with the change, so a plain ratio is unusable on a small diff. Both numbers are env-tunable (`TEST_FIXED_LINES`, `MAX_TEST_RATIO`); retune them to the repo rather than waiving the gate. Over the allowance, name the contract each extra test pins, or cut it.
 
 ### Checks that measure something
 

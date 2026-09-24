@@ -7,6 +7,8 @@
 #   2. No comment block longer than MAX_LINES (default 2).
 #   3. No high comment density per file — the default is NO comment, and a
 #      ceiling alone does not catch many small comments that should not exist.
+#   4. No Python function/body docstring longer than MAX_DOC_LINES (default 13).
+#      Module and class docstrings are exempt at any length.
 #
 # These are counts because "terse" is a judgment, and every author of a 10-line
 # block believes theirs is the justified exception.
@@ -18,10 +20,11 @@
 #   git diff ... | comment-discipline.sh -   # read a diff on stdin
 #
 # Exit: 0 clean, 1 findings, 2 usage error.
-# Env:  MAX_COMMENT_LINES (default 2)
+# Env:  MAX_COMMENT_LINES (default 2), MAX_DOCSTRING_LINES (default 13)
 set -uo pipefail
 
 MAX_LINES="${MAX_COMMENT_LINES:-2}"
+MAX_DOC="${MAX_DOCSTRING_LINES:-13}"
 BASE="origin/main"
 MODE="branch"
 
@@ -30,7 +33,7 @@ while [ $# -gt 0 ]; do
     --staged)  MODE="staged"; shift ;;
     --base)    BASE="${2:?--base needs a ref}"; shift 2 ;;
     -)         MODE="stdin"; shift ;;
-    -h|--help) sed -n '2,20p' "$0"; exit 0 ;;
+    -h|--help) sed -n '2,24p' "$0"; exit 0 ;;
     *)         echo "unknown arg: $1" >&2; exit 2 ;;
   esac
 done
@@ -39,10 +42,11 @@ case "$MODE" in
   stdin)  cat ;;
   staged) git diff --cached ;;
   branch) git diff "$(git merge-base "$BASE" HEAD 2>/dev/null || echo "$BASE")"...HEAD ;;
-esac | MAX_LINES="$MAX_LINES" /usr/bin/python3 -c '
+esac | MAX_LINES="$MAX_LINES" MAX_DOC="$MAX_DOC" /usr/bin/python3 -c '
 import os, re, sys
 
 MAX = int(os.environ.get("MAX_LINES", "2"))
+MAX_DOC = int(os.environ.get("MAX_DOC", "13"))
 
 # Prose files are excluded outright. A markdown "## Heading" is not a code
 # comment, and flagging them buries the real findings in noise — that false
@@ -74,7 +78,8 @@ def openers(path):
 
 # Block-comment openers/closers. Tracked with state, otherwise only the opening
 # line counts and a 20-line /* ... */ essay slips through a line-comment-only
-# gate untouched — which would make the whole check trivially avoidable.
+# gate untouched — which would make the whole check trivially avoidable. This
+# also covers JS/TS JSDoc, which opens "/**".
 BLOCK_OPEN  = re.compile(r"^\s*(\{\{-?\s*)?/\*")
 BLOCK_CLOSE = re.compile(r"\*/")
 
@@ -113,6 +118,71 @@ density = {}
 DENSITY_MIN_LINES = 4       # below this, a high ratio is just a small diff
 DENSITY_RATIO     = 0.35
 
+# Python triple-quoted prose. A "#"-only gate is blind to it, so an author can
+# move an essay from a comment into a docstring and pass untouched. Module and
+# class docstrings are legitimate at any length (measured: module median 5,
+# p75 12; class p90 6) — the target is a multi-paragraph FUNCTION docstring or
+# narrative prose standing in a function body.
+DOC_OPEN = re.compile(r"^(?:[rRbBuUfF]{0,2})(\"\"\"|" + chr(39) * 3 + ")")
+PY_DEF   = re.compile(r"^\s*(?:async\s+)?def\s")
+PY_CLASS = re.compile(r"^\s*class\s")
+
+doc = {"open": False, "delim": "", "kind": "", "line": 0, "n": 0, "added": 0,
+       "scope": None, "wait": None}
+
+def doc_flush():
+    if doc["added"] and doc["kind"] in ("function", "body") and doc["n"] > MAX_DOC:
+        findings.append((path, doc["line"], doc["n"],
+                         "%s docstring is %d lines (max %d)" % (doc["kind"], doc["n"], MAX_DOC),
+                         "narrative prose belongs in the PR body, not the source"))
+    doc["open"] = False
+
+def doc_reset():
+    if doc["open"]:
+        doc_flush()
+    doc.update(open=False, delim="", kind="", line=0, n=0, added=0,
+               scope=None, wait=None)
+
+def doc_scan(text, added, ln):
+    # True when this line is part of a Python triple-quoted block, so the
+    # caller leaves it out of the "#" machinery entirely.
+    if not path.endswith(".py"):
+        return False
+    s = text.strip()
+    if doc["open"]:
+        doc["n"] += 1
+        if added:
+            doc["added"] += 1
+        if doc["delim"] in s:
+            doc_flush()
+        return True
+    if not s or s.startswith("#"):
+        return False
+    m = DOC_OPEN.match(s)
+    if m:
+        d = m.group(1)
+        indent = len(text) - len(text.lstrip())
+        kind = doc["scope"] or ("module" if indent == 0 else "body")
+        doc.update(kind=kind, line=ln, n=1, added=1 if added else 0,
+                   delim=d, scope=None, wait=None)
+        if d in s[m.end():]:
+            doc_flush()
+        else:
+            doc["open"] = True
+        return True
+    # Scope of the NEXT statement: a def/class header, possibly spanning lines,
+    # ends at the colon. Anything else clears it.
+    if PY_DEF.match(text):
+        doc["wait"] = "function"
+    elif PY_CLASS.match(text):
+        doc["wait"] = "class"
+    if doc["wait"] and text.rstrip().endswith(":"):
+        doc["scope"] = doc["wait"]
+        doc["wait"] = None
+    elif not doc["wait"]:
+        doc["scope"] = None
+    return False
+
 def flush():
     global run
     if path and len(run) > MAX:
@@ -129,16 +199,19 @@ for raw in sys.stdin:
     # unshown context would otherwise leave the flag stuck on forever.
     if line.startswith("+++ "):
         flush()
+        doc_reset()
         in_block = False
         p = line[4:].strip()
         path = None if p == "/dev/null" else re.sub(r"^b/", "", p)
         continue
     if line.startswith("--- ") or line.startswith("diff --git"):
         flush()
+        doc_reset()
         in_block = False
         continue
     if line.startswith("@@"):
         flush()
+        doc_reset()
         in_block = False
         m = re.search(r"\+(\d+)", line)
         lineno = int(m.group(1)) - 1 if m else 0
@@ -151,7 +224,11 @@ for raw in sys.stdin:
         lineno += 1
         text = line[1:]
         d = density.setdefault(path, [0, 0])
-        if is_comment(text, path):
+        if doc_scan(text, True, lineno):
+            if text.strip():
+                d[1] += 1
+            flush()
+        elif is_comment(text, path):
             d[0] += 1
             run.append((lineno, text))
             for rx, label in BANNED:
@@ -167,9 +244,11 @@ for raw in sys.stdin:
         continue          # removed line: no effect on the added-run
     else:
         lineno += 1
+        doc_scan(line[1:] if line[:1] == " " else line, False, lineno)
         flush()
 
 flush()
+doc_reset()
 
 for f, (c, code) in sorted(density.items()):
     total = c + code
@@ -191,6 +270,7 @@ for p, ln, _n, why, snippet in findings:
     print("      %s" % why)
     print("      %s\n" % snippet)
 print("Rules: default is NO comment; ceiling %d lines when one is warranted;" % MAX)
+print("docstring ceiling %d lines on a function or a function body;" % MAX_DOC)
 print("never a ticket ID / PR number / date / author. Rationale goes in the PR body.")
 sys.exit(1)
 '

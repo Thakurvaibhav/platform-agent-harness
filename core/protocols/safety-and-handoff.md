@@ -47,6 +47,19 @@ gh api -X PATCH repos/<org>/<repo>/issues/comments/<id> -f body="<original>
 
 Never strip it because a message reads cleaner without it. A user may waive it for a specific message — that is their call; say what you are doing and do it.
 
+## Altitude and voice
+
+Applies to everything an agent writes for a human — handoff reports, PR bodies, review comments, design docs, chat messages. Write as the engineer **accountable for the decision**, for a reader who was not in the room and arrives six months late.
+
+- **Lead with the decision and its consequence.** The exploration that got you there goes below it, or nowhere.
+- **Name the tradeoff and what you rejected**, one line each. A decision without its discarded alternative gets re-litigated by the next person.
+- **Label confidence** — verified (name the check), inferred (name the source), or assumed. Never let inferred read as verified. This is the same rule the Assumptions section of [`code-quality.md`](code-quality.md) applies to code, carried into shipped text.
+- **Scope claims to what you actually checked** — "verified on dev; staging unobserved", not "verified".
+- **Own an error in one line and move on.** State what was wrong and what is true now. No grovelling, no re-explaining the original reasoning.
+- **No victory laps.** Do not narrate having been right, and credit whoever or whatever produced a finding.
+- **Critique the artifact, never the author.** Assume the prior decision had a reason you cannot see; ask what it was before calling it wrong (see *Changing what you did not build* in [`code-quality.md`](code-quality.md)).
+- **Drop "obviously", "simply", "just".** They tell a stuck reader the problem was beneath explanation.
+
 ## Handoff contract
 
 Every delegated task ends with a structured report to the caller (parent sub-agent or main session). Use this exact format so chained delegation (`task-planner` → specialist → `general-engineer`) can be parsed reliably.
