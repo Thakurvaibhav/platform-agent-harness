@@ -12,6 +12,8 @@ The end-to-end compaction lifecycle these hooks implement is documented in [`LIF
 | [generic/post-task-memory.sh](generic/post-task-memory.sh) | Wrapper for `bd remember` with sanitization guard. |
 | [generic/rtk-wrapper.sh](generic/rtk-wrapper.sh) | Wraps documented `rtk-safe` commands with `rtk`. |
 | [generic/learning-gate.py](generic/learning-gate.py) | Learning-capture gate; records usage telemetry — reads + citations (see below). |
+| [generic/comment-discipline.sh](generic/comment-discipline.sh) | Blocking gate on code-comment discipline: banned refs, 2-line block ceiling, per-file density, 13-line ceiling on a Python function / function-body docstring. |
+| [generic/test-discipline.sh](generic/test-discipline.sh) | Blocking gate on test VOLUME: added test LOC within `TEST_FIXED_LINES + MAX_TEST_RATIO x` added prod LOC (defaults `220` and `1.2`). |
 
 > The knowledge-home scripts (`knowledge-search.sh`, `drift-check.sh`, `learn.sh`) live in [`agent-knowledge/scripts/`](../../agent-knowledge/scripts/), not here — they belong to the shared knowledge home, not the runtime event hooks.
 
@@ -35,6 +37,19 @@ Both paths record usage telemetry under `${HARNESS_METRICS:-~/.agent-knowledge/m
 | `LEARN_TOOLUSE_MIN` | `8` | Tool-use count that counts as "substantive" for the hard gate. |
 | `LEARN_MAIN_GAP` | `2` | Work-minus-persist gap that triggers the soft nudge. |
 | `HARNESS_METRICS` | `~/.agent-knowledge/metrics` | Where usage telemetry (reads + citations) is written. |
+
+## The two discipline gates
+
+[`generic/comment-discipline.sh`](generic/comment-discipline.sh) and [`generic/test-discipline.sh`](generic/test-discipline.sh) share one interface — `--staged`, `--base <ref>`, a bare invocation (diff vs merge-base with `origin/main`), or a diff on stdin with `-`. Exit `0` clean, `1` findings, `2` usage error. Both are **blocking** before a push and both are re-run at review time.
+
+They bound the two things a reviewer otherwise keeps writing by hand:
+
+- **Prose volume.** The docstring rule matters as much as the `#` rules: without it an author moves an essay out of a comment block into a triple-quoted string and passes untouched. Module and class docstrings are exempt at any length — the target is a multi-paragraph *function* docstring, or narrative prose standing in a function body.
+- **Test volume.** The allowance is affine (`FIXED + RATIO x prod`), not a plain ratio, because one test carries a fixed scaffolding cost that does not shrink with the change.
+
+Both thresholds are env-tunable (`MAX_COMMENT_LINES`, `MAX_DOCSTRING_LINES`, `TEST_FIXED_LINES`, `MAX_TEST_RATIO`). Retune to the repo rather than waiving the gate — a count can be argued with only by changing the count. The standards they enforce are canonical in [`core/protocols/code-quality.md`](../protocols/code-quality.md).
+
+**Prove a gate can fail before trusting it.** Feed each one a diff built to trip it and confirm it exits 1, then a clean control and confirm it exits 0. A threshold that has never fired has not been shown capable of firing.
 
 ## Adapter hooks (Factory Droid examples)
 

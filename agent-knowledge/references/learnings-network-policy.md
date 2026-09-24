@@ -2,7 +2,7 @@
 
 Fleet NetworkPolicy strategy, self-managed Cilium (GKE + EKS), Istio-ambient coexistence, FQDN egress.
 
-See also: `learnings-operators.md`, `learnings-agentgateway.md`, `learnings-istio.md`
+See also: `learnings-operators.md`, `learnings-agentgateway.md`, `learnings-istio.md`, `learnings-gke.md` (VPC-level firewall and subnet design, versus in-cluster policy here)
 
 ## Fleet substrate and provider facts
 

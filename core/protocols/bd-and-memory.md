@@ -47,8 +47,14 @@ Use these prefixes consistently so memories are categorizable and searchable.
 | `<repo>/pref/<topic>` | User preferences, workflow conventions | `bd remember "user prefers kustomize over raw manifests for overlays" --key <repo>/pref/kustomize` |
 | `<repo>/security/<topic>` | Security findings, CVEs, RBAC issues | `bd remember "tetragon needs NET_ADMIN cap for eBPF hooks" --key <repo>/security/tetragon-caps` |
 | `<repo>/perf/<topic>` | Performance findings, sizing, benchmarks | `bd remember "vector 2x memory under burst; set limit to 2Gi" --key <repo>/perf/vector-memory` |
+| `<repo>/status/<topic>` | Active project status tracking | `bd remember "progressive-delivery rollout: 3 of 7 clusters enabled" --key <repo>/status/progressive-delivery` |
+| `<repo>/meta/<topic>` | Harness bookkeeping read by tooling | `bd remember "last consolidation: <date>, promoted N memories" --key <repo>/meta/last-consolidation` |
 
 Replace `<repo>` with the actual repo name. The memory text must be **self-contained** — readable without the current session's chat history.
+
+The first slot is a **domain**, usually the repo, but any stable one works — use `harness/` for agent-harness preferences, which are portable and survive an employer change. Never put `infra` in that slot: it is a *category* (`<repo>/infra/<topic>`), so `infra/x/y` parses ambiguously.
+
+**`<repo>/meta/last-consolidation` is load-bearing — never rename it.** [`agent-knowledge/scripts/drift-check.sh`](../../agent-knowledge/scripts/drift-check.sh) greps for the literal string `meta/last-consolidation`; re-keying it makes consolidation-freshness detection silently report "never" forever. The `meta/` category exists for exactly this: bookkeeping that tooling reads, not prose a human reads.
 
 ## Rules for memories
 
@@ -110,6 +116,27 @@ If an open PR exists and the change is related: reuse the worktree/branch, amend
 
 **Dispatch hint**: when you (orchestrator) want a sub-agent to amend, explicitly pass the PR number, branch name, and worktree path — sub-agents don't discover open PRs on their own.
 
+## PR titles
+
+**Every PR title is Conventional Commits AND carries its ticket key:**
+
+```
+<type>(<scope>): <description> (<TICKET-KEY>)
+```
+
+```
+chore(infra): remove the retired pool-2 node pool (PLAT-142)
+feat(monitoring): add node-pool saturation alerts (OBS-77)
+```
+
+This applies to **every** agent that opens a PR — the orchestrator, every sub-agent, every external worker — not only whoever invokes a `create-pr` skill. Sub-agents cannot invoke skills, so a protocol file is the rule's only reachable home for them.
+
+- **Type** from `feat|fix|chore|refactor|docs|test|ci|perf|build`. Pick one you can defend: a cost or noise reduction is `chore`; a behaviour correction is `fix`.
+- **Scope is optional but single.** Never comma-separate — a title lint using [`amannn/action-semantic-pull-request`](https://github.com/amannn/action-semantic-pull-request) rejects `feat(a,b): …` outright. Multiple areas → pick the primary scope, or drop the scope.
+- **Ticket key goes in trailing parens, UPPERCASE.** Branches read `feature/plat-142-slug`, so uppercase what you extract from one. If there is genuinely no ticket, omit it — **never invent one**.
+- **The head commit's subject must match the PR title**, so a squash merge cannot produce a message that disagrees with the PR.
+- Repo history is mostly *not* in this form. Do not copy it. The one exception is a repo with an enforced different convention (a title-lint CI job, or a `<type>: <TICKET-KEY> | <title>` house style) — follow the enforced one and say which you used.
+
 ## Base pre-completion checklist
 
 Run before creating a PR. Domain-specific checks add to this.
@@ -118,6 +145,8 @@ Run before creating a PR. Domain-specific checks add to this.
 2. **Helm validation**: `helm dep build`, `helm lint`, `helm template` succeed on every chart you modified.
 3. **No secrets in diff**: `git diff` shows no credentials, tokens, API keys.
 4. **PR description**: external ticket link and rationale (WHY, not just WHAT).
+5. **PR title**: Conventional Commits + ticket key, matching the head commit subject (see *PR titles* above).
+6. **Mechanical gates**: [`comment-discipline.sh`](../hooks/generic/comment-discipline.sh) and [`test-discipline.sh`](../hooks/generic/test-discipline.sh) both exit 0 against the branch diff. Both are blocking before push.
 
 ## Post-deploy validation
 

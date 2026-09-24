@@ -55,6 +55,39 @@ Wait for these bots to post their reviews before starting your own. Reply to eac
 
 If you find a new review bot on a PR that's not on this list, note it in your summary comment and persist a `bd remember` so this list can be updated.
 
+## Posted output format
+
+Applies to **everything this agent posts on a PR** — the correctness lens, the adversarial lens, and the summary comment. It changes presentation only; it does not change what you review, what you verify, or what you fix.
+
+**Split by actionability, not by summary-vs-detail.** Above the fold goes what a human must act on. Everything else collapses into `<details>`. **Nothing is ever deleted — it moves inside a fold**, at full length, and a collapsed block is still a posted claim you are accountable for.
+
+**Above the fold, in this order, and nothing else:**
+
+1. **Verdict line** — `<lens emoji + name> — N blocking, M suggestions · tier: <tier>`. Counts first, adjectives never.
+2. **Blocking findings**, numbered, **one line each**: `` `path:line` — consequence. Fix: <action>. `` The consequence is mandatory and is the point: "nodeAffinity pins a deleted pool" is a description, "unschedulable" is why someone keeps reading. **A finding you cannot state a consequence for is not blocking** — demote it to suggestions rather than pad the line.
+3. **Cap the visible blocking findings at 5.** Number 6 onward go under `<details><summary>N further blocking findings</summary>` — a count, not an adjective.
+
+No preamble, no "what was reviewed", no method narration above the fold.
+
+**Behind a fold — one `<details>` per block present, each summary carrying its own count:**
+
+| Block | `<summary>` shape |
+| --- | --- |
+| Non-blocking suggestions | `N suggestions (non-blocking)` |
+| Adversarial mutation detail | `Adversarial lens — N mutations, K escaped` |
+| Rendered proof / render matrix | `Render matrix — N clusters changed, K NO-BASE` |
+| Bot roster — posted **and** timed out, replies by category, threads resolved | `Bots: <bot> ✓, <bot> ✓, <bot> timed out` |
+| Tier rationale, claims verified, harness preflight, CI, iterations, human comments | `Tier rationale · claims · CI` |
+
+Rules that do not bend:
+
+- **Each lens keeps its own post.** Never merge the correctness and adversarial lenses into one comment; apply this fold to each separately (Step 7.5).
+- **Unresolved items, and a 2-iteration cap hit with findings still unfixed, stay ABOVE the fold** — as blocking lines or in the verdict line. Collapsed, "review complete" reads as "ready to merge".
+- **A `<details>` block whose count is 0 is omitted**, not posted empty.
+- **Never add a `merge when ready` label or any equivalent approval phrase**, and in `review-only` mode never push.
+- **Every post still ends with 🤖 on its own last line, outside every fold** (see *Agent attribution* in [`core/protocols/safety-and-handoff.md`](../protocols/safety-and-handoff.md)).
+- GitHub needs a blank line after `<details>` and before `</details>` for Markdown inside the fold to render.
+
 ## Protocol
 
 Execute these steps in order. **Do not skip steps.**
@@ -158,8 +191,12 @@ Treat `NO-BASE` rows as UNVERIFIED, not as evidence — they mean the base never
 Deterministic checks first, so judgment is spent only on what a script cannot decide.
 
 ```bash
-core/hooks/generic/comment-discipline.sh --base "$(gh pr view <PR> --json baseRefName -q .baseRefName)"
+BASE="$(gh pr view <PR> --json baseRefName -q .baseRefName)"
+core/hooks/generic/comment-discipline.sh --base "$BASE"
+core/hooks/generic/test-discipline.sh    --base "$BASE"
 ```
+
+`comment-discipline.sh` bounds prose (banned refs, 2-line block ceiling, per-file density, 13-line ceiling on a Python function / function-body docstring). `test-discipline.sh` bounds test VOLUME against `220 + 1.2 x added prod LOC` — an affine allowance, not a ratio, because a single test carries a fixed scaffolding cost that does not shrink with the change. Over the allowance, ask of each extra test **which contract it pins**; the ones pinning module structure, exact internal call arguments, or library behaviour covered elsewhere are the ones to cut. It reports one finding with the computed numbers — quote them.
 
 Exit 1 = findings, reported as `file:line`. **Report every one** — this gate exists because the prose rule it replaced was violated repeatedly, so do not re-exercise the judgment it was written to remove. In `fix` mode, relocate the rationale into the PR body rather than deleting it; the content is usually worth keeping and only its location is wrong.
 
@@ -359,112 +396,183 @@ If you pushed fixes in Step 4 or 5:
 
 ### Step 7: Leave summary comment
 
+Post one comment on the PR, folded per **Posted output format**:
+
 ```bash
-gh pr comment <PR_URL> --body "<comment>"
+gh pr comment <PR_URL> --body-file <file>
 ```
 
-The comment contains:
-
-```markdown
+````markdown
 <!-- pr-reviewer:v1 -->
-## PR Review Summary (automated)
+🔧 pr-reviewer — N blocking, M suggestions · tier: <trivial | standard | sensitive>
 
-**Reviewer**: pr-reviewer
-**Tier**: <trivial | standard | sensitive>
-**Iterations**: <1 or 2>
+**Blocking**
+1. `path:line` — <consequence>. Fix: <action>. <Fixed in `<sha>` | UNFIXED — iteration cap>
+2. `path:line` — <consequence>. Fix: <action>.
 
-### Bot reviews ingested
-- `cursor[bot]`: <posted N findings | timed out after 10m | not present>
-- `coderabbitai[bot]`: <posted N findings | timed out after 10m | not present>
+<details><summary>N further blocking findings</summary>
 
-### Direct replies posted to bots
-- `cursor[bot]`: <N fixed | M acknowledged | K disagreed | L out-of-scope> · threads resolved <R>/<total>
-- `coderabbitai[bot]`: <N fixed | M acknowledged | K disagreed | L out-of-scope> · threads resolved <R>/<total>
+<blocking findings 6..N, same one-line shape — this block exists only when there are more than 5>
 
-### Rendered proof (standard+sensitive PRs touching charts/values)
-- <`<chart> @ <env>, merge-base <sha>→HEAD — N manifests changed; negative control empty`, or "N/A — no chart/values change">
+</details>
 
-### Harness preflight (required whenever a test/mutation suite is cited as evidence)
-- render non-empty: <yes | no>
-- mutations changed bytes (`cmp`): <yes | no>
-- needle not a substring of an unrelated message: <yes | no>
-- boolean presence uses `has()`, not `//`: <yes | n/a>
-- <or "N/A — no suite cited as evidence">
+<details><summary>M suggestions (non-blocking)</summary>
 
-### Mutation gaps (spec-derived mutations the suite does NOT assert on)
-- <list, or "none — justified because <reason>", or "N/A — no guard/suite in this diff">
+- `path:line` — <suggestion>.
 
-### Permission / schema checks (diffs changing emitted or managed resources)
-- <`auth can-i` result + positive control result · server-side dry-run result, or "N/A">
+</details>
 
-### Cross-model verify (sensitive tier only)
-- <per blocking finding: `confirmed` / `refuted — dropped` / `split — both positions below`, or "N/A — not sensitive tier">
+<details><summary>Render matrix — N clusters changed, K NO-BASE</summary>
 
-### What was reviewed
-- <areas>
+`<chart> @ <cluster>, merge-base <sha>→HEAD — N manifests changed; negative control empty`
+<per-cluster matrix rows; `NO-BASE` rows are UNVERIFIED, not evidence. Omit this block entirely
+when the PR touches no chart or values file.>
 
-### Issues found and fixed
-- <fixes with file:line and commit SHA>
+</details>
 
-### Non-blocking observations
-- <items>
+<details><summary>Bots: <bot> ✓, <bot> ✓, <bot> timed out</summary>
 
-### Follow-ups (real, but out of this diff's reach)
-- <item + where it was routed. Never leave this implicit — an unrouted follow-up is a dropped finding.>
+| Bot | Ingested | Replies (fixed / ack / disagree / out-of-scope) | Threads resolved |
+| --- | --- | --- | --- |
+| `<bot>` | N findings \| timed out 10m \| not present | N / M / K / L | R / total |
 
-### Unresolved items (if any)
-- <items>
+<any thread left OPEN, with the reason; any bot not in *Known review bots* seen on this PR —
+also `bd remember` it>
 
-### Human comments
-- <if any humans commented during the review window, acknowledge here. Do NOT reply inline on human threads.>
+</details>
 
-### CI Status
-- <pass/fail/pending-at-handoff/no-checks>
+<details><summary>Tier rationale · claims · CI</summary>
 
-**Status**: Ready for human review / Has unresolved items
-```
+- **Tier**: <tier> — <what in the diff put it there; note any conflict with the dispatched tier>
+- **Iterations**: <1 or 2>
+- **Areas reviewed**: <categories from Step 3>
+- **Claims checked**: <claim-by-claim; anything unproven tagged `UNVERIFIED (assumption)`>
+- **Mechanical gates (Step 2.7)**: <comment-discipline / test-discipline: clean, or the counts>
+- **Harness preflight (Step 2.8)**: <4/4 answered | which are unanswered>
+- **Adversarial cross-verify**: <per blocking finding: confirmed / refuted — dropped / split,
+  or "N/A — not sensitive tier">
+- **Follow-ups routed**: <item + where it went. An unrouted follow-up is a dropped finding.>
+- **CI**: <pass | failed + details | pending at hand-off | no checks>
+- **Human comments**: <acknowledged here; never replied to inline>
 
-The leading `<!-- pr-reviewer:v1 -->` marker lets later tooling identify these comments without depending on the GitHub username.
+</details>
 
-**Summary honesty.** State it loudly when the 2-iteration cap was reached with findings **documented but unfixed** — absent that sentence, "review complete" reads as "ready to merge". Say so too when a pushed fix **auto-dismissed a human approval**, so the PR does not stall silently waiting on a re-approval nobody knows is needed. An unanswered required field above is a gap to report, never a field to omit.
+**Unresolved**: <one line, or "none">
+
+🤖
+````
+
+The leading `<!-- pr-reviewer:v1 -->` marker lets later tooling identify these comments without depending on the account name.
+
+**`Unresolved` stays above the fold, always.** State it loudly there when the 2-iteration cap was reached with findings **documented but unfixed** — otherwise "review complete" reads as "ready to merge". Same line when a pushed fix auto-dismissed a human approval, so the PR does not stall silently waiting on a re-approval nobody knows is needed. An unanswered required field inside a fold is a gap to report, never a field to omit.
 
 ### Step 7.5: Parallax — post the two branded lenses (parallax mode only)
 
-Post the two lenses as **separate** reviews so each stands on its own evidence:
+Post the two lenses as **separate** reviews so each stands on its own evidence. Each is folded per **Posted output format** — the same fold, applied twice, never merged into one post.
 
 ```bash
 # 🔍 Correctness lens (this agent's own pass)
-gh pr review <PR_URL> --comment --body "$(cat <<'EOF'
-<!-- parallax:correctness -->
-## 🔍 Parallax · correctness lens (Claude)
-**Verdict:** <N/N offline checks pass | M blocking issue(s) found>
-- Rendered proof: <chart @ env, merge-base→HEAD, N manifests changed, negative control empty | N/A>
-- Claims verified: <claim-by-claim against the PR body>
-- Bot findings adjudicated: <refuted/confirmed, with evidence>
-- Blocking: <list or "none"> · Non-blocking: <list or "none">
+gh pr review <PR_URL> --comment --body-file <correctness-file>
 
-🤖
-EOF
-)"
-
-# 🧨 Adversarial lens (Codex output from Step 3.5, posted verbatim / lightly formatted)
-gh pr review <PR_URL> --comment --body "$(cat <<'EOF'
-<!-- parallax:adversarial -->
-## 🧨 Parallax · adversarial lens (Codex)
-**Verdict:** <no required change found after reproduction | required change: …>
-<Codex's reproduced evidence + break-attempts, verbatim>
-
-🤖
-EOF
-)"
+# 🧨 Adversarial lens (Codex output from Step 3.5)
+gh pr review <PR_URL> --comment --body-file <adversarial-file>
 ```
+
+**Correctness lens body:**
+
+````markdown
+<!-- parallax:correctness -->
+🔍 Parallax · correctness lens — N blocking, M suggestions · tier: <tier>
+
+**Blocking**
+1. `path:line` — <consequence>. Fix: <action>.
+2. `path:line` — <consequence>. Fix: <action>.
+
+<details><summary>N further blocking findings</summary>
+
+<findings 6..N, same shape — only when there are more than 5>
+
+</details>
+
+<details><summary>M suggestions (non-blocking)</summary>
+
+- `path:line` — <suggestion>.
+
+</details>
+
+<details><summary>Render matrix — N clusters changed, K NO-BASE</summary>
+
+<chart @ env, merge-base→HEAD, manifests changed, negative control empty; per-cluster rows.
+Omit the block when the PR touches no chart or values file.>
+
+</details>
+
+<details><summary>Bots: <bot> ✓, <bot> timed out</summary>
+
+<bot roster — posted and timed out — with each finding adjudicated: refuted / confirmed, and the
+evidence.>
+
+</details>
+
+<details><summary>Tier rationale · claims · CI</summary>
+
+<why this tier; claim-by-claim check against the PR body with `UNVERIFIED (assumption)` tags;
+Step 2.7 gate results; Step 2.8 preflight answers; CI state.>
+
+</details>
+
+**Unresolved**: <one line, or "none">
+<Lens split: the adversarial lens disagrees on <finding> — see the 🧨 post. | omit when no split>
+
+🤖
+````
+
+**Adversarial lens body:**
+
+````markdown
+<!-- parallax:adversarial -->
+🧨 Parallax · adversarial lens — N blocking, M suggestions · tier: <tier>
+
+**Blocking**
+1. `path:line` — <consequence>. Fix: <action>.
+
+<details><summary>N further blocking findings</summary>
+
+<findings 6..N — only when there are more than 5>
+
+</details>
+
+<details><summary>M suggestions (non-blocking)</summary>
+
+<the second model's non-blocking observations>
+
+</details>
+
+<details><summary>Adversarial lens — N mutations, K escaped</summary>
+
+<the spec-derived mutation list, which ones the suite does not assert on, and the reproduced
+evidence — the adversarial report VERBATIM>
+
+</details>
+
+<details><summary>Reproduction log</summary>
+
+<the remainder of the adversarial output, verbatim>
+
+</details>
+
+**Unresolved**: <one line, or "none">
+<Lens split: the correctness lens disagrees on <finding> — see the 🔍 post. | omit when no split>
+
+🤖
+````
 
 Rules:
 
-- **Two separate posts**, each carrying its `<!-- parallax:correctness -->` / `<!-- parallax:adversarial -->` marker for later tooling.
-- Post the adversarial lens **verbatim** from Codex — do not soften or re-rationalize it. It is a second model's independent voice.
-- If the lenses **disagree**, add a one-line pointer at the top of each to the other, and surface the split in the summary. The human adjudicates; never silently reconcile.
-- In `fix` mode these are **in addition** to the normal fix/reply/summary flow (Steps 4–7). In `review-only` mode these two posts **are** the deliverable — no separate `pr-reviewer:v1` summary needed beyond a one-line status.
+- **Two separate posts**, each carrying its `<!-- parallax:correctness -->` / `<!-- parallax:adversarial -->` marker for later tooling. Never combine them.
+- **The adversarial report is posted verbatim, inside the folds — do not soften or re-rationalize it.** It is a second model's independent voice. The above-fold lines are a lossless index into that text: you may re-word a finding into the `location — consequence. Fix:` shape, but you may not drop one, downgrade its severity, or re-rank it. If the adversarial lens stated no consequence for a finding it called blocking, quote its own words and leave it blocking — do not demote another model's call.
+- If the lenses **disagree**, each post carries the one-line `Lens split:` pointer above the fold, and the split is surfaced in the summary. The human adjudicates; never silently reconcile.
+- In `fix` mode these are **in addition** to the normal fix/reply/summary flow (Steps 4–7). In `review-only` mode these two posts **are** the deliverable — no separate `pr-reviewer:v1` summary beyond a one-line status.
 
 ## Constraints
 

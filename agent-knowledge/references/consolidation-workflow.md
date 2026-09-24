@@ -9,7 +9,7 @@ Note: Most reusable insights should already be in learnings files via immediate 
 
 Steps:
 1. Run `bd memories` to list all memories.
-2. For EVERY memory (regardless of prefix -- `<repo>/`, `<platform>/`, `<service>/`, etc.):
+2. For EVERY memory, regardless of prefix:
    a. Classify as: REUSABLE LEARNING (generalized pattern/gotcha/decision), ACTIVE STATE (ongoing project status), or STALE RECORD (completed project, superseded health run, historical PR record).
    b. If REUSABLE LEARNING: check if the insight already exists in a matching learnings file (use index.md keywords to find the right file). If not present, generalize the insight and append as a numbered item with `(ref: #NNN)` provenance when the memory references a PR/URL. **Write the learnings entry, then grep the destination file to confirm it landed, and only THEN `bd forget`.** Never delete on the strength of intending to write.
       **"Already covered" requires a citation, not a feeling** — name the `learnings-<file>.md#<N>` you are relying on. A 2026-07-26 pass judged 35 memories "already generalized" and proposed deleting them; an audit found only 6 were genuinely covered and 21 existed nowhere but bd. Those 16 `<repo>/methodology/*` memories had generalized bd→bd, so nothing ever reached a learnings file.

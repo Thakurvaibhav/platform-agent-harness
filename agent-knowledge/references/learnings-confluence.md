@@ -2,7 +2,7 @@
 
 Surgical-edit mechanics for approved Confluence pages via the Atlassian MCP.
 
-See also: `learnings-code-review.md`, `learnings-agent-workflow.md`
+See also: `learnings-code-review.md`, `learnings-agent-workflow.md`, `learnings-notion.md` (the same class of lessons for the other wiki)
 
 ## Edit mechanic
 
