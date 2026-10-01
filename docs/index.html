@@ -1,0 +1,515 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="description" content="How a CLI coding agent is wired to keep what it learns: dispatch, memory tiers, the consolidation loop, and what each agent reads before it starts work.">
+<meta name="color-scheme" content="light dark">
+<meta property="og:type" content="website">
+<meta property="og:title" content="Platform Agent Harness">
+<meta property="og:description" content="How a CLI coding agent is wired to keep what it learns: dispatch, memory tiers, the consolidation loop, and what each agent reads before it starts work.">
+<meta property="og:url" content="https://thakurvaibhav.github.io/platform-agent-harness/">
+<meta name="twitter:card" content="summary">
+<title>Platform Agent Harness</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500&family=IBM+Plex+Sans:wght@400;500;600&family=Spectral:wght@400;600&display=swap">
+
+<style>
+  :root{
+    --ground:#F6F8FA; --panel:#FFFFFF; --ink:#16202C; --muted:#5A6675;
+    --rule:#DDE3EA; --accent:#2F6F6B; --accent-soft:#E4EFEE;
+  }
+  @media (prefers-color-scheme: dark){
+    :root:not([data-theme="light"]){
+      --ground:#0F141A; --panel:#161D25; --ink:#E5EAF1; --muted:#909DAD;
+      --rule:#242D38; --accent:#68B0A9; --accent-soft:#172B2A;
+    }
+  }
+  :root[data-theme="dark"]{
+    --ground:#0F141A; --panel:#161D25; --ink:#E5EAF1; --muted:#909DAD;
+    --rule:#242D38; --accent:#68B0A9; --accent-soft:#172B2A;
+  }
+
+  *{box-sizing:border-box}
+  body{background:var(--ground); color:var(--ink); margin:0; font-size:16px; line-height:1.62;
+    font-family:"IBM Plex Sans",-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif;
+    -webkit-font-smoothing:antialiased}
+  .wrap{max-width:800px; margin:0 auto; padding:60px 24px 100px}
+  h1,h2{font-family:Spectral,Georgia,serif; text-wrap:balance; margin:0}
+  h1{font-size:42px; font-weight:600; line-height:1.12; letter-spacing:-.015em}
+  h2{font-size:26px; font-weight:600}
+  p{margin:0}
+  code,.mono{font-family:"IBM Plex Mono",ui-monospace,Menlo,monospace}
+  code{font-size:.87em; background:var(--accent-soft); padding:.12em .36em; border-radius:3px}
+  .eyebrow{font-family:"IBM Plex Mono",monospace; font-size:11px; font-weight:500;
+    letter-spacing:.11em; text-transform:uppercase; color:var(--accent); margin-bottom:7px}
+
+  header{border-bottom:1px solid var(--rule); padding-bottom:32px}
+  .byline{font-size:14px; color:var(--muted); margin-top:18px;
+    font-family:"IBM Plex Mono",monospace}
+  .byline b{color:var(--ink); font-weight:500}
+
+  section{margin-top:54px}
+  .lede{font-size:19px; color:var(--muted); margin-top:16px; max-width:64ch}
+  .sub{color:var(--muted); margin:10px 0 24px; max-width:66ch}
+  .body{max-width:66ch}
+  .body p + p{margin-top:14px}
+
+  figure{margin:22px 0 0; border:1px solid var(--rule); border-radius:8px;
+    background:var(--panel); padding:20px 18px 14px; overflow-x:auto}
+  figure svg{display:block; max-width:100%; height:auto; color:var(--ink)}
+  figcaption{font-size:13.5px; color:var(--muted); margin-top:12px;
+    border-top:1px solid var(--rule); padding-top:10px}
+  .dgm-box{fill:var(--panel); stroke:currentColor; stroke-width:1.1}
+  .dgm-hi{fill:var(--accent-soft); stroke:var(--accent); stroke-width:1.4}
+  .dgm-t{fill:currentColor; font-family:"IBM Plex Sans",sans-serif; font-size:12.5px}
+  .dgm-m{fill:currentColor; font-family:"IBM Plex Mono",monospace; font-size:11px; opacity:.72}
+  .dgm-a{fill:var(--accent); font-family:"IBM Plex Mono",monospace; font-size:10.5px}
+  .dgm-l{stroke:currentColor; stroke-width:1.1; fill:none}
+  .dgm-l-hi{stroke:var(--accent); stroke-width:1.5; fill:none}
+  .dgm-l-fat{stroke:currentColor; stroke-width:5; fill:none; opacity:.2}
+
+  .layers{display:grid; gap:1px; background:var(--rule); margin-top:22px;
+    border:1px solid var(--rule); border-radius:8px; overflow:hidden}
+  .layer{background:var(--panel); padding:15px 18px; display:grid;
+    grid-template-columns:128px 1fr; gap:18px; align-items:baseline}
+  .layer .n{font-family:"IBM Plex Mono",monospace; font-size:12.5px; color:var(--accent)}
+  .layer .d{font-size:14.5px; color:var(--muted)}
+  .layer .d b{color:var(--ink); font-weight:500}
+
+  ul.bul{list-style:none; margin:18px 0 0; padding:0; max-width:68ch}
+  ul.bul li{position:relative; padding:0 0 12px 20px; color:var(--muted); font-size:15.5px}
+  ul.bul li:last-child{padding-bottom:0}
+  ul.bul li::before{content:""; position:absolute; left:2px; top:10px; width:6px; height:6px;
+    border-radius:50%; background:var(--accent)}
+  ul.bul li b{color:var(--ink); font-weight:600}
+
+  ol.steps{list-style:none; margin:22px 0 0; padding:0; counter-reset:s;
+    border:1px solid var(--rule); border-radius:8px; background:var(--panel); overflow:hidden}
+  ol.steps li{counter-increment:s; padding:13px 18px 13px 48px; position:relative;
+    border-bottom:1px solid var(--rule); font-size:14.5px; color:var(--muted)}
+  ol.steps li:last-child{border-bottom:0}
+  ol.steps li::before{content:counter(s); position:absolute; left:18px; top:14px;
+    width:18px; height:18px; border-radius:50%; background:var(--accent-soft);
+    color:var(--accent); font-family:"IBM Plex Mono",monospace; font-size:10.5px;
+    display:grid; place-items:center}
+  ol.steps li b{color:var(--ink); font-weight:500}
+
+  table{width:100%; border-collapse:collapse; font-size:14.5px}
+  .scroll{overflow-x:auto; margin-top:20px}
+  th{text-align:left; font-family:"IBM Plex Mono",monospace; font-size:11px;
+    letter-spacing:.08em; text-transform:uppercase; color:var(--muted);
+    font-weight:500; padding:0 12px 8px 0; border-bottom:1px solid var(--rule)}
+  td{padding:10px 12px 10px 0; border-bottom:1px solid var(--rule); vertical-align:top}
+  td.num{font-family:"IBM Plex Mono",monospace; font-variant-numeric:tabular-nums; white-space:nowrap}
+  td.ag{font-family:"IBM Plex Mono",monospace; font-size:13px; color:var(--accent); white-space:nowrap}
+
+  .note{font-size:14px; color:var(--muted); border-top:1px solid var(--rule);
+    margin-top:16px; padding-top:12px; max-width:70ch}
+  footer{margin-top:64px; padding-top:22px; border-top:1px solid var(--rule);
+    font-size:13.5px; color:var(--muted)}
+  @media (max-width:560px){ h1{font-size:32px} .layer{grid-template-columns:1fr; gap:4px} }
+</style>
+<style>
+  /* Standalone-hosting reset. The artifact runtime supplied these; a plain page must. */
+  img{max-width:100%}
+  [hidden]{display:none!important}
+</style>
+</head>
+<body>
+<div class="wrap">
+
+<header>
+  <h1>Platform Agent Harness</h1>
+  <p class="lede">Claude Code and Codex, wired so they keep what they learn.</p>
+  <p class="byline"><b>Vaibhav Thakur</b> · platform engineering</p>
+</header>
+
+<section>
+  <div class="eyebrow">Why this exists</div>
+  <h2>A chat starts from zero every time</h2>
+  <div class="body">
+    <p>Open a window, explain the situation, get an answer, close it. It works. But everything you taught it is gone: your cluster layout, the deploy quirk that cost you an afternoon, the reason a previous approach was abandoned.</p>
+    <p>So you explain it again next week. And the agent, starting clean, confidently re-derives a conclusion you already disproved.</p>
+  </div>
+  <ul class="bul">
+    <li><b>Knowledge outlives the session</b> and stays findable, or it may as well not exist.</li>
+    <li><b>Work splits across specialists</b> without any one of them drowning in context.</li>
+    <li><b>Every change is checked</b> by a second model that never saw the first one's conclusions.</li>
+  </ul>
+  <p class="note">This is a setup layer over tools that already exist, not a replacement for them. The accumulated knowledge happens to be Kubernetes platform work, because that is the work; the machinery underneath has nothing specific to it.</p>
+</section>
+
+<section>
+  <div class="eyebrow">What's in the box</div>
+  <h2>Eight specialists and a dispatcher</h2>
+  <p class="sub">A main session holds the plan and hands work to specialists. Each is a role definition: a prompt, a set of references, and explicit criteria for what "done" means.</p>
+  <div class="scroll">
+    <table>
+      <thead><tr><th>Agent</th><th>Owns</th></tr></thead>
+      <tbody>
+        <tr><td class="ag">task-planner</td><td>Breaks a project into tracked units, sets dependencies, maps each to a specialist. Plans; writes no code.</td></tr>
+        <tr><td class="ag">tool-researcher</td><td>Production readiness of a new tool: version, sizing, hardening, monitoring, fit with the stack.</td></tr>
+        <tr><td class="ag">helm-chart-engineer</td><td>Charts and values. Renders across every cluster before claiming a change works.</td></tr>
+        <tr><td class="ag">argocd-manifest-engineer</td><td>Application and ApplicationSet manifests for GitOps delivery.</td></tr>
+        <tr><td class="ag">platform-engineer</td><td>CI workflows, alert rules, dashboards, observability wiring.</td></tr>
+        <tr><td class="ag">alert-investigator</td><td>Read-only triage of a firing alert: cause, scope, impact. Mutates nothing.</td></tr>
+        <tr><td class="ag">pr-reviewer</td><td>The two-model review below. Runs on a different model from whoever wrote the code.</td></tr>
+        <tr><td class="ag">general-engineer</td><td>Anything without a specialist: exploration, scoped research, independent validation.</td></tr>
+      </tbody>
+    </table>
+  </div>
+  <p class="note">The role is not tied to one vendor. The same definition runs as a Claude subagent or a Codex worker, and both write findings back to the same store. That is what makes a second opinion genuinely independent rather than the same model agreeing with itself.</p>
+</section>
+
+<section>
+  <div class="eyebrow">Where knowledge lives</div>
+  <h2>One store, two jobs</h2>
+  <div class="body">
+    <p>The memory layer is <a href="https://github.com/steveyegge/beads">beads</a>, a local issue store, doing two things that look unrelated and are deliberately the same system. It tracks <b>work</b>, as units with real dependencies between them, and it holds <b>what was learned</b>, keyed by domain, category and topic.</p>
+    <p>Keeping them together is what lets a finding from Tuesday's task surface while planning Thursday's.</p>
+  </div>
+
+  <div class="layers">
+    <div class="layer">
+      <div class="n">env.sh</div>
+      <div class="d"><b>The single switch.</b> One file names where work lives, which store to use, and which organisation is current. Everything else reads those values instead of hardcoding paths, so moving machine or employer is one edit.</div>
+    </div>
+    <div class="layer">
+      <div class="n">references/</div>
+      <div class="d"><b>Portable knowledge.</b> Numbered, curated files: method, and third-party behaviour cited at a pinned version. True anywhere, and it travels with you.</div>
+    </div>
+    <div class="layer">
+      <div class="n">orgs/&lt;org&gt;/</div>
+      <div class="d"><b>Local knowledge.</b> Cluster registry, account IDs, per-environment tables, house conventions. True only of one estate.</div>
+    </div>
+    <div class="layer">
+      <div class="n">the store</div>
+      <div class="d"><b>Working memory.</b> Fast to write mid-task, and the task graph itself. Periodically distilled into the two tiers above.</div>
+    </div>
+  </div>
+
+  <figure>
+    <svg viewBox="0 0 660 196" role="img" aria-label="An agent reads from every knowledge tier unconditionally, but writes only to the tier for the current organisation.">
+      <defs>
+        <marker id="ar" viewBox="0 0 8 8" refX="7" refY="4" markerWidth="7" markerHeight="7" orient="auto">
+          <polygon points="0,1 7,4 0,7" fill="currentColor"></polygon>
+        </marker>
+        <marker id="ar-a" viewBox="0 0 8 8" refX="7" refY="4" markerWidth="7" markerHeight="7" orient="auto">
+          <polygon points="0,1 7,4 0,7" fill="var(--accent)"></polygon>
+        </marker>
+      </defs>
+      <rect class="dgm-box" x="6" y="72" width="104" height="52" rx="5"></rect>
+      <text class="dgm-t" x="58" y="94" text-anchor="middle">agent</text>
+      <text class="dgm-m" x="58" y="111" text-anchor="middle">any task</text>
+      <line class="dgm-l" x1="300" y1="34" x2="118" y2="88" marker-end="url(#ar)"></line>
+      <line class="dgm-l" x1="300" y1="98" x2="118" y2="98" marker-end="url(#ar)"></line>
+      <line class="dgm-l" x1="300" y1="162" x2="118" y2="108" marker-end="url(#ar)"></line>
+      <text class="dgm-m" x="188" y="130">reads every tier</text>
+      <rect class="dgm-box" x="306" y="14" width="196" height="42" rx="5"></rect>
+      <text class="dgm-t" x="404" y="32" text-anchor="middle">references/</text>
+      <text class="dgm-m" x="404" y="48" text-anchor="middle">portable</text>
+      <rect class="dgm-hi" x="306" y="78" width="196" height="42" rx="5"></rect>
+      <text class="dgm-t" x="404" y="96" text-anchor="middle">orgs/&lt;current&gt;/</text>
+      <text class="dgm-a" x="404" y="112" text-anchor="middle">active</text>
+      <rect class="dgm-box" x="306" y="142" width="196" height="42" rx="5"></rect>
+      <text class="dgm-t" x="404" y="160" text-anchor="middle">orgs/&lt;previous&gt;/</text>
+      <text class="dgm-m" x="404" y="176" text-anchor="middle">precedent</text>
+      <path class="dgm-l-hi" d="M 58 68 L 58 8 L 560 8 L 560 84" marker-end="url(#ar-a)"></path>
+      <text class="dgm-a" x="528" y="102">writes</text>
+    </svg>
+    <figcaption>The asymmetry is the design. Which organisation is active decides where new writes land; it never narrows a read. Knowledge from a previous estate stays searchable as precedent without its specifics leaking into the portable tier, which is what makes the portable tier safe to take with you.</figcaption>
+  </figure>
+</section>
+
+<section>
+  <div class="eyebrow">Making it findable</div>
+  <h2>Built as an LLM wiki</h2>
+  <div class="body">
+    <p>Adapted from Karpathy's LLM Wiki: documentation written to be read by a model rather than a person, where retrieval is the design constraint instead of an afterthought. The practical test is whether an agent reads it <em>before</em> it starts grepping the repo. A pile of markdown notes never passes that test.</p>
+  </div>
+  <ul class="bul">
+    <li><b>Entries are numbered and citable.</b> An agent writes <code>[learnings-argocd.md#42]</code> and a later reader goes straight to it. Knowledge compounds instead of being silently rewritten.</li>
+    <li><b>The index is a catalogue</b> of every file, with keyword and cross-reference columns, so an agent finds the right file without reading all of them.</li>
+    <li><b>The log is an append-only chronology</b>, one entry per non-trivial task, currently around 160.</li>
+  </ul>
+  <div class="body" style="margin-top:16px">
+    <p>The index answers "where is this written down". The log answers "what happened, and when".</p>
+  </div>
+  <p class="note">Search runs across all three at once, plus the working store, so one query covers both the durable and the recent. The failure this prevents is specific and was observed repeatedly before the search step existed: an agent re-derives a conclusion from scratch that was already recorded, sometimes from the same incident a day earlier.</p>
+</section>
+
+<section>
+  <div class="eyebrow">How an agent knows any of this</div>
+  <h2>One file is loaded at birth</h2>
+  <div class="body">
+    <p>A fresh agent starts with nothing. Nothing is injected automatically, and it cannot be told things mid-flight by a human who is not watching. So the bootstrap has to be one file, loaded at task start, whose first section tells it where everything else is.</p>
+    <p>That file is the shared protocol. Its opening is a checklist that every agent runs, including the main session.</p>
+  </div>
+
+  <ol class="steps">
+    <li>Read <b>the shared protocol</b> for workflow, constraints and completion rules, and the <b>engineering standards</b> file before writing any code.</li>
+    <li>Read <b>the index</b> to discover what exists. Load every topic file whose domain overlaps the task. When uncertain, load it: a false positive costs less context than a missed lesson.</li>
+    <li>Run <b>the search</b> across memories, curated files and docs with two or three keywords from the task. This catches matches that an exact keyword lookup would miss.</li>
+    <li>Read <b>the cluster registry</b> for the active organisation, on effectively every task, because nearly all the work is cluster scoped.</li>
+    <li><b>Drift check</b>, main session only: stale graphs, store over threshold, distillation overdue. Surface warnings before starting work.</li>
+  </ol>
+
+  <p class="note">This is also why the protocol file, rather than the interactive helper library, is the home for anything load bearing. A specialist cannot invoke those helpers. If a rule has to reach one, it has to be in the files it reads at startup, and a rule that lives anywhere else does not exist as far as that agent is concerned.</p>
+</section>
+
+<section>
+  <div class="eyebrow">How a project becomes work</div>
+  <h2>Split by dependency, not by size</h2>
+  <p class="sub">A project is decomposed into tracked units. What matters is which of them actually block each other, because that decides what can run at the same time.</p>
+
+  <figure>
+    <svg viewBox="0 0 740 236" role="img" aria-label="A project fans out into two independent units that run in parallel; both must close before a third unit becomes available, which in turn blocks a fourth.">
+      <rect class="dgm-box" x="6" y="88" width="92" height="56" rx="5"></rect>
+      <text class="dgm-t" x="52" y="111" text-anchor="middle">project</text>
+      <text class="dgm-m" x="52" y="128" text-anchor="middle">a ticket</text>
+      <line class="dgm-l" x1="100" y1="104" x2="158" y2="48" marker-end="url(#ar)"></line>
+      <line class="dgm-l" x1="100" y1="128" x2="158" y2="184" marker-end="url(#ar)"></line>
+      <text class="dgm-a" x="104" y="80">independent</text>
+      <rect class="dgm-hi" x="164" y="18" width="152" height="54" rx="5"></rect>
+      <text class="dgm-t" x="240" y="41" text-anchor="middle">assess tool</text>
+      <text class="dgm-a" x="240" y="58" text-anchor="middle">tool-researcher</text>
+      <rect class="dgm-hi" x="164" y="160" width="152" height="54" rx="5"></rect>
+      <text class="dgm-t" x="240" y="183" text-anchor="middle">network policy</text>
+      <text class="dgm-a" x="240" y="200" text-anchor="middle">platform-eng</text>
+      <line class="dgm-l" x1="318" y1="52" x2="372" y2="100" marker-end="url(#ar)"></line>
+      <line class="dgm-l" x1="318" y1="180" x2="372" y2="132" marker-end="url(#ar)"></line>
+      <text class="dgm-m" x="330" y="84">blocks</text>
+      <text class="dgm-m" x="330" y="158">blocks</text>
+      <rect class="dgm-box" x="378" y="88" width="152" height="56" rx="5"></rect>
+      <text class="dgm-t" x="454" y="111" text-anchor="middle">chart + values</text>
+      <text class="dgm-a" x="454" y="128" text-anchor="middle">helm-chart-eng</text>
+      <line class="dgm-l" x1="532" y1="116" x2="578" y2="116" marker-end="url(#ar)"></line>
+      <text class="dgm-m" x="555" y="107" text-anchor="middle">blocks</text>
+      <rect class="dgm-box" x="584" y="88" width="150" height="56" rx="5"></rect>
+      <text class="dgm-t" x="659" y="111" text-anchor="middle">Application</text>
+      <text class="dgm-a" x="659" y="128" text-anchor="middle">argocd-eng</text>
+      <text class="dgm-a" x="164" y="232">both offered at once · the chart waits for both to close</text>
+    </svg>
+    <figcaption>Two units with no dependency between them are offered simultaneously and worked in parallel by different specialists. The chart depends on both, so it stays unavailable until they close. The tool query cannot be claimed as done while it is still open.</figcaption>
+  </figure>
+
+  <div class="body" style="margin-top:20px">
+    <p><b>Not everything becomes a tracked unit.</b> A one-line fix, a quick question, a five-minute investigation: those are just done. Tracking them would be ceremony.</p>
+    <p>But if one of them <em>teaches</em> something, a flag that behaves differently than documented, a failure mode with a non-obvious cause, that lands in the store anyway. The work goes untracked; the lesson does not. Most of what accumulates arrives this way rather than from planned projects.</p>
+  </div>
+
+  <p class="note">Wide, repetitive work takes the other shape. The same playbook against twenty clusters is twenty independent units fanned out at once, capped at around ten concurrent workers. Running a dependent chain in parallel is the most common way this goes wrong.</p>
+</section>
+
+<section>
+  <div class="eyebrow">Keeping knowledge true</div>
+  <h2>A corpus nobody prunes becomes a corpus nobody trusts</h2>
+  <div class="body">
+    <p>Capture is cheap, so the store fills fast. A busy week adds a few hundred entries. Left alone it turns into a landfill: the same finding written three times by three sessions, notes about work that finished a month ago, and claims that a later measurement quietly disproved.</p>
+    <p>So it gets distilled. Each entry is sorted into one of three outcomes, and anything worth keeping is moved into one of the two durable tiers <em>before</em> it leaves the store.</p>
+  </div>
+
+  <figure>
+    <svg viewBox="0 0 790 292" role="img" aria-label="Each entry is classified as reusable, in progress, or finished. Reusable entries are routed to the portable or local tier, written, verified, then removed. In-progress entries stay. Finished entries are logged in full before removal.">
+      <rect class="dgm-box" x="6" y="112" width="86" height="52" rx="5"></rect>
+      <text class="dgm-t" x="49" y="134" text-anchor="middle">entry</text>
+      <text class="dgm-m" x="49" y="151" text-anchor="middle">from store</text>
+      <line class="dgm-l" x1="94" y1="138" x2="126" y2="138" marker-end="url(#ar)"></line>
+      <rect class="dgm-hi" x="132" y="112" width="96" height="52" rx="5"></rect>
+      <text class="dgm-t" x="180" y="134" text-anchor="middle">sort</text>
+      <text class="dgm-a" x="180" y="151" text-anchor="middle">1 of 3</text>
+      <path class="dgm-l" d="M 230 128 L 248 128 L 248 44 L 268 44" marker-end="url(#ar)"></path>
+      <line class="dgm-l" x1="230" y1="138" x2="268" y2="138" marker-end="url(#ar)"></line>
+      <path class="dgm-l" d="M 230 148 L 248 148 L 248 232 L 268 232" marker-end="url(#ar)"></path>
+      <rect class="dgm-box" x="274" y="18" width="142" height="52" rx="5"></rect>
+      <text class="dgm-t" x="345" y="40" text-anchor="middle">reusable</text>
+      <text class="dgm-m" x="345" y="57" text-anchor="middle">pattern, gotcha</text>
+      <rect class="dgm-box" x="274" y="112" width="142" height="52" rx="5"></rect>
+      <text class="dgm-t" x="345" y="134" text-anchor="middle">in progress</text>
+      <text class="dgm-m" x="345" y="151" text-anchor="middle">open work</text>
+      <rect class="dgm-box" x="274" y="206" width="142" height="52" rx="5"></rect>
+      <text class="dgm-t" x="345" y="228" text-anchor="middle">finished</text>
+      <text class="dgm-m" x="345" y="245" text-anchor="middle">done, superseded</text>
+      <line class="dgm-l" x1="418" y1="44" x2="452" y2="44" marker-end="url(#ar)"></line>
+      <line class="dgm-l" x1="418" y1="232" x2="452" y2="232" marker-end="url(#ar)"></line>
+      <rect class="dgm-hi" x="458" y="6" width="166" height="76" rx="5"></rect>
+      <text class="dgm-t" x="541" y="28" text-anchor="middle">route by tier</text>
+      <text class="dgm-a" x="541" y="46" text-anchor="middle">method → portable</text>
+      <text class="dgm-a" x="541" y="62" text-anchor="middle">estate data → local</text>
+      <text class="dgm-t" x="424" y="142">stays put</text>
+      <rect class="dgm-box" x="458" y="206" width="166" height="52" rx="5"></rect>
+      <text class="dgm-t" x="541" y="228" text-anchor="middle">archive log</text>
+      <text class="dgm-m" x="541" y="245" text-anchor="middle">full text, first</text>
+      <line class="dgm-l" x1="626" y1="44" x2="660" y2="44" marker-end="url(#ar)"></line>
+      <line class="dgm-l" x1="626" y1="232" x2="660" y2="232" marker-end="url(#ar)"></line>
+      <rect class="dgm-box" x="666" y="18" width="118" height="52" rx="5"></rect>
+      <text class="dgm-t" x="725" y="40" text-anchor="middle">confirm it landed</text>
+      <text class="dgm-a" x="725" y="57" text-anchor="middle">then remove</text>
+      <rect class="dgm-box" x="666" y="206" width="118" height="52" rx="5"></rect>
+      <text class="dgm-t" x="725" y="228" text-anchor="middle">remove</text>
+      <text class="dgm-m" x="725" y="245" text-anchor="middle">irreversible</text>
+      <text class="dgm-m" x="666" y="96">an entry with both halves splits:</text>
+      <text class="dgm-m" x="666" y="112">method and evidence, cross-linked</text>
+    </svg>
+    <figcaption>The routing question: is the separable content <em>estate data</em>, a census or a per-cluster table, or is a cluster named only as the place a general claim was proved? The first is local, the second is portable. Tie-breaker: would a reader at another company act differently because of this?</figcaption>
+  </figure>
+
+  <div class="scroll">
+    <table>
+      <thead><tr><th>Rule</th><th>Why</th></tr></thead>
+      <tbody>
+        <tr><td>Write it, confirm it landed, <em>then</em> remove</td><td>Removal is irreversible and there is no history to recover from. Never delete on the strength of intending to write.</td></tr>
+        <tr><td>Full text archived before any removal</td><td>Otherwise the discarded pile is unauditable. You cannot inspect what you threw away to judge whether it deserved it.</td></tr>
+        <tr><td>"Already covered" needs a citation</td><td>One pass judged 35 entries already captured elsewhere. An audit found 6 were, and 21 existed nowhere else.</td></tr>
+        <tr><td>Read frequency ranks, never prunes</td><td>A rarely read file may hold the once-a-year gotcha that prevents an incident.</td></tr>
+      </tbody>
+    </table>
+  </div>
+  <p class="note">Cadence decides the cost. At around a hundred entries this is one agent and an hour. A backlog of seven hundred once took thirteen agents and most of a day. Growth is the system working, so the fix is running the pass more often rather than capturing less.</p>
+</section>
+
+<section>
+  <div class="eyebrow">Why it scales</div>
+  <h2>Context is the budget that runs out</h2>
+  <div class="body">
+    <p>Every agent has a finite window, and reading burns it faster than writing. Two decisions follow.</p>
+    <p><b>Specialists spend their own budget, not the main session's.</b> A specialist reads the protocol files, searches prior art, greps the repo, queries live clusters, and returns a report. The tens of thousands of tokens of raw output die with it. Ten workers can read ten times what one session could afford.</p>
+  </div>
+
+  <figure>
+    <svg viewBox="0 0 720 262" role="img" aria-label="The main session dispatches specialists. Each reads widely and generates large volumes of raw output locally, returning only a compact report.">
+      <rect class="dgm-hi" x="6" y="100" width="112" height="60" rx="5"></rect>
+      <text class="dgm-t" x="62" y="124" text-anchor="middle">main session</text>
+      <text class="dgm-a" x="62" y="142" text-anchor="middle">stays lean</text>
+      <line class="dgm-l" x1="120" y1="114" x2="206" y2="48" marker-end="url(#ar)"></line>
+      <line class="dgm-l" x1="120" y1="130" x2="206" y2="130" marker-end="url(#ar)"></line>
+      <line class="dgm-l" x1="120" y1="146" x2="206" y2="212" marker-end="url(#ar)"></line>
+      <text class="dgm-a" x="126" y="98">dispatch</text>
+      <rect class="dgm-box" x="212" y="20" width="250" height="56" rx="5"></rect>
+      <text class="dgm-t" x="337" y="42" text-anchor="middle">specialist</text>
+      <text class="dgm-m" x="337" y="60" text-anchor="middle">reads protocols · prior art</text>
+      <rect class="dgm-box" x="212" y="102" width="250" height="56" rx="5"></rect>
+      <text class="dgm-t" x="337" y="124" text-anchor="middle">specialist</text>
+      <text class="dgm-m" x="337" y="142" text-anchor="middle">greps · renders · queries live</text>
+      <rect class="dgm-box" x="212" y="184" width="250" height="56" rx="5"></rect>
+      <text class="dgm-t" x="337" y="206" text-anchor="middle">specialist</text>
+      <text class="dgm-m" x="337" y="224" text-anchor="middle">own window, own budget</text>
+      <path class="dgm-l-fat" d="M 468 48 L 512 48"></path>
+      <path class="dgm-l-fat" d="M 468 130 L 512 130"></path>
+      <path class="dgm-l-fat" d="M 468 212 L 512 212"></path>
+      <text class="dgm-m" x="516" y="42">raw output</text>
+      <text class="dgm-m" x="516" y="58">stays here</text>
+      <text class="dgm-m" x="516" y="134">discarded on exit</text>
+      <text class="dgm-m" x="516" y="216">never reaches main</text>
+      <path class="dgm-l-hi" d="M 337 244 L 337 254 L 62 254 L 62 166" marker-end="url(#ar-a)"></path>
+      <text class="dgm-a" x="196" y="250">one compact report each</text>
+    </svg>
+    <figcaption>Reading is delegated along with the work. What returns to the main session is a report, not a transcript, which is why a plan can survive a dozen investigations without the planner running out of room.</figcaption>
+  </figure>
+
+  <div class="body" style="margin-top:22px">
+    <p><b>Memory is searched, never loaded.</b> Injecting the whole corpus into every agent sounds helpful and is the opposite. The preamble instead says: you have no memories loaded, here is how to fetch the ones your task needs.</p>
+  </div>
+
+  <div class="scroll">
+    <table>
+      <thead><tr><th>Preamble per dispatch</th><th>Bytes</th><th>Roughly</th></tr></thead>
+      <tbody>
+        <tr><td>Corpus injected into every agent</td><td class="num">163,949</td><td>~40k tokens, before reading anything</td></tr>
+        <tr><td>Replaced with "fetch what you need"</td><td class="num">2,175</td><td>~0.5k tokens</td></tr>
+      </tbody>
+    </table>
+  </div>
+  <p class="note">Measured, and not the first time. An earlier estate reached 774&nbsp;KB, about 193k tokens, injected into every worker. <b>The detail that settles it:</b> two entries already held a lesson that a later change then re-learned across three correction commits. The knowledge was there and went unused, because dumping all of it crowded out the context needed to read the file being edited. Auto-loading everything is why nothing gets used.</p>
+
+  <p class="note">Two smaller savings compound quietly. Verbose read-only commands are rewritten before they run by <a href="https://github.com/rtk-ai/rtk">rtk</a>, compressing output by 60 to 90 percent; nobody has to remember, because it is a hook rather than a habit, and mutating or piped commands are never touched. Architecture questions go to a <a href="https://github.com/safishamsi/graphify">Graphify</a> repo graph instead of linear file reads, which is worth roughly two orders of magnitude on "what calls this".</p>
+</section>
+
+<section>
+  <div class="eyebrow">Scope</div>
+  <h2>What this is not</h2>
+  <ul class="bul">
+    <li><b>Not a new agent.</b> Claude Code and Codex are used as they ship. This is configuration, protocol and glue, which is why it survives their updates instead of breaking on them.</li>
+    <li><b>Not a documentation library.</b> Every file is loaded by an agent in a real session, or it gets deleted. Prose nothing reads is the failure being avoided, not the product.</li>
+    <li><b>Not a benchmark claim.</b> What is measured here is narrow: tokens spent per dispatch, entries promoted per pass, files read per week. No speedup multiplier, because that depends entirely on the work.</li>
+    <li><b>Not finished.</b> About a fifth is enforced by code. The rest is prose an agent follows by choice, and the last section shows how unevenly that lands.</li>
+  </ul>
+</section>
+
+<section>
+  <div class="eyebrow">How work gets checked</div>
+  <h2>Two models that never compare notes</h2>
+  <p class="sub">Every non-trivial change gets two passes. The independence is the mechanism: the second model never sees the first one's findings, because a second opinion from the same model is not one.</p>
+
+  <figure>
+    <svg viewBox="0 0 660 200" role="img" aria-label="A pull request is reviewed by two independent passes that never exchange findings, each posting its own review.">
+      <rect class="dgm-box" x="6" y="76" width="96" height="52" rx="5"></rect>
+      <text class="dgm-t" x="54" y="98" text-anchor="middle">change</text>
+      <text class="dgm-m" x="54" y="115" text-anchor="middle">a PR</text>
+      <line class="dgm-l" x1="104" y1="92" x2="182" y2="52" marker-end="url(#ar)"></line>
+      <line class="dgm-l" x1="104" y1="112" x2="182" y2="152" marker-end="url(#ar)"></line>
+      <rect class="dgm-box" x="188" y="20" width="208" height="56" rx="5"></rect>
+      <text class="dgm-t" x="292" y="42" text-anchor="middle">correctness pass</text>
+      <text class="dgm-m" x="292" y="60" text-anchor="middle">verify the claims</text>
+      <rect class="dgm-box" x="188" y="126" width="208" height="56" rx="5"></rect>
+      <text class="dgm-t" x="292" y="148" text-anchor="middle">adversarial pass</text>
+      <text class="dgm-m" x="292" y="166" text-anchor="middle">try to break it</text>
+      <line class="dgm-l" x1="292" y1="84" x2="292" y2="118" stroke-dasharray="4 4"></line>
+      <line class="dgm-l" x1="280" y1="95" x2="304" y2="107"></line>
+      <line class="dgm-l" x1="304" y1="95" x2="280" y2="107"></line>
+      <text class="dgm-a" x="312" y="105">nothing shared</text>
+      <line class="dgm-l" x1="398" y1="48" x2="470" y2="48" marker-end="url(#ar)"></line>
+      <line class="dgm-l" x1="398" y1="154" x2="470" y2="154" marker-end="url(#ar)"></line>
+      <rect class="dgm-hi" x="476" y="22" width="178" height="52" rx="5"></rect>
+      <text class="dgm-t" x="565" y="44" text-anchor="middle">review posted</text>
+      <text class="dgm-m" x="565" y="61" text-anchor="middle">blocking first</text>
+      <rect class="dgm-hi" x="476" y="128" width="178" height="52" rx="5"></rect>
+      <text class="dgm-t" x="565" y="150" text-anchor="middle">review posted</text>
+      <text class="dgm-m" x="565" y="167" text-anchor="middle">what escaped</text>
+    </svg>
+    <figcaption>The adversarial pass builds its attacks from what the code is <em>supposed to prevent</em>, never from the existing tests. Deriving them from the assertions measures your own imagination rather than the suite. Where the two passes disagree, that disagreement is the first thing shown.</figcaption>
+  </figure>
+
+  <p class="note">Reviews lead with blocking findings only, one line each, naming the consequence, capped at five. Everything else folds away. Nothing is deleted; the reading path is just short enough that a human finishes it.</p>
+</section>
+
+<section>
+  <div class="eyebrow">What has teeth</div>
+  <h2>Enforced, and merely written down</h2>
+  <p class="sub">Worth being precise about, because the difference decides what holds under pressure.</p>
+
+  <div class="scroll">
+    <table>
+      <thead><tr><th>Enforced, code that runs</th><th>Rule</th><th>On fail</th></tr></thead>
+      <tbody>
+        <tr><td class="ag">comment gate</td><td>No comment block over 2 lines. No ticket IDs, dates or author names in source.</td><td class="num">exit 1</td></tr>
+        <tr><td class="ag">test gate</td><td>No function docstring over 13 lines. Added test volume within a budget scaled to the change.</td><td class="num">exit 1</td></tr>
+        <tr><td class="ag">render matrix</td><td>Chart changes rendered across every cluster, diffed against the merge base.</td><td class="num">blocking</td></tr>
+        <tr><td class="ag">capture gate</td><td>A specialist that did real work and recorded nothing is stopped.</td><td class="num">blocks</td></tr>
+        <tr><td class="ag">output rewrite</td><td>Eligible read-only commands compressed before they run.</td><td class="num">automatic</td></tr>
+        <tr><td class="ag">drift check</td><td>Stale graphs, store over threshold, distillation overdue.</td><td class="num">warns</td></tr>
+      </tbody>
+    </table>
+  </div>
+
+  <div class="scroll">
+    <table>
+      <thead><tr><th>Written down, followed by choice</th><th>Status</th></tr></thead>
+      <tbody>
+        <tr><td>Search prior art before implementing</td><td class="num">logged, never blocked</td></tr>
+        <tr><td>Which tier a finding belongs in</td><td class="num">judgment</td></tr>
+        <tr><td>Commit and PR title conventions</td><td class="num">no lint in repo</td></tr>
+        <tr><td>Tone, altitude, raising a risk once</td><td class="num">unfalsifiable</td></tr>
+      </tbody>
+    </table>
+  </div>
+
+  <p class="note">Roughly <b>2,100 lines of code against 9,000 lines of prose</b>. The split is deliberate: a rule belongs in prose only if it is short enough to survive attention decay, and anything longer should become a count a script can check. <b>The written-down half does not reliably fire.</b> Measured reading in the first week of a new estate was two file reads and zero citations. When a documented rule keeps being broken, the fix is the enforcement point rather than the wording.</p>
+</section>
+
+
+</div>
+</body>
+</html>

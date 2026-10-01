@@ -9,7 +9,10 @@ runtime's equivalents — see core/hooks/README.md):
                         persisted nothing, block its stop exactly once and tell
                         it to `bd remember` / `learn.sh` (or explicitly say
                         nothing was non-obvious). A `stop_hook_active`-style
-                        flag guards against blocking loops.
+                        flag guards against blocking loops. NOTE the transcript
+                        to grade on this event is `agent_transcript_path`, not
+                        `transcript_path` (which is the PARENT session) --
+                        see `subagent_transcript`.
   * UserPromptSubmit -> SOFT nudge for the long-lived MAIN session. If work has
                         outpaced persistence since the last nudge, inject a
                         one-line reminder (never blocks). Main-session citations
@@ -334,6 +337,45 @@ def handle_main_prompt(data, path, stats):
             "hookEventName": "UserPromptSubmit", "additionalContext": msg}}))
 
 
+def _warn(msg):
+    """Degradation has to be visible somewhere -- never a silent clean exit."""
+    print("[learning-gate] " + msg, file=sys.stderr)
+
+
+def subagent_transcript(data):
+    """(path, source) for a SubagentStop payload.
+
+    On this event `transcript_path` is the PARENT session; the stopped worker's own
+    record is `agent_transcript_path` (Claude Code resolves it to
+    <session>/subagents/agent-<agent_id>.jsonl). Reading `transcript_path` here graded
+    main-session activity instead, which inverts the gate in BOTH directions, and
+    mislabelled those reads as source "subagent". If your runtime names the sub-agent
+    transcript differently, this is the one place to map it.
+    """
+    path = data.get("agent_transcript_path", "")
+    if path:
+        return path, "subagent"
+    _warn("SubagentStop payload carries no agent_transcript_path; falling back to the "
+          "parent transcript -- this verdict is NOT about the sub-agent.")
+    return data.get("transcript_path", ""), "subagent-fallback"
+
+
+def handle_unmeasurable(data, path):
+    """A gate that could not measure must not render as a pass."""
+    _warn(f"could not read sub-agent transcript {path!r} -- capture is unverified")
+    if os.environ.get("LEARN_GATE_DISABLE") == "1" or data.get("stop_hook_active"):
+        return
+    reason = (
+        "The learning-capture gate could NOT read your transcript "
+        f"({path or 'no path in payload'}), so it cannot tell whether you persisted "
+        "anything -- do not read that as a pass. If you discovered anything non-obvious, "
+        "persist it NOW with `agent-knowledge/scripts/learn.sh \"<insight>\" "
+        "<domain>/<category>/<topic>` (or `bd remember`). If nothing was genuinely "
+        "non-obvious, state that explicitly in one line, then finish."
+    )
+    print(json.dumps({"decision": "block", "reason": reason}))
+
+
 def main():
     try:
         data = json.load(sys.stdin)
@@ -341,21 +383,24 @@ def main():
         sys.exit(0)
     if not isinstance(data, dict):
         sys.exit(0)
-    path = data.get("transcript_path", "")
-    if not path or not os.path.isfile(path):
-        sys.exit(0)
-    stats = parse_transcript(path)
-    if stats is None:
-        sys.exit(0)
-
     event = data.get("hook_event_name", "")
     if event == "SubagentStop":
-        log_new_citations(path, stats["citations"], "subagent")
-        log_learnings_reads(path, stats["learnings_reads"], "subagent")
+        path, source = subagent_transcript(data)
+    else:
+        path, source = data.get("transcript_path", ""), "main"
+    stats = parse_transcript(path) if path and os.path.isfile(path) else None
+    if stats is None:
+        if event == "SubagentStop":
+            handle_unmeasurable(data, path)
+        sys.exit(0)
+
+    if event == "SubagentStop":
+        log_new_citations(path, stats["citations"], source)
+        log_learnings_reads(path, stats["learnings_reads"], source)
         handle_subagent_stop(data, stats)
     elif event == "UserPromptSubmit":
-        log_new_citations(path, stats["citations"], "main")
-        log_learnings_reads(path, stats["learnings_reads"], "main")
+        log_new_citations(path, stats["citations"], source)
+        log_learnings_reads(path, stats["learnings_reads"], source)
         handle_main_prompt(data, path, stats)
     sys.exit(0)
 

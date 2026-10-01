@@ -89,8 +89,10 @@ Never work in the main checkout. Always use a git worktree.
 
 ```bash
 cd <repo-path>
-git fetch origin main
-git worktree add ../<repo>-<branch-name> -b <branch-name> origin/main
+# Resolve the default branch; it is not always `main`.
+BASE_REF=$(git symbolic-ref --short refs/remotes/origin/HEAD | sed 's|^origin/||')
+git fetch origin "$BASE_REF"
+git worktree add ../<repo>-<branch-name> -b <branch-name> "origin/$BASE_REF"
 cd ../<repo>-<branch-name>
 # ...work...
 # After merge:
@@ -102,7 +104,7 @@ Check `git worktree list` first — reuse an existing worktree if suitable.
 Edge cases:
 
 - After `gh pr merge`, delete the remote branch AND `git worktree remove ../<dir>`. Stale worktrees accumulate.
-- Rebasing inside a worktree: `git fetch origin main && git rebase origin/main`. Force-push with `--force-with-lease`.
+- Rebasing inside a worktree: `git fetch origin "$BASE_REF" && git rebase "origin/$BASE_REF"` (resolve `BASE_REF` as above). Force-push with `--force-with-lease`.
 
 ## Amending existing PRs
 

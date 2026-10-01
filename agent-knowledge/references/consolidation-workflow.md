@@ -61,7 +61,15 @@ Steps:
    - **NOTE (experiment):** read-frequency tracking started 2026-06-26. Revisit in a few weeks to judge whether it earns its keep — citations did not.
 8. **Keep the hive lean by PROMOTION, not deletion** (this is what keeps every subagent's `bd prime --memories-only` small): aggressively promote reusable bd memories into `learnings-*.md` (step 2b) so durable knowledge lives in the searchable learnings layer and bd holds only active/high-signal memories. Separately, `session/pre-compact-*` (session-scoped checkpoints, one per session id), legacy `session/pre-compact`/`k8s/pre-compact`, and `session/adhoc` memories older than 7 days are short-term continuity only — `bd forget` those. Goal: a small, high-signal persistent-memory set so priming stays cheap without losing recall.
 9. **New file threshold**: If 3+ memories share a domain keyword not covered by any existing learnings file, create a new `learnings-<topic>.md` with those entries and add it to index.md.
-10. Update index.md if any new topic directories or learnings files were created.
+10. **Update index.md — and RE-DERIVE every `Entries` count, do not copy the table's own numbers.**
+    Add rows for any new topic directory or learnings file (step 9), refresh the Keywords column
+    for every file you appended to, and recompute each count with
+    `re.finditer(r'^(\d+)\. ', text, re.M)` against the file on disk — **both tiers**,
+    `agent-knowledge/references/` and `agent-knowledge/orgs/*/`. A promotion pass changes entry
+    counts by construction, so a count copied forward is wrong the moment the pass succeeds. One
+    real run added its new learnings-file row correctly and still left 7 stale counts behind it,
+    one off by 16. Nothing warns about this: the index stays syntactically valid and
+    `drift-check.sh` does not read the column.
 11. Run: bd remember "last consolidation: <today's date>, promoted N memories to learnings, deleted M stale/session records (discard log: <path>). N persistent memories remaining." --key <repo>/meta/last-consolidation
 12. **Verify the export AFTER the final write, not after the first.** `bd export` without `--all`
     writes an issues-only `issues.jsonl`, silently dropping every memory from the portable

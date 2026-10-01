@@ -72,6 +72,36 @@ Same rule for the reverse direction and for splits: if an entry is partly method
 
 **Detecting mis-resolution, and the case this rule does not cover.** A confidently-wrong reference cannot be found by a dangling-reference scan — it resolves. Two things follow. First, when entries are copied between two corpora that number *independently* (porting from a private corpus to a public one, merging two knowledge bases), tombstoning does not help: every `#N` that lands in range now points at an unrelated entry. Strip or re-resolve each one at the boundary, by opening the target — a range check is not a resolution check. Second, run the detector **differentially**: capture its output before the change and diff. Absolute counts are dominated by pre-existing references and are not actionable; only the delta tells you what you broke. See `agent-knowledge/references/learnings-agent-workflow.md` → "Numbered-corpus hygiene" for the detection commands and the duplicate-number audit.
 
+## Both tiers need a keyword surface in the index
+
+Splitting the corpus is half the job. The other half is that
+`agent-knowledge/references/index.md` must carry a **keyword row for every file in both tiers** —
+because the index, not the search script, is what an agent reads to decide *what to open*. Search
+helps only once a query exists; the index is what turns a task into a query.
+
+Index one tier and not the other and the failure is silent and one-directional:
+
+- Instance files get zero reads. Nothing errors. `knowledge-search.sh` still returns hits, so the
+  tier looks reachable.
+- Estate questions land on whichever **portable** file carries the broadest keyword list — normally
+  the largest file in the corpus, since keyword lists grow with entry count.
+- That file is read repeatedly and cited almost never, because it cannot answer what was asked. A
+  high read-to-citation ratio on one big portable file is the diagnostic signature of this bug, and
+  it is visible in `agent-knowledge/metrics/` before anyone notices the routing is wrong.
+
+Two rules keep the surfaces from fighting:
+
+1. **Mine instance keywords from the instance file.** Proper nouns — services, clusters, projects,
+   repos, pipelines, tickets, teams. Those strings appear nowhere in `references/` by construction,
+   so they route unambiguously.
+2. **Never copy the portable twin's keywords into the instance row, or the reverse.** Two rows
+   competing for one query is a misroute waiting to happen, and the larger keyword surface wins it.
+
+The same precision rule applies *within* the portable tier. A keyword broad enough to match half of
+the domain pulls in queries its file cannot serve; prefer a qualified term (`PromQL arming proof`)
+over a bare one (`arming proof`) wherever more than one file could plausibly claim it, and give each
+genuinely shared term exactly one owner.
+
 ## How this composes with the other stores
 
 The four-store routing table lives in [`bd-and-memory.md`](bd-and-memory.md) → "Memory routing". The tier split refines exactly one row of it: durable curated knowledge is not one bucket but two, and the payload/locator rule above decides which.

@@ -19,7 +19,7 @@ The end-to-end compaction lifecycle these hooks implement is documented in [`LIF
 
 ## learning-gate.py — capture enforcement + measurement
 
-[`generic/learning-gate.py`](generic/learning-gate.py) turns the soft "remember to persist learnings" convention into a machine-checked gate, and measures which learnings actually get read and cited so consolidation can rank files and detect coverage gaps (never prune by usage). Stdlib only; it reads a JSON event on stdin and parses the transcript at `transcript_path`. It targets Claude-Code-style JSONL transcripts and may need a small `parse_transcript` tweak per runtime (see the file header).
+[`generic/learning-gate.py`](generic/learning-gate.py) turns the soft "remember to persist learnings" convention into a machine-checked gate, and measures which learnings actually get read and cited so consolidation can rank files and detect coverage gaps (never prune by usage). Stdlib only; it reads a JSON event on stdin and parses a transcript. **Which transcript depends on the event:** `SubagentStop` carries the stopped worker's own record at `agent_transcript_path`, while `transcript_path` on that same payload is the PARENT session. Grading the parent is the natural bug here and it is silent both ways — a worker that captured nothing passes, and a diligent one is blocked for the main session's churn. Every other event carries only `transcript_path`. It targets Claude-Code-style JSONL transcripts and may need a small `parse_transcript` tweak per runtime (see the file header).
 
 Two events (map to your runtime's equivalents):
 
@@ -40,7 +40,7 @@ Both paths record usage telemetry under `${HARNESS_METRICS:-~/.agent-knowledge/m
 
 ## The two discipline gates
 
-[`generic/comment-discipline.sh`](generic/comment-discipline.sh) and [`generic/test-discipline.sh`](generic/test-discipline.sh) share one interface — `--staged`, `--base <ref>`, a bare invocation (diff vs merge-base with `origin/main`), or a diff on stdin with `-`. Exit `0` clean, `1` findings, `2` usage error. Both are **blocking** before a push and both are re-run at review time.
+[`generic/comment-discipline.sh`](generic/comment-discipline.sh) and [`generic/test-discipline.sh`](generic/test-discipline.sh) share one interface — `--staged`, `--base <ref>`, a bare invocation (diff vs merge-base with the **resolved** base branch — `--base`/`$BASE_REF`, else the PR's `baseRefName`, else `origin/HEAD`), or a diff on stdin with `-`. Exit `0` clean, `1` findings, `2` usage error **or an unresolvable base** — a gate that could not measure must never read as a pass. Both are **blocking** before a push and both are re-run at review time.
 
 They bound the two things a reviewer otherwise keeps writing by hand:
 

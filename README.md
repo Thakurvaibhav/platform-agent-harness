@@ -6,6 +6,9 @@ A portable, runtime-neutral behavioral specification and coordination protocol f
 
 > Most agent setups stop at "give it a system prompt." That falls apart on real infra work — multi-step rollouts, second opinions on risky PRs, memory that survives context resets, safe Kubernetes defaults, and parallel investigation across clusters. This harness adds the **behavioral specification and coordination protocol around the prompt.**
 
+**[Read the overview →](https://thakurvaibhav.github.io/platform-agent-harness/)** — how the pieces fit together,
+with diagrams: dispatch, memory tiers, the consolidation loop, and what each agent actually reads at birth.
+
 ---
 
 | **Why it pays off** |
@@ -16,7 +19,7 @@ A portable, runtime-neutral behavioral specification and coordination protocol f
 | **Hand-curated knowledge base** ([`agent-knowledge/references/`](agent-knowledge/references/)) — markdown-only `index.md`, `log.md`, and numbered `learnings-*.md` agents read before they grep the repo. Adapted from [Karpathy's LLM Wiki](https://gist.github.com/karpathy/442a6bf555914893e9891c11519de94f). |
 | **3x+ wall-clock speedup** on N-cluster validation via parallel sub-agent dispatch ([`core/protocols/parallel-dispatch.md`](core/protocols/parallel-dispatch.md)). |
 | **Second-agent PR review** with structured bot-reply protocol ([`core/protocols/pr-review-loop.md`](core/protocols/pr-review-loop.md)). |
-| Design | [`core/protocols/design-framework.md`](core/protocols/design-framework.md) | Requirements lock, constraint inventory (hard/convention/preference), candidate shapes, multi-model judge panel. Driven by the [`design`](skills/design/) skill. |
+| **Design before code** — requirements lock, constraint inventory (hard / convention / preference), candidate shapes, multi-model judge panel ([`core/protocols/design-framework.md`](core/protocols/design-framework.md), driven by the [`design`](skills/design/) skill). |
 | **18 observability skills** install via `gcx skills install --all` — no vendoring. |
 | **Survives a job change.** Knowledge splits into a portable tier (`references/`) and a per-org instance tier ([`agent-knowledge/orgs/`](agent-knowledge/orgs/)), with one switch ([`agent-knowledge/env.sh`](agent-knowledge/env.sh)) for every machine path — see [`core/protocols/knowledge-tiers.md`](core/protocols/knowledge-tiers.md) and the runbook at [`installation/new-org-setup.md`](installation/new-org-setup.md). |
 
@@ -103,7 +106,7 @@ For a public companion repo using this exact operating model, see [`Thakurvaibha
 | Layer | Path | What it provides |
 | --- | --- | --- |
 | Agent prompts | [`core/agents/`](core/agents/) | 7 specialist sub-agents (planner, researcher, helm, argocd, platform/observability, PR reviewer, general-engineer) with explicit "when to invoke / when NOT to invoke" boundaries |
-| Protocols | [`core/protocols/`](core/protocols/) | 10 canonical rules: harness-pillars, code-quality, delegation, bd-and-memory, knowledge-tiers, rtk-command-policy, graphify-first, pr-review-loop, parallel-dispatch, safety-and-handoff |
+| Protocols | [`core/protocols/`](core/protocols/) | 11 canonical rules: harness-pillars, code-quality, delegation, bd-and-memory, knowledge-tiers, rtk-command-policy, graphify-first, pr-review-loop, parallel-dispatch, safety-and-handoff, design-framework |
 | Skills | [`skills/`](skills/) | 15 portable executable playbooks (shiny-engineer, create-pr, helm-upgrade, k8s-debug, graphify, contract-validation, adopt-eval, upstream-triage, stakeholder-comms, stop-slop-code, systematic-debugging, ingest-reading, design, parallax-review, verify-claims); observability skills live in `gcx skills install` |
 | Domain packs | [`domain-packs/`](domain-packs/) | Kubernetes safety, Helm essentials, observability-via-gcx — focused, not exhaustive |
 | Hooks | [`core/hooks/`](core/hooks/) | Transcript-parsing pre-compact memory snapshot, rtk autoprefix, context-threshold warning, learning-capture gate |
@@ -135,7 +138,8 @@ The handoff report has a mandatory `## Knowledge updates` section ([`templates/h
 
 - No mutating Kubernetes commands (`apply|create|delete|patch|replace|edit|scale|rollout|...`).
 - No `helm install|upgrade|uninstall|rollback`.
-- No pushes to `main` / `master`; no force-push to protected branches.
+- No pushes to the repository's **default/protected branch** — resolved per repo
+  (`git symbolic-ref refs/remotes/origin/HEAD`), never assumed to be `main`; no force-push to protected branches.
 - Read-only by default; runtime denylists pin the rest.
 - All examples and templates use synthetic placeholders (`<cluster>`, `<service>`, `<TICKET-KEY>`).
 

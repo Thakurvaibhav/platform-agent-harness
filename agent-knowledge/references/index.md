@@ -1,6 +1,14 @@
 # Reference Index
 
-Master catalog for the harness. Agents check this file **before** broad searches when they need to know whether guidance already exists.
+Master catalog for the harness. Agents check this file **before** broad searches when they need to
+know whether guidance already exists.
+
+**There are two keyword tables, and you must scan BOTH** — *Topic learnings* for portable method,
+*Instance tier* for what is true of the estate you are working in. Instance keywords are the proper
+nouns: services, clusters, projects, repos, pipelines, tickets, teams. A portable row can never answer
+a question about those, so a one-tier index quietly routes every estate question to whichever portable
+file happens to carry the largest keyword surface. That file is usually the biggest one in the corpus,
+and it is the wrong answer. Match keywords to your task and load every file that overlaps.
 
 > **Maintenance:** Update this file whenever you add or remove a doc. Update only the affected row.
 
@@ -106,7 +114,7 @@ Master catalog for the harness. Agents check this file **before** broad searches
 | [`agent-knowledge/references/learnings-operators.md`](learnings-operators.md) | Operators, CRDs, policy-engine patterns (guard/mutation/audit), admission-controller cache gotchas | kyverno, tetragon, CRD, operator, policy, mutating, validating, reconciliation | `learnings-argocd.md`, `learnings-network-policy.md`, `learnings-crossplane.md`, `learnings-istio.md` |
 | [`agent-knowledge/references/learnings-k8s-sa.md`](learnings-k8s-sa.md) | ServiceAccount separation, Workload Identity (GKE WI / EKS IRSA), image-pull secrets, batch SA rollout | ServiceAccount, SA, Workload Identity, imagePullSecrets, GKE, EKS, IAM, OIDC provider ARN | `learnings-crossplane.md`, `learnings-workload-debug.md` |
 | [`agent-knowledge/references/learnings-crossplane.md`](learnings-crossplane.md) | Crossplane v2 install (core + Upbound providers + ProviderConfig) via ArgoCD, and Composition/XRD authoring for cloud IAM: Composition-v1-only, DRC provider-identity shapes (IRSA/WI), runtime-CRD sync-waves, AWS name-prefix vs path scoping, function-go-templating inline Helm injection, deny-policy/permissions-boundary gotchas, required()-guarded identities | crossplane, XRD, Composition, DeploymentRuntimeConfig, DRC, ClusterProviderConfig, provider, Upbound, IRSA, Workload Identity, sync-wave, SkipDryRunOnMissingResource, function-go-templating, permissions boundary, managed resource, EnvironmentConfig | `learnings-argocd.md`, `learnings-helm-ci.md`, `learnings-k8s-sa.md`, `learnings-operators.md`, `learnings-terraform.md` |
-| [`agent-knowledge/references/learnings-agent-workflow.md`](learnings-agent-workflow.md) | Sub-agent dispatch pitfalls, parallel work, knowledge capture, cross-harness, debugging, shell portability, verification method, numbered-corpus hygiene | dispatch, subagent, timeout, prompt, delegation, parallel, codex, cross-harness, bd, regression, fan-out, MCP, BSD vs GNU, sed -i, df -g, perl -i -pe, yq, empty grep, positive control, false negative, mutation testing, cmp gate, silent mis-resolution, dangling reference, duplicate entry number, amend in place, already covered, auto-export, rc=0 no-op, dolt gc, health check, machine-readable | `learnings-code-review.md`, `learnings-fleet-campaigns.md`, `learnings-confluence.md`, `learnings-terraform.md`, `learnings-notion.md` |
+| [`agent-knowledge/references/learnings-agent-workflow.md`](learnings-agent-workflow.md) | Sub-agent dispatch pitfalls, parallel work, knowledge capture, cross-harness, debugging, shell portability, verification method, numbered-corpus hygiene | dispatch, subagent, timeout, prompt, delegation, parallel, codex, cross-harness, bd, regression, fan-out, MCP, BSD vs GNU, sed -i, df -g, perl -i -pe, yq, empty grep, positive control, false negative, mutation testing, cmp gate, silent mis-resolution, dangling reference, duplicate entry number, amend in place, already covered, auto-export, rc=0 no-op, dolt gc, health check, machine-readable, index routing, keyword surface, one-tier index, read-to-citation ratio, zero-read tier, usage metrics era split, unsplit metrics | `learnings-code-review.md`, `learnings-fleet-campaigns.md`, `learnings-confluence.md`, `learnings-terraform.md`, `learnings-notion.md` |
 | [`agent-knowledge/references/learnings-confluence.md`](learnings-confluence.md) | Confluence page surgical-edit mechanics, MCP tool availability, collision-safe anchoring | confluence, atlassian, MCP, page edit, surgical edit, storage format, difflib | `learnings-code-review.md`, `learnings-agent-workflow.md`, `learnings-notion.md` |
 | [`agent-knowledge/references/learnings-code-review.md`](learnings-code-review.md) | PR review patterns, bot interactions, CI feedback handling | review, PR, CodeRabbit, Cursor Bugbot, CI feedback, bot, false positive | `learnings-progressive-delivery.md`, `learnings-agent-workflow.md`, `learnings-confluence.md`, `learnings-envoy-gateway.md` |
 | [`agent-knowledge/references/learnings-network-policy.md`](learnings-network-policy.md) | Fleet NetworkPolicy strategy, self-managed Cilium (GKE + EKS), Istio-ambient coexistence, FQDN egress | Cilium, NetworkPolicy, GKE, EKS, DPv2, FQDN, toFQDNs, l7Proxy, ambient, HBONE, audit mode, fail-open | `learnings-operators.md`, `learnings-agentgateway.md`, `learnings-istio.md`, `learnings-gke.md` |
@@ -117,9 +125,39 @@ Master catalog for the harness. Agents check this file **before** broad searches
 | [`agent-knowledge/references/learnings-gke.md`](learnings-gke.md) | GKE cluster-platform facts: node-pool capacity arithmetic, surge-upgrade and autoscaler mechanics, PVC expansion, VPC/subnet design, quota surfaces | GKE, node pool, machine type, allocatable, kubeReserved, memory sliding scale, measured vs advertised capacity, ephemeral-storage reservation, diskSizeGb, E2_CPUS quota, surge upgrade, maxSurge, maxUnavailable, totalMaxNodeCount, autoscaler ceiling, upgrade convergence, born stale, PVC expansion, FileSystemResizePending, VPC design, GKE-managed Services range, subnet expansion contiguous, LoadBalancer health-check ranges, healthCheckNodePort, ip-masq-agent, nonMasqueradeCIDRs, RFC6598, default_snat_status, Cloud NAT, firewall priority 1000, destination_ranges, crane, DOCKER_CONFIG | `learnings-workload-debug.md`, `learnings-terraform.md`, `learnings-observability.md`, `learnings-network-policy.md`, `learnings-agent-sandbox.md` |
 | [`agent-knowledge/references/learnings-notion.md`](learnings-notion.md) | Notion MCP page-editing mechanics: markdown rendering traps, safe section deletion, annotation-only edits that silently no-op, comment anchors orphaned by structural edits | notion, notion-update-page, notion-fetch, notion-get-comments, update_content, replace_content, include_all_blocks, include_resolved, include_discussions, page_last_edited_at, inline code in bold, literal asterisks, bullet from plus, section delete, anchor, rich-text annotations, silent no-op, table rebuild, orphaned comment thread, discussion id, cached snapshot | `learnings-confluence.md`, `learnings-agent-workflow.md` |
 
+## Instance tier — `agent-knowledge/orgs/<org>/`
+
+The harness ships this table **empty by design**: instance knowledge is yours, not the project's.
+Add one row per file the moment you seed an org (see [`../orgs/README.md`](../orgs/README.md)).
+A file with no row here is findable only by `knowledge-search.sh` — an agent consulting the index
+to decide what to open will never learn it exists.
+
+Org files drop the `learnings-` prefix so no citation is ambiguous, and they number **independently
+from 1** — cite as `orgs/<org>/<file>.md#N`. See
+[`../../core/protocols/knowledge-tiers.md`](../../core/protocols/knowledge-tiers.md) for the
+payload-vs-locator rule that decides which tier an entry belongs to.
+
+> `ACTIVE_ORG` names the org for WRITES and prompts. It never narrows a READ: `knowledge-search.sh`
+> searches every org directory unconditionally, including previous employers'.
+
+**Keywords here are deliberately NOT the portable twin's keywords.** Copying them across is what
+creates the misrouting this table exists to prevent — two rows competing for the same query, and the
+larger keyword surface wins. Mine these from the file's own contents: the proper nouns that appear
+nowhere in `references/` because they are true of exactly one estate.
+
+| File | Keywords | Entries | Portable counterpart |
+| --- | --- | --- | --- |
+| `orgs/<org>/clusters.md` | *(example shape — delete this row when you add your own)* prod-01, staging-01, dev-01, `<region>`, `<account-id>`, `<gitops-controller>`, `<namespace names>`, `<ticket prefix>`, `<team names>` | n/a — prose registry | `learnings-gke.md`, `learnings-workload-debug.md` |
+
+
 ## Documentation folder convention
 
-When creating domain documentation outside this repo, use these standard subfolder names:
+Domain documentation lives outside this repo, under the tree `$HARNESS_DOCS` points at
+(set in `env.sh`). Always refer to it by the variable rather than an absolute path — a
+hard-coded employer path is the single most common piece of instance leakage in a harness,
+and it silently sends agents to the previous job's tree after a move.
+
+Within `$HARNESS_DOCS/<topic>/`, use these standard subfolder names:
 
 | Folder | Contents |
 | --- | --- |
