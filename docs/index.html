@@ -32,10 +32,41 @@
   }
 
   *{box-sizing:border-box}
-  body{background:var(--ground); color:var(--ink); margin:0; font-size:16px; line-height:1.62;
+  body{background:var(--ground); color:var(--ink); margin:0; font-size:17.5px; line-height:1.6;
     font-family:"IBM Plex Sans",-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif;
     -webkit-font-smoothing:antialiased}
-  .wrap{max-width:800px; margin:0 auto; padding:60px 24px 100px}
+  .wrap{max-width:880px; margin:0 auto; padding:60px 24px 100px}
+  main{min-width:0}
+  /* Narrow: no rail, but the repo link still has to be reachable. */
+  .toc ol, .toc .eyebrow{display:none}
+  .toc-links{display:flex; flex-wrap:wrap; gap:0 14px; margin-bottom:4px}
+  .toc-links a{font-family:"IBM Plex Mono",monospace; font-size:11.5px;
+    color:var(--muted); text-decoration:none}
+  .toc-links a:hover{color:var(--accent)}
+  .toc-links a+a::before{content:"\00b7"; margin-right:14px; opacity:.5}
+  @media (min-width:1080px){
+    .wrap{max-width:1180px; display:grid; grid-template-columns:200px minmax(0,1fr);
+      gap:0 68px; align-items:start; padding:60px 44px 100px}
+    .toc ol, .toc .eyebrow{display:revert}
+    .toc-links{display:block; margin-top:22px; margin-bottom:0; padding-top:14px;
+      border-top:1px solid var(--rule)}
+    .toc-links a{display:block; margin-bottom:7px}
+    .toc-links a+a::before{content:none}
+    .toc-inner{position:sticky; top:60px}
+    .toc ol{list-style:none; margin:14px 0 0; padding:0; counter-reset:t}
+    .toc li{counter-increment:t; margin-bottom:9px; line-height:1.35}
+    .toc li::before{content:counter(t,decimal-leading-zero); font-family:"IBM Plex Mono",monospace;
+      font-size:10.5px; color:var(--muted); opacity:.65; margin-right:8px}
+    .toc a{font-size:13.5px; color:var(--muted); text-decoration:none;
+      border-bottom:1px solid transparent; transition:color .12s, border-color .12s}
+    .toc a:hover{color:var(--accent); border-bottom-color:var(--accent)}
+    /* figure / table / .scroll / .layers / ol.steps carry no max-width — they fill
+       this column by default. Only prose is measured, above. */
+  }
+  @media (min-width:1600px){ .wrap{max-width:1280px; grid-template-columns:236px minmax(0,1fr)} }
+  html{scroll-behavior:smooth}
+  section{scroll-margin-top:28px}
+  @media (prefers-reduced-motion:reduce){ html{scroll-behavior:auto} }
   h1,h2{font-family:Spectral,Georgia,serif; text-wrap:balance; margin:0}
   h1{font-size:42px; font-weight:600; line-height:1.12; letter-spacing:-.015em}
   h2{font-size:26px; font-weight:600}
@@ -51,9 +82,8 @@
   .byline b{color:var(--ink); font-weight:500}
 
   section{margin-top:54px}
-  .lede{font-size:19px; color:var(--muted); margin-top:16px; max-width:64ch}
-  .sub{color:var(--muted); margin:10px 0 24px; max-width:66ch}
-  .body{max-width:66ch}
+  .lede{font-size:20.5px; color:var(--muted); margin-top:16px}
+  .sub{color:var(--muted); margin:10px 0 24px}
   .body p + p{margin-top:14px}
 
   figure{margin:22px 0 0; border:1px solid var(--rule); border-radius:8px;
@@ -78,7 +108,7 @@
   .layer .d{font-size:14.5px; color:var(--muted)}
   .layer .d b{color:var(--ink); font-weight:500}
 
-  ul.bul{list-style:none; margin:18px 0 0; padding:0; max-width:68ch}
+  ul.bul{list-style:none; margin:18px 0 0; padding:0}
   ul.bul li{position:relative; padding:0 0 12px 20px; color:var(--muted); font-size:15.5px}
   ul.bul li:last-child{padding-bottom:0}
   ul.bul li::before{content:""; position:absolute; left:2px; top:10px; width:6px; height:6px;
@@ -96,7 +126,7 @@
     display:grid; place-items:center}
   ol.steps li b{color:var(--ink); font-weight:500}
 
-  table{width:100%; border-collapse:collapse; font-size:14.5px}
+  table{width:100%; border-collapse:collapse; font-size:15.5px}
   .scroll{overflow-x:auto; margin-top:20px}
   th{text-align:left; font-family:"IBM Plex Mono",monospace; font-size:11px;
     letter-spacing:.08em; text-transform:uppercase; color:var(--muted);
@@ -106,7 +136,7 @@
   td.ag{font-family:"IBM Plex Mono",monospace; font-size:13px; color:var(--accent); white-space:nowrap}
 
   .note{font-size:14px; color:var(--muted); border-top:1px solid var(--rule);
-    margin-top:16px; padding-top:12px; max-width:70ch}
+    margin-top:16px; padding-top:12px}
   footer{margin-top:64px; padding-top:22px; border-top:1px solid var(--rule);
     font-size:13.5px; color:var(--muted)}
   @media (max-width:560px){ h1{font-size:32px} .layer{grid-template-columns:1fr; gap:4px} }
@@ -120,13 +150,38 @@
 <body>
 <div class="wrap">
 
+<nav class="toc" aria-label="Sections">
+  <div class="toc-inner">
+    <div class="eyebrow">Contents</div>
+    <ol>
+    <li><a href="#why">Why this exists</a></li>
+    <li><a href="#roster">What's in the box</a></li>
+    <li><a href="#memory">Where knowledge lives</a></li>
+    <li><a href="#wiki">Making it findable</a></li>
+    <li><a href="#protocols">How an agent knows any of this</a></li>
+    <li><a href="#decomposition">How a project becomes work</a></li>
+    <li><a href="#consolidation">Keeping knowledge true</a></li>
+    <li><a href="#context">Why it scales</a></li>
+    <li><a href="#scope">Scope</a></li>
+    <li><a href="#review">How work gets checked</a></li>
+    <li><a href="#enforcement">What has teeth</a></li>
+    </ol>
+    <div class="toc-links">
+      <a href="https://github.com/Thakurvaibhav/platform-agent-harness">Source on GitHub &rarr;</a>
+      <a href="https://www.linkedin.com/in/vaibhavthakur/">LinkedIn &rarr;</a>
+    </div>
+  </div>
+</nav>
+
+<main>
+
 <header>
   <h1>Platform Agent Harness</h1>
   <p class="lede">Claude Code and Codex, wired so they keep what they learn.</p>
   <p class="byline"><b>Vaibhav Thakur</b> · platform engineering</p>
 </header>
 
-<section>
+<section id="why">
   <div class="eyebrow">Why this exists</div>
   <h2>A chat starts from zero every time</h2>
   <div class="body">
@@ -141,7 +196,7 @@
   <p class="note">This is a setup layer over tools that already exist, not a replacement for them. The accumulated knowledge happens to be Kubernetes platform work, because that is the work; the machinery underneath has nothing specific to it.</p>
 </section>
 
-<section>
+<section id="roster">
   <div class="eyebrow">What's in the box</div>
   <h2>Eight specialists and a dispatcher</h2>
   <p class="sub">A main session holds the plan and hands work to specialists. Each is a role definition: a prompt, a set of references, and explicit criteria for what "done" means.</p>
@@ -163,7 +218,7 @@
   <p class="note">The role is not tied to one vendor. The same definition runs as a Claude subagent or a Codex worker, and both write findings back to the same store. That is what makes a second opinion genuinely independent rather than the same model agreeing with itself.</p>
 </section>
 
-<section>
+<section id="memory">
   <div class="eyebrow">Where knowledge lives</div>
   <h2>One store, two jobs</h2>
   <div class="body">
@@ -223,7 +278,7 @@
   </figure>
 </section>
 
-<section>
+<section id="wiki">
   <div class="eyebrow">Making it findable</div>
   <h2>Built as an LLM wiki</h2>
   <div class="body">
@@ -240,7 +295,7 @@
   <p class="note">Search runs across all three at once, plus the working store, so one query covers both the durable and the recent. The failure this prevents is specific and was observed repeatedly before the search step existed: an agent re-derives a conclusion from scratch that was already recorded, sometimes from the same incident a day earlier.</p>
 </section>
 
-<section>
+<section id="protocols">
   <div class="eyebrow">How an agent knows any of this</div>
   <h2>One file is loaded at birth</h2>
   <div class="body">
@@ -259,7 +314,7 @@
   <p class="note">This is also why the protocol file, rather than the interactive helper library, is the home for anything load bearing. A specialist cannot invoke those helpers. If a rule has to reach one, it has to be in the files it reads at startup, and a rule that lives anywhere else does not exist as far as that agent is concerned.</p>
 </section>
 
-<section>
+<section id="decomposition">
   <div class="eyebrow">How a project becomes work</div>
   <h2>Split by dependency, not by size</h2>
   <p class="sub">A project is decomposed into tracked units. What matters is which of them actually block each other, because that decides what can run at the same time.</p>
@@ -303,7 +358,7 @@
   <p class="note">Wide, repetitive work takes the other shape. The same playbook against twenty clusters is twenty independent units fanned out at once, capped at around ten concurrent workers. Running a dependent chain in parallel is the most common way this goes wrong.</p>
 </section>
 
-<section>
+<section id="consolidation">
   <div class="eyebrow">Keeping knowledge true</div>
   <h2>A corpus nobody prunes becomes a corpus nobody trusts</h2>
   <div class="body">
@@ -370,7 +425,7 @@
   <p class="note">Cadence decides the cost. At around a hundred entries this is one agent and an hour. A backlog of seven hundred once took thirteen agents and most of a day. Growth is the system working, so the fix is running the pass more often rather than capturing less.</p>
 </section>
 
-<section>
+<section id="context">
   <div class="eyebrow">Why it scales</div>
   <h2>Context is the budget that runs out</h2>
   <div class="body">
@@ -427,7 +482,7 @@
   <p class="note">Two smaller savings compound quietly. Verbose read-only commands are rewritten before they run by <a href="https://github.com/rtk-ai/rtk">rtk</a>, compressing output by 60 to 90 percent; nobody has to remember, because it is a hook rather than a habit, and mutating or piped commands are never touched. Architecture questions go to a <a href="https://github.com/safishamsi/graphify">Graphify</a> repo graph instead of linear file reads, which is worth roughly two orders of magnitude on "what calls this".</p>
 </section>
 
-<section>
+<section id="scope">
   <div class="eyebrow">Scope</div>
   <h2>What this is not</h2>
   <ul class="bul">
@@ -438,7 +493,7 @@
   </ul>
 </section>
 
-<section>
+<section id="review">
   <div class="eyebrow">How work gets checked</div>
   <h2>Two models that never compare notes</h2>
   <p class="sub">Every non-trivial change gets two passes. The independence is the mechanism: the second model never sees the first one's findings, because a second opinion from the same model is not one.</p>
@@ -475,7 +530,7 @@
   <p class="note">Reviews lead with blocking findings only, one line each, naming the consequence, capped at five. Everything else folds away. Nothing is deleted; the reading path is just short enough that a human finishes it.</p>
 </section>
 
-<section>
+<section id="enforcement">
   <div class="eyebrow">What has teeth</div>
   <h2>Enforced, and merely written down</h2>
   <p class="sub">Worth being precise about, because the difference decides what holds under pressure.</p>
@@ -510,6 +565,7 @@
 </section>
 
 
+</main>
 </div>
 </body>
 </html>
