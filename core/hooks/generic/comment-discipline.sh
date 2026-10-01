@@ -14,18 +14,22 @@
 # block believes theirs is the justified exception.
 #
 # Usage:
-#   comment-discipline.sh                    # diff vs merge-base with origin/main
+#   comment-discipline.sh                    # diff vs merge-base with the base branch
 #   comment-discipline.sh --staged           # staged changes (pre-commit)
 #   comment-discipline.sh --base origin/dev  # explicit base
 #   git diff ... | comment-discipline.sh -   # read a diff on stdin
 #
-# Exit: 0 clean, 1 findings, 2 usage error.
-# Env:  MAX_COMMENT_LINES (default 2), MAX_DOCSTRING_LINES (default 13)
+# Base ref, first that resolves: --base / $BASE_REF, the PR's own baseRefName,
+# origin/HEAD, then `main` with a warning; none resolving = exit 2, gate did not run.
+#
+# Exit: 0 clean, 1 findings, 2 usage error or unresolvable base.
+# Env:  MAX_COMMENT_LINES (default 2), MAX_DOCSTRING_LINES (default 13), BASE_REF
 set -uo pipefail
 
+SELF="$(basename "$0")"
 MAX_LINES="${MAX_COMMENT_LINES:-2}"
 MAX_DOC="${MAX_DOCSTRING_LINES:-13}"
-BASE="origin/main"
+BASE=""
 MODE="branch"
 
 while [ $# -gt 0 ]; do
@@ -33,15 +37,47 @@ while [ $# -gt 0 ]; do
     --staged)  MODE="staged"; shift ;;
     --base)    BASE="${2:?--base needs a ref}"; shift 2 ;;
     -)         MODE="stdin"; shift ;;
-    -h|--help) sed -n '2,24p' "$0"; exit 0 ;;
+    -h|--help) sed -n '2,26p' "$0"; exit 0 ;;
     *)         echo "unknown arg: $1" >&2; exit 2 ;;
   esac
 done
 
+# Prints "<ref>|<source>". The default branch is not always `main`, and a gate
+# pointed at the wrong base measures an unrelated diff without ever erroring.
+resolve_base() {
+  local ref="${1:-${BASE_REF:-}}" src="explicit" c
+  if [ -z "$ref" ] && command -v gh >/dev/null 2>&1; then
+    ref="$(gh pr view --json baseRefName -q .baseRefName 2>/dev/null)"; src="PR baseRefName"
+  fi
+  if [ -z "$ref" ]; then
+    ref="$(git symbolic-ref --quiet refs/remotes/origin/HEAD 2>/dev/null)"
+    ref="${ref#refs/remotes/origin/}"; src="origin/HEAD"
+  fi
+  if [ -z "$ref" ]; then
+    ref="main"; src="FALLBACK"
+    echo "$SELF: no --base, no PR context, origin/HEAD unset — falling back to main." >&2
+    echo "$SELF: if that is not this repo default branch, pass --base, or repair with: git remote set-head origin -a" >&2
+  fi
+  for c in "$ref" "origin/$ref"; do
+    git rev-parse --verify --quiet "$c^{commit}" >/dev/null 2>&1 && { echo "$c|$src"; return 0; }
+  done
+  echo "$SELF: CANNOT DETERMINE BASE — $ref ($src) does not resolve to a commit." >&2
+  echo "$SELF: this gate did NOT run; nothing was measured. Pass --base <ref> or set BASE_REF." >&2
+  return 1
+}
+
+if [ "$MODE" = "branch" ]; then
+  INFO="$(resolve_base "$BASE")" || exit 2
+  BASE="${INFO%%|*}"
+  MERGE_BASE="$(git merge-base "$BASE" HEAD 2>/dev/null)" || {
+    echo "$SELF: no merge-base between $BASE and HEAD — cannot measure this diff." >&2; exit 2; }
+  echo "$SELF: base $BASE (${INFO##*|}), merge-base ${MERGE_BASE:0:8}" >&2
+fi
+
 case "$MODE" in
   stdin)  cat ;;
   staged) git diff --cached ;;
-  branch) git diff "$(git merge-base "$BASE" HEAD 2>/dev/null || echo "$BASE")"...HEAD ;;
+  branch) git diff "$MERGE_BASE"...HEAD ;;
 esac | MAX_LINES="$MAX_LINES" MAX_DOC="$MAX_DOC" /usr/bin/python3 -c '
 import os, re, sys
 

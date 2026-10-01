@@ -37,7 +37,7 @@ The home's scripts and `learning-gate.py` honor `HARNESS_REFS` (default `~/.agen
 
 | Factory event | Behavior | Claude-Code equivalent |
 | --- | --- | --- |
-| `SubagentStop` | Hard gate — blocks a sub-agent's stop once if it did substantive work but persisted no learning. | `SubagentStop` |
+| `SubagentStop` | Hard gate — blocks a sub-agent's stop once if it did substantive work but persisted no learning. **Confirm which transcript your runtime supplies on this event**: the gate gets the worker's own record, not the parent session, or it grades the wrong conversation and fails silently in both directions. | `SubagentStop` |
 | `UserPromptSubmit` | Soft, debounced nudge for the long-lived main session. | `UserPromptSubmit` |
 
 If your Factory build names these events differently, map them to the closest stop / prompt-submit equivalents. The gate parses Claude-Code-style JSONL transcripts; under a runtime whose transcript shape differs, the `parse_transcript` function may need a small per-runtime tweak (the hook's file header documents this). It writes the citation heatmap to `${HARNESS_METRICS:-~/.agent-knowledge/metrics}`. Env switches: `LEARN_GATE_DISABLE`, `LEARN_METRICS_DISABLE`, `LEARN_TOOLUSE_MIN`, `LEARN_MAIN_GAP`.

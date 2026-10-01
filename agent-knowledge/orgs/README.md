@@ -28,6 +28,7 @@ agent-knowledge/
 | **Cite as a path, not a bare basename** | `orgs/acme/istio.md#4`, never `istio.md#4`. |
 | **Never delete a previous org's directory** | It is precedent. `knowledge-search.sh` still searches it; `ACTIVE_ORG` only stops new writes from landing there. |
 | **Absence claims live here, always** | "Metric `X` does not exist" is a fact about one allowlist. In `references/` it is not stale, it is wrong — and wrong in the direction that stops the next agent from looking. |
+| **Every file gets a row in `references/index.md`** | The index is what an agent reads to decide *what to open*; `knowledge-search.sh` only helps once it already has a query. A file with no row is invisible to that decision. Mine the row's keywords from the file's own contents — the proper nouns — and **never copy them from the portable twin**: two rows competing for one query is a misroute, and the larger keyword surface always wins. |
 | **Numbered, append-only, self-contained** | Same entry discipline as `references/learnings-*.md` (see [`../references/README.md`](../references/README.md)). |
 
 ## How search treats this tier
@@ -50,7 +51,10 @@ An empty or missing `orgs/` degrades gracefully: the section prints a "no org kn
 ```sh
 mkdir -p "$HARNESS_HOME/orgs/<org>"
 # then set ACTIVE_ORG=<org> in env.sh and start with clusters.md
+# then add a row per file to references/index.md, under Instance tier
 ```
+
+That last step is the one that gets skipped, and skipping it is silent. Nothing errors, `knowledge-search.sh` keeps returning hits, and the only symptom is read telemetry: the new org's files sit at zero reads for weeks while agents keep opening whichever portable file has the broadest keywords. Check [`../metrics/`](../metrics/) after a few weeks of real work — a well-used estate file should be among the most-read things in the corpus, because almost every task needs at least one fact that is true of only this estate.
 
 The full runbook — with the checks that catch a tier that exists but is not searchable — is [`installation/new-org-setup.md`](../../installation/new-org-setup.md).
 

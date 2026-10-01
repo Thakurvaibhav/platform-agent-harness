@@ -220,6 +220,7 @@ A complete, production-shaped wiring. Tilde paths (`~/.claude/...`) keep it mach
 Notes:
 
 - `UserPromptSubmit` runs the context-budget nudge and the learning-capture soft nudge; `SubagentStop` runs the learning-capture hard gate. Both reuse the same `learning-gate.py`.
+- The two events carry **different transcript fields**: `SubagentStop` grades `agent_transcript_path` (the worker's own record); `UserPromptSubmit` grades `transcript_path` (the session). Binding the gate to a sub-agent-stop event on any runtime means checking which field that runtime supplies — grading the parent transcript fails silently in both directions.
 - `PreCompact` matcher `auto|manual` snapshots bd memory before either compaction path. `SessionStart` matchers `startup` and `compact` reload `bd prime`.
 - `env.CTX_MAX_TOKENS` is an example; set it to your model's effective compaction limit. Add other env (e.g. `BEADS_DB`, `HARNESS_REFS`, `HARNESS_METRICS`) here as needed.
 - `permissions.deny` is the full mutating-command denylist; keep it in sync with [`installation/command-denylist.md`](../../installation/command-denylist.md).

@@ -166,7 +166,7 @@ CI passes. Summary comment posted. PR ready for human review.
 
 ## 5. Enablement (`argocd-engineer`)
 
-After PR merge, `task-planner` releases the next task. `argocd-engineer` adds:
+After PR merge the blocking dependency clears, so the next task becomes ready (`bd ready`) and the main session dispatches it. `argocd-engineer` adds:
 
 ```yaml
 # charts/<argo-apps>/values.<dev-cluster>.yaml
@@ -211,7 +211,7 @@ No context loss. Work resumes.
 
 ## What this exercised
 
-- `task-planner` for breakdown, dispatch, retro.
+- `task-planner` for breakdown and retro; the main session owned dispatch.
 - `tool-researcher` for production-readiness research.
 - `helm-engineer` for the chart change.
 - `argocd-engineer` for phased enablement.

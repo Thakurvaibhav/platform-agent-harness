@@ -35,8 +35,10 @@ Both paths record usage telemetry under `${HARNESS_METRICS:-~/.agent-knowledge/m
 Two blocking gates run before every push and again at review. They are plain scripts, not runtime hooks, so they wire the same way into any runtime — a pre-push git hook, a CI step, or a step in the PR-creation flow:
 
 ```bash
-core/hooks/generic/comment-discipline.sh --base origin/main || exit 1
-core/hooks/generic/test-discipline.sh    --base origin/main || exit 1
+# No --base: each script resolves this repo's own default branch. Hard-coding
+# origin/main measures an unrelated diff in a repo whose default is dev.
+core/hooks/generic/comment-discipline.sh || exit 1
+core/hooks/generic/test-discipline.sh    || exit 1
 ```
 
 Both accept `--staged` (pre-commit), `--base <ref>`, or a diff on stdin with `-`. Exit `0` clean, `1` findings, `2` usage error. Thresholds are env-tunable — `MAX_COMMENT_LINES` (2), `MAX_DOCSTRING_LINES` (13), `TEST_FIXED_LINES` (220), `MAX_TEST_RATIO` (1.2). Retune them to the repo instead of skipping the gate; the whole point is a number that cannot be argued with. Catalog and rationale: [`core/hooks/README.md`](../core/hooks/README.md).

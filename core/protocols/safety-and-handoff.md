@@ -4,8 +4,8 @@ Operating rules every sub-agent must apply, and the structured handoff format ev
 
 ## Git safety
 
-- **NEVER push directly to `main` or `master`.** Always use a feature branch.
-- **NEVER `git push --force` on `main` / `master`.** Runtime denylists typically block this — don't try.
+- **NEVER push directly to the repository's default/protected branch** — `main`, `master`, `dev`, `staging`, whatever this repo uses. Always use a feature branch. **Resolve the name, never assume it:** `git symbolic-ref refs/remotes/origin/HEAD | sed 's@^refs/remotes/origin/@@'`. A fresh clone can leave `origin/HEAD` unset, and that command then fails; `git remote set-head origin -a` repairs it. That same resolved ref is the diff base for the discipline gates and for any render proof — hard-coding `origin/main` is a guess, and in a repo whose default is `dev` it measures an unrelated diff.
+- **NEVER `git push --force` on a default/protected branch.** Runtime denylists typically block this — don't try, and note that a denylist enumerates branch names, so it covers only the names someone remembered to list.
 - Use `--force-with-lease` (not `--force`) when force-pushing your own feature branches.
 - Use `git rm -r` for directory deletion in agent sessions. `rm -rf` is typically blocked by runtime risk gates.
 

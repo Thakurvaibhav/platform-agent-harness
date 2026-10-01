@@ -2,7 +2,7 @@
 name: helm-upgrade
 description: >-
   Upgrade a Helm chart dependency (subchart bump, appVersion bump, repo
-  migration) safely in a GitOps repo. Covers research, breaking-change
+  migration) safely, in a GitOps or Terraform-managed repo. Covers research, breaking-change
   analysis, cross-component reference checks, values migration, local
   validation, PR creation, and deployment notes.
 ---
@@ -16,6 +16,29 @@ Use this skill when the user wants to upgrade a Helm subchart version, bump `app
 Prefix verbose read-only commands with `rtk` per [`core/protocols/rtk-command-policy.md`](../../core/protocols/rtk-command-policy.md).
 
 **Fast-path for patch bumps:** If the upgrade is a patch bump (e.g. `1.5.19` → `1.5.20`) whose only change is an `appVersion` bump with no chart template changes, you can skip Steps 5b–6 and go straight to the cross-component check (Step 3). Confirm this from the upstream release notes first — if the only line is "bump app to vX.Y.Z", the fast-path applies.
+
+## Precondition: how this repo delivers charts
+
+Steps 3, 8 and *Post-merge monitoring* below assume a **GitOps apps chart** — one chart holding
+per-cluster `values.<cluster>.yaml` files that switch components on and off. That layout is common
+but not universal. Establish which case you are in **before** Step 8, and say which one in the PR.
+
+```bash
+# Locate the apps chart, if this repo has one
+APPS_CHART=$(dirname "$(rg -l 'argoproj\.io/v1alpha1' --glob '*.yaml' . | head -1)" 2>/dev/null)
+ls "$APPS_CHART"/values.*.yaml 2>/dev/null
+```
+
+- **Apps chart found** → use `$APPS_CHART` wherever the steps below refer to it. Do not hard-code
+  the path; the chart's directory name differs per repo.
+- **No apps chart found** → you are in the *other* case, not looking at a missing file. Say so
+  explicitly rather than reporting the file as absent. The estate most likely installs charts
+  through Terraform `helm_release`, `helmfile`, or a direct `helm upgrade` pipeline. Read the
+  module's values template and its per-environment tfvars (or `helmfile.yaml` environments) to
+  learn which environments receive the component, and substitute that tool's plan/diff for the
+  app-of-apps diff in Step 8. A `terraform plan` is the **weaker** proof: `terraform validate` does
+  not type-check `set` list elements at all, so the Step 5b render diff stays your primary R1
+  evidence either way [learnings-helm-ci.md#37].
 
 ## Steps
 
@@ -54,7 +77,7 @@ helm show values <repo>/<chart> --version <new-version> | grep -F "<path>"
 
 Common reference patterns to check:
 
-- **otel collector endpoints** — exporter/backend URLs in `charts/otel/values/` pointing at the upgraded service.
+- **otel collector endpoints** — exporter/backend URLs pointing at the upgraded service, wherever this repo keeps collector values (e.g. `charts/otel/values/`).
 - **Grafana datasource URLs** — `lokiUrl` / `tempoUrl` / `mimirDatasourceUrl` style keys in chart values.
 - **Alertmanager / ruler URLs** — configs pointing at an alertmanager service.
 
@@ -174,6 +197,11 @@ tar -tzf charts/<chart-name>/charts/<chart>-<version>.tgz | head
 
 ### 8. Review the ArgoCD App-of-Apps diff
 
+**Applies only when the precondition above found an apps chart.** If it did not, this repo has no
+app-of-apps to diff: run the delivery tool's own plan/diff instead (`terraform plan` on the module,
+`helmfile diff`, or `helm diff upgrade`) and carry the Step 5b render diff as the resource-level
+evidence. Then skip to Step 9.
+
 Local `helm template` cannot see SSA merge outcomes, operator-injected fields, or cross-component side effects. The App-of-Apps diff can. It fetches the **fully rendered Kubernetes manifests** ArgoCD would apply — for both the live revision and the PR branch (`argocd app manifests <app> --revision <branch>`) — and runs `dyff` between them. It shows real resource-level changes (Deployments, Services, CRDs, ConfigMaps), not just Application-spec changes.
 
 **Option A — CI diff (preferred).** If the repo has an app-of-apps diff workflow (e.g. `argocd_app_of_apps_diff.yaml`) that runs on PRs touching `charts/**`, wait for its per-cluster `dyff` comment and review it. That is the authoritative view of what ArgoCD will apply.
@@ -188,8 +216,8 @@ gh api repos/<owner>/<repo>/actions/jobs/<job-id>/logs 2>/dev/null | sed 's/^[0-
 **Option B — run the diff locally** (requires the `argocd` CLI, `dyff`, network access to the ArgoCD endpoint, and credentials):
 
 ```bash
-# Which clusters deploy this component?
-for f in charts/argo-apps/values.*.yaml; do
+# Which clusters deploy this component? ($APPS_CHART from the precondition above)
+for f in "$APPS_CHART"/values.*.yaml; do
   cluster=$(basename "$f" | sed 's/values\.//;s/\.yaml//')
   grep -q "^<component>:" "$f" 2>/dev/null && echo "$cluster"
 done
@@ -256,16 +284,22 @@ For a pure port renumber under SSA, the multi-PR dance still can't avoid the dup
 
 ## Post-merge monitoring & rollback
 
-**Deployment awareness first.** Not every chart deploys to dev before prod. Check which clusters actually receive it:
+**Deployment awareness first.** Not every chart deploys to dev before prod. Check which environments actually receive it.
+
+Where the precondition above found an apps chart, read its per-cluster values:
 
 ```bash
-for f in charts/argo-apps/values.*.yaml; do
+for f in "$APPS_CHART"/values.*.yaml; do
   cluster=$(basename "$f" | sed 's/values\.//;s/\.yaml//')
   grep -q "^<component>:" "$f" 2>/dev/null && echo "$cluster"
 done
 ```
 
-If a component only deploys to a production cluster (e.g. `prod-01`), merging to the default branch goes straight to production with no dev soak — take extra care.
+Where it did not, there is no per-cluster values file to read and its absence means nothing: derive
+the same answer from the delivery tool — which environments instantiate the `helm_release` module
+(its per-environment tfvars), or which `helmfile.yaml` environments list the release.
+
+If a component only deploys to a production environment, merging to the default branch goes straight to production with no dev soak — take extra care.
 
 **After the sync:** verify pods are healthy, check for ArgoCD permadiffs (type mismatches, operator-injected fields), verify data flow end-to-end (metrics/logs/traces as applicable), and watch for alert regressions for ~24h.
 
@@ -290,7 +324,7 @@ ArgoCD auto-syncs the revert, rolling back to the previous chart version. Statef
 Patterns that have caused real production issues:
 
 - **SSA port-list merge conflicts** — changing a named port's number under `ServerSideApply=true` leaves duplicate port names; Kubernetes rejects it. Fix: ArgoCD Sync with **Replace**. Always compare rendered port numbers (Step 5b).
-- **otel collector endpoints break silently** — when a backend renames/removes a service, otel collectors exporting to it fail quietly or queue data instead of erroring loudly. Grep `charts/otel/values/` for the old endpoint before merging.
+- **otel collector endpoints break silently** — when a backend renames/removes a service, otel collectors exporting to it fail quietly or queue data instead of erroring loudly. Grep the collector's values (e.g. `charts/otel/values/`) for the old endpoint before merging.
 - **Datasource URLs with port changes** — an upstream chart may change its default listen port; the rendered Service port moves but the Grafana datasource URL in your values still points at the old one. Diff rendered Services.
 - **Integer vs. string permadiffs** — operators sometimes store a value as a string where Helm renders an integer (`cpu: 1` vs `cpu: "1"`), producing a perpetual ArgoCD diff. Quote numeric values to match what the operator stores.
 - **Helm hook annotations block ArgoCD self-heal** — if upstream defaults add `helm.sh/hook` annotations, ArgoCD treats those resources as hooks, not managed resources, and won't reconcile them on self-heal. Check for and remove unexpected hook annotations.

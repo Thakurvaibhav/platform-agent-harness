@@ -26,7 +26,7 @@ Examples that do **not** fit:
 
 ## Dispatch shape
 
-In the orchestrator (often `task-planner` or the main session):
+In the orchestrator (the main session — a planner produces the plan and does not dispatch):
 
 1. Pick a single, sanitized playbook (numbered checks, exact commands, pass/fail criteria, evidence).
 2. Build per-target parameter sets — keep them small.

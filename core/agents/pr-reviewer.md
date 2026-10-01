@@ -109,6 +109,13 @@ State the chosen tier in the summary comment. **When in doubt between standard a
 ```bash
 gh pr view <PR_URL> --json title,body,headRefName,baseRefName,files
 gh pr diff <PR_URL>
+
+# Resolve ONCE, then SUBSTITUTE THE LITERALS below — shell state does not survive between your
+# Bash calls, so `$BASE_REF` / `$PXD` in later steps are placeholders like `<PR_URL>`, not variables.
+BASE_REF=$(gh pr view <PR_URL> --json baseRefName -q .baseRefName 2>/dev/null)
+[ -n "$BASE_REF" ] || BASE_REF=$(git symbolic-ref --short refs/remotes/origin/HEAD 2>/dev/null | sed 's|^origin/||')
+[ -n "$BASE_REF" ] || echo "FATAL: base unresolved — STOP and report; NEVER assume \`main\`, repo defaults differ"
+PXD="${TMPDIR:-/tmp}/parallax-<PR#>"; mkdir -p "$PXD"   # <PR#> keys it; a fixed path collides between siblings
 ```
 
 Read the PR description and full diff. Understand what the change is doing before judging it.
@@ -155,17 +162,17 @@ Reading a Helm/values source diff is **not** proof of its rendered effect — a 
 1. Anchor at the **merge-base**, not the immediate parent (with multiple commits, the parent only proves the last commit is conservative):
 
    ```bash
-   BASE=$(git merge-base origin/main HEAD)
+   BASE=$(git merge-base "origin/$BASE_REF" HEAD)   # BASE_REF, PXD: Step 1 literals
    ```
 
 2. Render the affected chart at `BASE` and at `HEAD` for the value set the PR changes. Use a detached worktree for `BASE` so you never mutate the review checkout:
 
    ```bash
-   git worktree add -d /tmp/rp_base "$BASE"
-   helm template <chart> -f /tmp/rp_base/<chart>/values/<env>.yaml > /tmp/rp_base.yaml
-   helm template <chart> -f <chart>/values/<env>.yaml               > /tmp/rp_head.yaml
-   git worktree remove /tmp/rp_base
-   diff -u /tmp/rp_base.yaml /tmp/rp_head.yaml
+   git worktree add -d "$PXD/rp_base" "$BASE"
+   helm template <chart> -f "$PXD/rp_base/<chart>/values/<env>.yaml" > "$PXD/rp_base.yaml"
+   helm template <chart> -f <chart>/values/<env>.yaml                > "$PXD/rp_head.yaml"
+   git worktree remove "$PXD/rp_base"
+   diff -u "$PXD/rp_base.yaml" "$PXD/rp_head.yaml"
    ```
 
    (Render every environment the PR changes, not just one. If your runtime compresses/truncates command output, disable that for these renders — a truncated manifest silently drops later templates and produces a false "no change" verdict.)
@@ -227,7 +234,7 @@ kubectl auth can-i <verb> <known-granted-resource> --as=system:serviceaccount:<n
 **(b) Does the live CRD accept the shape?** Server-side dry-run, not documentation. A nested block emitted as a list where the CRD wants a map renders and lints perfectly:
 
 ```bash
-kubectl apply --dry-run=server -f /tmp/rp_head.yaml
+kubectl apply --dry-run=server -f "$PXD/rp_head.yaml"
 ```
 
 Read-only throughout — `auth can-i` and `--dry-run=server` mutate nothing, so this stays inside the read-only constraint.
@@ -256,25 +263,29 @@ For each issue, classify as:
 
 A different model catches what this one rationalized. Two shapes depending on mode:
 
-**Parallax mode — full independent adversarial lens.** Dispatch a complete, independent Codex review that tries to *break* the PR, working in a **read-only worktree at the merge-base** (never the working checkout). Codex does its OWN offline reproduction and does **not** see your findings. Run your own correctness pass (Steps 1–3) *before* reading Codex's output, so the two lenses stay independent.
+**Parallax mode — full independent adversarial lens.** Dispatch a complete, independent Codex review that tries to *break* the PR. Codex does its OWN offline reproduction and does **not** see your findings. Run your own correctness pass (Steps 1–3) *before* reading Codex's output, so the two lenses stay independent. **This block is the canonical launch shape — every other cross-model dispatch in this file reuses it rather than restating it.**
 
 ```bash
-BASE=$(git merge-base origin/main HEAD)
-git worktree add -d /tmp/parallax_adv "$BASE"     # isolated base; the adversarial lens never touches your checkout
-agent-knowledge/scripts/codex-dispatch.sh general-engineer \
+BASE=$(git merge-base "origin/$BASE_REF" HEAD)   # BASE_REF, PXD: Step 1 literals
+git worktree add -d "$PXD/adv" "$BASE"           # isolated base; the lens never touches your checkout
+timeout 1800 agent-knowledge/scripts/codex-dispatch.sh general-engineer \
   "You are the ADVERSARIAL LENS of a Parallax review — an independent second-model pass. PR: <url>, head <sha>. \
-   In a READ-ONLY worktree, try to BREAK head against the PR body's claims. Reproduce evidence locally: \
-   helm dep build/lint/template, rendered NEGATIVE controls, guard fail-closed tests, per-environment render matrix. \
-   Ground EVERY claim in a reproduced command or file:line — never a bot diff_hunk. Default to FINDING a required \
-   change; only conclude 'no required change' after real reproduction. Do NOT post to GitHub and do NOT mutate \
-   anything — return your findings + one-line verdict as text; the orchestrator posts them." \
-  <repo-dir> > /tmp/parallax_adv.out 2>&1 < /dev/null
-git worktree remove /tmp/parallax_adv
+   Your cwd IS a read-only worktree at the merge-base; try to BREAK head against the PR body's claims. Reproduce \
+   evidence locally: helm dep build/lint/template, rendered NEGATIVE controls, guard fail-closed tests, \
+   per-environment render matrix. Ground EVERY claim in a reproduced command or file:line — never a bot diff_hunk. \
+   Default to FINDING a required change; only conclude 'no required change' after real reproduction. \
+   Do not dispatch further workers. Do NOT post to GitHub and do NOT mutate anything — return your findings + \
+   one-line verdict as text; the orchestrator posts them. The last line of your final message must be exactly \
+   PARALLAX_ADV_END, with nothing after it." \
+  "$PXD/adv" > "$PXD/adv.out" 2>&1 < /dev/null; echo "DISPATCH_EXIT=$?" >> "$PXD/adv.out"
+git worktree remove --force "$PXD/adv"
 ```
 
-Capture `/tmp/parallax_adv.out` verbatim — it becomes the **adversarial lens** review post (Step 7.5). If the adversarial lens surfaces a blocking issue your correctness pass missed, fold it into your fixes (Step 4) in `fix` mode.
+`codex-dispatch.sh` is purely positional — `<specialist> "<task>" <target-dir>` — and its 3rd argument becomes the worker's working directory, so it must be the **merge-base worktree**, never `<repo-dir>`, or the lens reads the wrong tree. `timeout` has to wrap the call because the script ends in `exec` and cannot time itself out; a hung lens otherwise hangs the whole review, which you cannot see mid-run. `$PXD` is keyed on the PR number so two concurrent reviews collide neither on the output file nor in the worktree registry (learnings-agent-workflow.md#104, #107).
 
-**Single mode, sensitive tier — per-finding refutation** (no full second pass). Do **not** assert a blocking finding — or a clean "no blocking issues" verdict — on one model's judgment alone. For **each blocking finding**, dispatch an independent refutation to a different model/runtime than your own (e.g. [`agent-knowledge/scripts/codex-dispatch.sh`](../../agent-knowledge/scripts/codex-dispatch.sh), or your runtime's cross-model equivalent). Prompt it to **refute**:
+Capture `$PXD/adv.out` verbatim **once Step 5.5 passes** — it becomes the **adversarial lens** review post (Step 7.5). `DISPATCH_EXIT` is appended *inside* the log because a trailing `echo` after a redirect lands in the caller's own output, not the file (learnings-agent-workflow.md#105); `=124` means the lens was killed, so post single-lens coverage saying so rather than salvaging a verdict from its trace, and next time scope the lens **narrower** rather than raising the cap — a killed run returns no verdicts at all (learnings-agent-workflow.md#83). If the adversarial lens surfaces a blocking issue your correctness pass missed, fold it into your fixes (Step 4) in `fix` mode.
+
+**Single mode, sensitive tier — per-finding refutation** (no full second pass). Do **not** assert a blocking finding — or a clean "no blocking issues" verdict — on one model's judgment alone. For **each blocking finding**, dispatch an independent refutation to a different model/runtime than your own, using the **launch mechanics of the canonical block above** — `timeout`, the merge-base worktree as target dir, "Do not dispatch further workers", the `PARALLAX_ADV_END` marker, stdin closed — writing to `"$PXD/adv_<n>.out"`. Only the prompt differs; it asks the lens to **refute**:
 
 ```
 Adversarially verify this PR-review finding. PR: <url>. Finding: <finding + file:line + rendered-proof hunk>.
@@ -381,7 +392,7 @@ gh pr checks <PR_URL>
 
 **Never judge a subprocess finished by a process check plus a log tail.** A cross-model run whose process had already exited was still flushing its output; the tail showed fixture noise and a sandbox rejection, and was reported as "no clean final report, one issue". The real report landed ~500 lines later with **four blocking findings and CHANGES REQUIRED**.
 
-After the process exits, re-read the **whole** output file and confirm the report's own end marker before drawing any conclusion. An absent end marker means the run is incomplete — say so; never let a truncated capture read as a clean verdict.
+The test is three conditions together (learnings-agent-workflow.md#82, #104): `grep -c PARALLAX_ADV_END "$PXD/adv.out"` is **≥ 2** — the dispatcher echoes the prompt into the log, so 1 is that echo alone and the marker can never be satisfied unless the dispatch actually asked for it; the `DISPATCH_EXIT=` line is present; and you then re-read the **whole** file, `grep -n`-ing the verdict markers and `sed`-ing the LAST report range rather than tailing, since a tail lands mid-report and silently drops the first findings (learnings-agent-workflow.md#105). Short of all three the run is incomplete — say so and post single-lens coverage; never let a truncated capture read as a clean verdict.
 
 ### Step 6: Re-review (iteration 2)
 
