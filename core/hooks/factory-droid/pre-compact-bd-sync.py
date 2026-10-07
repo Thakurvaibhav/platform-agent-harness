@@ -224,7 +224,8 @@ def main() -> int:
     # neither durable nor reusable, so it fails the bar for a memory; writing one per
     # compaction under a fixed key regrew the same record after every consolidation sweep.
     # post-compact-prime-reminder.sh reads this back — move one half and the other breaks.
-    sid = str(input_data.get("session_id") or "unknown")[:8]
+    sid = re.sub(r"[^A-Za-z0-9_-]", "", str(input_data.get("session_id") or ""))[:8]
+    sid = sid or "unknown"
     try:
         CHECKPOINT_DIR.mkdir(parents=True, exist_ok=True)
         (CHECKPOINT_DIR / f"{sid}.md").write_text(memory + "\n", encoding="utf-8")

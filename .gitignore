@@ -34,6 +34,9 @@ agent-knowledge/metrics/learning-citations.jsonl
 agent-knowledge/metrics/learning-reads.json
 agent-knowledge/metrics/learning-reads.jsonl
 
+# Session checkpoints written by the PreCompact hook (session-derived, never committed)
+agent-knowledge/pre-compact/
+
 # Tool/vendor caches
 node_modules/
 .venv/

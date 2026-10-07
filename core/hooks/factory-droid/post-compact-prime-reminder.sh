@@ -47,26 +47,40 @@ else
 fi
 PRIME_EXIT=$?
 
-# pre-compact-bd-sync.py writes the session checkpoint here. Recovery has to read it
-# back, or the checkpoint is written and never seen — keep this path in step with that
-# hook's CHECKPOINT_DIR.
+# pre-compact-bd-sync.py keys its checkpoint by session id; read back THIS session's
+# file only. Newest-wins would inject a sibling session's state, or a months-old one.
 CKPT_DIR="${PRECOMPACT_DIR:-${HARNESS_HOME:-$HOME/.agent-knowledge}/pre-compact}"
 CKPT_FILE=""
 CKPT=""
-if [ -d "$CKPT_DIR" ]; then
-  CKPT_FILE=$(ls -t "$CKPT_DIR"/*.md 2>/dev/null | head -1)
-  if [ -n "$CKPT_FILE" ]; then
-    CKPT=$(cat "$CKPT_FILE" 2>/dev/null)
-  fi
+SID=""
+if [ ! -t 0 ]; then
+  SID=$(python3 -c 'import sys, json
+try:
+    print(str((json.load(sys.stdin) or {}).get("session_id") or "")[:8])
+except Exception:
+    pass' 2>/dev/null | tr -cd 'A-Za-z0-9_-')
+fi
+# Mirrors the writer's own fallback when the runtime supplies no session id.
+[ -n "$SID" ] || SID="unknown"
+if [ -f "$CKPT_DIR/$SID.md" ]; then
+  CKPT_FILE="$CKPT_DIR/$SID.md"
+  CKPT=$(cat "$CKPT_FILE" 2>/dev/null)
+  rm -f "$CKPT_FILE"
+fi
+# Orphans: a session that compacted and never restarted leaves its file behind.
+find "$CKPT_DIR" -name '*.md' -mtime +7 -delete 2>/dev/null
+
+# Built once: the two output branches differ only in their prose.
+CKPT_BLOCK=""
+if [ -n "$CKPT" ]; then
+  ESCAPE='import sys, json; print(json.dumps(sys.stdin.read())[1:-1])'
+  ESCAPED_CKPT=$(printf '%s' "$CKPT" | python3 -c "$ESCAPE")
+  ESCAPED_CKPT_FILE=$(printf '%s' "$CKPT_FILE" | python3 -c "$ESCAPE")
+  CKPT_BLOCK="\\n\\n--- pre-compact checkpoint ($ESCAPED_CKPT_FILE) ---\\n${ESCAPED_CKPT}\\n--- end checkpoint ---"
 fi
 
 if [ "$PRIME_EXIT" -eq 0 ] && [ -n "$PRIME_OUTPUT" ]; then
   ESCAPED=$(printf '%s' "$PRIME_OUTPUT" | python3 -c 'import sys, json; print(json.dumps(sys.stdin.read())[1:-1])')
-  CKPT_BLOCK=""
-  if [ -n "$CKPT" ]; then
-    ESCAPED_CKPT=$(printf '%s' "$CKPT" | python3 -c 'import sys, json; print(json.dumps(sys.stdin.read())[1:-1])')
-    CKPT_BLOCK="\\n\\n--- pre-compact checkpoint ($CKPT_FILE) ---\\n${ESCAPED_CKPT}\\n--- end checkpoint ---"
-  fi
   cat <<ENDJSON
 {
   "hookSpecificOutput": {
@@ -76,14 +90,8 @@ if [ "$PRIME_EXIT" -eq 0 ] && [ -n "$PRIME_OUTPUT" ]; then
 }
 ENDJSON
 else
-  # The checkpoint matters MORE here, not less: bd prime gave us nothing, so it is the
-  # only record of the previous session. Prose uses single quotes, never backticks —
-  # this heredoc interpolates, and a backtick in it would run as a command.
-  CKPT_BLOCK=""
-  if [ -n "$CKPT" ]; then
-    ESCAPED_CKPT=$(printf '%s' "$CKPT" | python3 -c 'import sys, json; print(json.dumps(sys.stdin.read())[1:-1])')
-    CKPT_BLOCK="\\n\\n--- pre-compact checkpoint ($CKPT_FILE) ---\\n${ESCAPED_CKPT}\\n--- end checkpoint ---"
-  fi
+  # bd prime gave us nothing, so the checkpoint is the only record left. Prose below uses
+  # single quotes: this heredoc interpolates, and a backtick in it would run as a command.
   cat <<ENDJSON
 {
   "hookSpecificOutput": {
