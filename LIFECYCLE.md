@@ -7,9 +7,9 @@ The whole point of `bd` + the harness hooks is that **nothing important is lost 
 ```
 during work        ─► bd remember "<insight>" --key <repo>/<prefix>/<topic>
 threshold crossed  ─► ctx-threshold-warn.py nudges /compact
-compaction         ─► pre-compact-bd-sync.py snapshots PRs/tasks/tickets into bd memory
+compaction         ─► pre-compact-bd-sync.py snapshots PRs/tasks/tickets to a session file
                                                 + adds comment to every in-progress bd task
-next session       ─► post-compact-prime-reminder.sh runs bd prime; agent reloads memories + ready queue
+next session       ─► post-compact-prime-reminder.sh runs bd prime AND reads that file back
 ```
 
 The result: the agent forgets the chat, but remembers **what it learned, what tasks were in flight, and what blockers remain**.
@@ -78,7 +78,8 @@ The result: the agent forgets the chat, but remembers **what it learned, what ta
 │   │ (PreCompact hook)       │                                                │
 │   │                         │   • extracts PR numbers, bd task IDs, tickets  │
 │   │                         │   • detects clusters/actions touched           │
-│   │                         │   • writes a session/pre-compact memory        │
+│   │                         │   • writes a session checkpoint FILE,          │
+│   │                         │     read back at the next SessionStart         │
 │   │                         │   • appends a snapshot comment to every        │
 │   │                         │     in-progress bd task                        │
 │   │                         │   • runs bd sync                               │
@@ -142,9 +143,9 @@ The handoff report has a mandatory `## Knowledge updates` section ([`templates/h
 | Piece | Path | Role |
 | --- | --- | --- |
 | `bd prime` workflow | [`core/protocols/bd-and-memory.md`](core/protocols/bd-and-memory.md) | Canonical rules for tasks, comments, memories, key taxonomy |
-| Pre-compact hook | [`core/hooks/factory-droid/pre-compact-bd-sync.py`](core/hooks/factory-droid/pre-compact-bd-sync.py) | Parses transcript, writes memory + task snapshots at compaction time |
+| Pre-compact hook | [`core/hooks/factory-droid/pre-compact-bd-sync.py`](core/hooks/factory-droid/pre-compact-bd-sync.py) | Parses transcript, writes a session checkpoint file + task snapshots at compaction time |
 | Threshold warn hook | [`core/hooks/factory-droid/ctx-threshold-warn.py`](core/hooks/factory-droid/ctx-threshold-warn.py) | Nudges `/compact` at `CTX_COMPACT_THRESHOLD` |
-| Session-start hook | [`core/hooks/factory-droid/post-compact-prime-reminder.sh`](core/hooks/factory-droid/post-compact-prime-reminder.sh) | Reloads bd context after compaction |
+| Session-start hook | [`core/hooks/factory-droid/post-compact-prime-reminder.sh`](core/hooks/factory-droid/post-compact-prime-reminder.sh) | Reloads bd context after compaction and injects the pre-compact checkpoint |
 | Transcript parser | [`core/statusline/statusline-context.py`](core/statusline/statusline-context.py) | Shared utilization computation for statusline and threshold hook |
 | Generic helper | [`core/hooks/generic/post-task-memory.sh`](core/hooks/generic/post-task-memory.sh) | Runtime-agnostic `bd remember` wrapper |
 | Tool reference | [`tools/bd/README.md`](tools/bd/README.md) | Upstream install + memory conventions |

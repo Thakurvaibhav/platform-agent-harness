@@ -1,11 +1,13 @@
 #!/usr/bin/env python3
 """
-PreCompact hook: persist bd memories before context compression.
+PreCompact hook: persist session state before context compression.
 
 Reads the session transcript, extracts structured data from recent assistant
 messages (PR numbers, bd task IDs, generic ticket keys, key actions), and
-stores a condensed snapshot as a bd memory plus a pre-compact comment on
-each in-progress task.
+stores a condensed snapshot as a session-scoped checkpoint FILE plus a
+pre-compact comment on each in-progress task. The checkpoint is read back by
+`post-compact-prime-reminder.sh` on the next SessionStart; a checkpoint nobody
+reads is a write-only loop, so the two hooks ship and change together.
 
 This file is intentionally generic — no organisation-specific cluster names,
 ticket prefixes, or project keywords are hard-coded. Override the
@@ -39,6 +41,16 @@ BD_TASK_RE = re.compile(
 )
 
 PR_RE = re.compile(r"(?:PR\s*#?|pull/)(\d{2,6})")
+
+# Where the session checkpoint is written, and where the SessionStart hook reads it
+# back from. Both halves must agree — override them together or not at all.
+CHECKPOINT_DIR = Path(
+    os.environ.get("PRECOMPACT_DIR")
+    or os.path.join(
+        os.environ.get("HARNESS_HOME", os.path.expanduser("~/.agent-knowledge")),
+        "pre-compact",
+    )
+)
 
 
 def run_cmd(cmd, timeout=10, cwd=None):
@@ -207,8 +219,18 @@ def main() -> int:
         return 0
 
     memory = build_memory(extracted)
-    safe_memory = memory.replace('"', '\\"').replace("'", "'\\''")
-    run_cmd(f"bd remember '{safe_memory}' --key session/pre-compact", timeout=10, cwd=cwd)
+
+    # Session-scoped file, one per session, outside the hive. A compaction checkpoint is
+    # neither durable nor reusable, so it fails the bar for a memory; writing one per
+    # compaction under a fixed key regrew the same record after every consolidation sweep.
+    # post-compact-prime-reminder.sh reads this back — move one half and the other breaks.
+    sid = re.sub(r"[^A-Za-z0-9_-]", "", str(input_data.get("session_id") or ""))[:64]
+    sid = sid or "unknown"
+    try:
+        CHECKPOINT_DIR.mkdir(parents=True, exist_ok=True)
+        (CHECKPOINT_DIR / f"{sid}.md").write_text(memory + "\n", encoding="utf-8")
+    except OSError:
+        pass  # a checkpoint we cannot write is not worth failing a compaction over
 
     snapshot_in_progress_tasks(memory, cwd)
     run_cmd("bd sync 2>/dev/null", timeout=10, cwd=cwd)

@@ -53,6 +53,35 @@ Before finishing, persist any non-obvious finding:
 bd remember "<insight>" --key <repo>/<prefix>/<topic>
 ```
 
+## Dispatching a cross-runtime worker (canonical launch contract)
+
+Several places launch workers through [`agent-knowledge/scripts/codex-dispatch.sh`](../../agent-knowledge/scripts/codex-dispatch.sh) — [`core/agents/tool-researcher.md`](../agents/tool-researcher.md), [`core/agents/pr-reviewer.md`](../agents/pr-reviewer.md), and the `adopt-eval` / `design` / `verify-claims` skills. A skill cannot inherit from an agent role, so each keeps its own copy-pasteable block; **this section is the one definition those copies must match.** Change the mechanics here first, then the copies.
+
+```bash
+# <run-dir> = ${TMPDIR:-/tmp}/<task-slug>-<runid>. Every shell call is a FRESH shell, so
+# $$ and `mktemp -d` do NOT survive between calls — substitute <run-dir> literally.
+mkdir -p <run-dir>
+timeout <N> agent-knowledge/scripts/codex-dispatch.sh general-engineer \
+  "<task; inputs passed by FILE PATH>. Do not dispatch further workers. \
+   The last line of your final message must be exactly <MARKER>, with nothing after it." \
+  <target-dir> > <run-dir>/<log>.out 2>&1 < /dev/null; echo "DISPATCH_EXIT=$?" >> <run-dir>/<log>.out
+```
+
+- **`timeout` wraps the call** — the dispatcher ends in `exec` and cannot time itself out. Scale `<N>` to the task's real width. `=124` means **narrow the brief**, not raise the cap: a killed run returns no verdicts at all.
+- **Args are positional**: specialist, quoted task, target dir (becomes the worker's `--cd`). For a review lens that must be the merge-base worktree, never the repo dir.
+- **Run-unique paths.** A fixed `/tmp/<name>.out` is truncated by the next sibling, silently, and the orchestrator then reads a well-formed report belonging to another task.
+- **"Do not dispatch further workers." goes in the prompt body.** The script's `HARNESS_DEPTH` ceiling only counts hops it made itself, so a host runtime that never exports it leaves the cap dormant — the prompt-level ban is the only control that always fires.
+- **Exit code goes INSIDE the log.** A trailing `echo` after the redirect lands in the caller's own output, not the file.
+- **Distinct `bd` keys per worker.** Concurrent writers to one key race.
+
+**A worker is finished only when all three hold** — never a tail, never one condition:
+
+1. `grep -c <MARKER> <log>` is **≥ 2**. The dispatcher echoes the prompt into the log, so 1 is that echo alone.
+2. `grep -c '^DISPATCH_EXIT=' <log>` is 1. **Anchored** — unanchored also matches the echoed prompt and any corpus file that quotes the string.
+3. Re-read the **whole** file and take the LAST report range. A tail lands mid-report and silently drops the first findings.
+
+A worker that fails, times out, or returns nothing **is not a pass**. Say so and mark its findings unverified; never let a dead worker read as agreement.
+
 ## Aggregation in the orchestrator
 
 After all workers return:

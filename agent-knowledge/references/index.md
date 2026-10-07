@@ -34,7 +34,7 @@ and it is the wrong answer. Match keywords to your task and load every file that
 | [`agent-knowledge/references/README.md`](README.md) | How the local knowledge base works + Karpathy LLM Wiki credit |
 | [`agent-knowledge/references/index.md`](index.md) | This master catalog |
 | [`agent-knowledge/references/log.md`](log.md) | Append-only work-log chronology |
-| [`agent-knowledge/scripts/knowledge-search.sh`](../scripts/knowledge-search.sh) | Search bd memories + learnings + domain docs with OR-matching across query terms |
+| [`agent-knowledge/scripts/knowledge-search.sh`](../scripts/knowledge-search.sh) | Search bd memories + this index + learnings + every org + domain docs; leads with the index rows matching the most query terms, then ranks files by match count |
 | [`agent-knowledge/scripts/drift-check.sh`](../scripts/drift-check.sh) | Harness health: graph freshness, learnings staleness, memory bloat, consolidation overdue |
 | [`agent-knowledge/scripts/learn.sh`](../scripts/learn.sh) | One-liner `bd remember` wrapper; finds the `.beads`-owning dir from CWD |
 | [`agent-knowledge/scripts/codex-dispatch.sh`](../scripts/codex-dispatch.sh) | Cross-runtime subagent parity: wraps `codex exec` with specialist role + hive preamble |
@@ -189,8 +189,8 @@ Within `$HARNESS_DOCS/<topic>/`, use these standard subfolder names:
 | [`core/hooks/generic/rtk-wrapper.sh`](../../core/hooks/generic/rtk-wrapper.sh) | Portable rtk command wrapper |
 | [`core/hooks/generic/learning-gate.py`](../../core/hooks/generic/learning-gate.py) | Learning-capture gate (sub-agent hard gate + main-session soft nudge); records usage telemetry (reads + citations) |
 | [`core/hooks/factory-droid/rtk-autoprefix.py`](../../core/hooks/factory-droid/rtk-autoprefix.py) | PreToolUse hook preserving `sudo`/`env=`/`time` prefixes |
-| [`core/hooks/factory-droid/pre-compact-bd-sync.py`](../../core/hooks/factory-droid/pre-compact-bd-sync.py) | PreCompact transcript parser → bd memory + per-task comments |
-| [`core/hooks/factory-droid/post-compact-prime-reminder.sh`](../../core/hooks/factory-droid/post-compact-prime-reminder.sh) | SessionStart `bd prime` |
+| [`core/hooks/factory-droid/pre-compact-bd-sync.py`](../../core/hooks/factory-droid/pre-compact-bd-sync.py) | PreCompact transcript parser → session checkpoint file + per-task comments |
+| [`core/hooks/factory-droid/post-compact-prime-reminder.sh`](../../core/hooks/factory-droid/post-compact-prime-reminder.sh) | SessionStart `bd prime` + pre-compact checkpoint read-back |
 | [`core/hooks/factory-droid/ctx-threshold-warn.py`](../../core/hooks/factory-droid/ctx-threshold-warn.py) | UserPromptSubmit hook nudging `/compact` past threshold |
 | [`core/statusline/statusline.sh`](../../core/statusline/statusline.sh) | Minimal statusline with repo / branch / Graphify / bd indicators |
 | [`core/statusline/statusline-context.py`](../../core/statusline/statusline-context.py) | Generic JSONL transcript parser used by statusline + threshold hook |

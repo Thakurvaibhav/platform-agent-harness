@@ -30,6 +30,8 @@ Two events (map to your runtime's equivalents):
 
 Both paths record usage telemetry under `${HARNESS_METRICS:-~/.agent-knowledge/metrics}`: per-file **read** counts in `learning-reads.json` (the primary signal, incremented on every `learnings-*.md` Read) plus `learning-reads.jsonl`, and per-entry `[learnings-<file>.md#<N>]` **citation** counts in `learning-usage.json` plus `learning-citations.jsonl`. [`templates/commands/consolidate.md`](../../templates/commands/consolidate.md) reads these for **ranking and gap-detection only — never for pruning**. Per-transcript dedupe (a `/tmp` marker) prevents double-counting on transcript growth.
 
+Reads of the **router files** — `index.md` and the protocol files the startup checklist names first — are counted too, so "was the startup checklist actually followed?" has an answer. This is read tracking **only**: the router names are deliberately absent from the capture branch, because editing a protocol file is not persisting a learning and counting it would let an agent satisfy the hard gate by touching the rules it is graded against.
+
 | Env var | Default | Effect |
 | --- | --- | --- |
 | `LEARN_GATE_DISABLE` | unset | `1` disables both gating and nudging (citation logging still runs). |
@@ -37,6 +39,7 @@ Both paths record usage telemetry under `${HARNESS_METRICS:-~/.agent-knowledge/m
 | `LEARN_TOOLUSE_MIN` | `8` | Tool-use count that counts as "substantive" for the hard gate. |
 | `LEARN_MAIN_GAP` | `2` | Work-minus-persist gap that triggers the soft nudge. |
 | `HARNESS_METRICS` | `~/.agent-knowledge/metrics` | Where usage telemetry (reads + citations) is written. |
+| `HARNESS_ROUTER_FILES` | `index.md,bd-and-memory.md,code-quality.md` | Comma-separated router files whose reads are counted. Rename them here if your layout differs. |
 
 ## The two discipline gates
 
@@ -59,8 +62,8 @@ These run in the Factory Droid runtime but the patterns translate directly to ot
 | --- | --- | --- |
 | [factory-droid/rtk-autoprefix.py](factory-droid/rtk-autoprefix.py) | PreToolUse | Auto-inserts `rtk` for allowlisted commands; preserves `sudo` / `env=` / `time` wrappers. |
 | [factory-droid/ctx-threshold-warn.py](factory-droid/ctx-threshold-warn.py) | UserPromptSubmit | Uses [`core/statusline/statusline-context.py`](../statusline/statusline-context.py) to compute actual utilization and nudges `/compact` past `CTX_COMPACT_THRESHOLD` (default 85%). |
-| [factory-droid/pre-compact-bd-sync.py](factory-droid/pre-compact-bd-sync.py) | PreCompact | Parses transcript, extracts PR / bd / ticket refs, writes `session/pre-compact` memory, adds snapshot comment to every in-progress bd task. |
-| [factory-droid/post-compact-prime-reminder.sh](factory-droid/post-compact-prime-reminder.sh) | SessionStart | Reloads bd context with `bd prime` after compaction. |
+| [factory-droid/pre-compact-bd-sync.py](factory-droid/pre-compact-bd-sync.py) | PreCompact | Parses transcript, extracts PR / bd / ticket refs, writes a session checkpoint file under `${PRECOMPACT_DIR:-$HARNESS_HOME/pre-compact}`, adds snapshot comment to every in-progress bd task. A compaction checkpoint is neither durable nor reusable, so it fails the bar for a memory — and one written per compaction under a fixed key regrows after every consolidation sweep. `post-compact-prime-reminder.sh` reads it back; **move one half and the other becomes a write-only loop.** |
+| [factory-droid/post-compact-prime-reminder.sh](factory-droid/post-compact-prime-reminder.sh) | SessionStart | Reloads bd context with `bd prime` after compaction and injects the checkpoint the PreCompact hook wrote. |
 
 ## Companion helper
 

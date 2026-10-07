@@ -99,8 +99,13 @@ except Exception:
         WARNINGS+=("DRIFT: bd memory count UNAVAILABLE (bd memories --json failed) — bloat check did not run")
         return
     fi
-    if [ "$count" -gt 60 ]; then
-        WARNINGS+=("DRIFT: $count bd memories (threshold: 60). Consider running /consolidate")
+    # This threshold is an ESCALATION, not the routine trigger — check_consolidation_freshness
+    # owns that (>7 days). At an observed write rate of ~34 memories/day, a threshold of 60
+    # fired on day two of every cycle and stayed on, and a warning that is true most of the
+    # time trains the reader to skip the whole report. The value that earns an interruption
+    # is "growing faster than the weekly cadence can absorb" — retune it to your write rate.
+    if [ "$count" -gt "${BD_MEMORY_THRESHOLD:-300}" ]; then
+        WARNINGS+=("DRIFT: $count bd memories — above the weekly cadence. Run /consolidate now, do not wait for the 7-day mark")
     fi
 }
 

@@ -69,6 +69,26 @@ LEARN_FILE_RE = re.compile(r"learnings-[\w.\-]+\.md")
 # Org files live outside REFS_DIR without the `learnings-` prefix. Match only in
 # PATH-QUALIFIED form: bare `istio.md` would match half the markdown in a repo.
 ORG_FILE_RE = re.compile(r"orgs/[\w.\-]+/[\w.\-]+\.md")
+# The startup checklist names the router files by path — the index every agent routes
+# through and the protocol files it reads first — yet none of them matched the
+# `learnings-*` shape, so "was the startup checklist actually followed?" had no answer.
+# READ TRACKING ONLY: these names are deliberately absent from the capture branch below.
+# Editing a protocol file is not persisting a learning, and counting it would let an
+# agent satisfy the hard gate by touching the rules it is being graded against.
+ROUTER_FILES = tuple(
+    x.strip()
+    for x in os.environ.get(
+        "HARNESS_ROUTER_FILES", "index.md,bd-and-memory.md,code-quality.md"
+    ).split(",")
+    if x.strip()
+)
+# Match with any leading path, so a shell read of `core/protocols/code-quality.md`
+# resolves against the real file; the metrics key stays the basename.
+ROUTER_FILE_RE = re.compile(
+    r"(?:[\w.~/-]*/)?(?:%s)"
+    % "|".join(re.escape(os.path.splitext(n)[0]) for n in ROUTER_FILES)
+    + r"\.md\b"
+)
 # A search *for* a filename is not a read of it: `grep 'learnings-foo.md' *.md`
 # looks for the name inside other files, and counting it ranks phantoms.
 SEARCH_RE = re.compile(r"\b(?:grep|rg|ag|ack|fgrep|egrep)\b")
@@ -120,6 +140,12 @@ def learnings_reads_in_cmd(cmd):
     """Learnings files READ by a shell command, excluding search patterns and phantoms."""
     quoted = [m.span() for m in QUOTED_RE.finditer(cmd)] if SEARCH_RE.search(cmd) else []
     out = []
+    for m in ROUTER_FILE_RE.finditer(cmd):
+        if any(qs < m.start() < qe for qs, qe in quoted):
+            continue
+        base = os.path.basename(m.group(0))
+        if base in ROUTER_FILES and is_real_learnings_file(base, m.group(0)):
+            out.append(base)
     for m in LEARN_FILE_RE.finditer(cmd):
         if any(qs < m.start() < qe for qs, qe in quoted):
             continue  # inside a search pattern, not a path being read
@@ -168,6 +194,8 @@ def parse_transcript(path):
                     base = os.path.basename(fp)
                     if (base.startswith("learnings-") and base.endswith(".md")
                             and is_real_learnings_file(base, fp)):
+                        learnings_reads.append(base)
+                    elif base in ROUTER_FILES and is_real_learnings_file(base, fp):
                         learnings_reads.append(base)
                     else:
                         om = ORG_FILE_RE.search(fp)
