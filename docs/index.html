@@ -19,16 +19,33 @@
   :root{
     --ground:#F6F8FA; --panel:#FFFFFF; --ink:#16202C; --muted:#5A6675;
     --rule:#DDE3EA; --accent:#2F6F6B; --accent-soft:#E4EFEE;
+    --switch-x:0px; color-scheme:light;
   }
+  /* Dark is reached three ways: the system preference, the in-page switch (which
+     inverts whatever the system asked for), and an explicit data-theme stamp. */
   @media (prefers-color-scheme: dark){
     :root:not([data-theme="light"]){
       --ground:#0F141A; --panel:#161D25; --ink:#E5EAF1; --muted:#909DAD;
       --rule:#242D38; --accent:#68B0A9; --accent-soft:#172B2A;
+      --switch-x:11px; color-scheme:dark;
+    }
+    :root:not([data-theme]):has(#theme-flip:checked){
+      --ground:#F6F8FA; --panel:#FFFFFF; --ink:#16202C; --muted:#5A6675;
+      --rule:#DDE3EA; --accent:#2F6F6B; --accent-soft:#E4EFEE;
+      --switch-x:0px; color-scheme:light;
+    }
+  }
+  @media (prefers-color-scheme: light){
+    :root:not([data-theme]):has(#theme-flip:checked){
+      --ground:#0F141A; --panel:#161D25; --ink:#E5EAF1; --muted:#909DAD;
+      --rule:#242D38; --accent:#68B0A9; --accent-soft:#172B2A;
+      --switch-x:11px; color-scheme:dark;
     }
   }
   :root[data-theme="dark"]{
     --ground:#0F141A; --panel:#161D25; --ink:#E5EAF1; --muted:#909DAD;
     --rule:#242D38; --accent:#68B0A9; --accent-soft:#172B2A;
+    --switch-x:11px; color-scheme:dark;
   }
 
   *{box-sizing:border-box}
@@ -44,6 +61,21 @@
     color:var(--muted); text-decoration:none}
   .toc-links a:hover{color:var(--accent)}
   .toc-links a+a::before{content:"\00b7"; margin-right:14px; opacity:.5}
+
+  /* Zero-JS theme switch: the checkbox inverts the system preference, and the
+     knob rides --switch-x so it tracks the resolved theme rather than the box. */
+  .tsw-input{position:absolute; width:0; height:0; opacity:0}
+  .tsw{display:inline-flex; align-items:center; gap:8px; cursor:pointer;
+    font-family:"IBM Plex Mono",monospace; font-size:11.5px; color:var(--muted);
+    user-select:none; transition:color .12s}
+  .tsw:hover{color:var(--accent)}
+  .tsw-track{position:relative; width:26px; height:14px; flex:none;
+    border:1px solid var(--rule); border-radius:7px; background:var(--panel)}
+  .tsw-knob{position:absolute; left:2px; top:2px; width:8px; height:8px; border-radius:50%;
+    background:var(--accent); transform:translateX(var(--switch-x)); transition:transform .16s}
+  .tsw-input:focus-visible + .tsw{outline:2px solid var(--accent); outline-offset:3px}
+  @media (prefers-reduced-motion:reduce){ .tsw-knob{transition:none} }
+
   @media (min-width:1080px){
     .wrap{max-width:1180px; display:grid; grid-template-columns:200px minmax(0,1fr);
       gap:0 68px; align-items:start; padding:60px 44px 100px}
@@ -52,6 +84,7 @@
       border-top:1px solid var(--rule)}
     .toc-links a{display:block; margin-bottom:7px}
     .toc-links a+a::before{content:none}
+    .tsw{margin-top:5px}
     .toc-inner{position:sticky; top:60px}
     .toc ol{list-style:none; margin:14px 0 0; padding:0; counter-reset:t}
     .toc li{counter-increment:t; margin-bottom:9px; line-height:1.35}
@@ -169,6 +202,8 @@
     <div class="toc-links">
       <a href="https://github.com/Thakurvaibhav/platform-agent-harness">Source on GitHub &rarr;</a>
       <a href="https://www.linkedin.com/in/vaibhavthakur/">LinkedIn &rarr;</a>
+      <input class="tsw-input" type="checkbox" id="theme-flip">
+      <label class="tsw" for="theme-flip"><span class="tsw-track"><span class="tsw-knob"></span></span>Dark mode</label>
     </div>
   </div>
 </nav>
