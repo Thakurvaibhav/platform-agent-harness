@@ -21,22 +21,10 @@
     --rule:#DDE3EA; --accent:#2F6F6B; --accent-soft:#E4EFEE;
     --switch-x:0px; color-scheme:light;
   }
-  /* Dark is reached three ways: the system preference, the in-page switch (which
-     inverts whatever the system asked for), and an explicit data-theme stamp. */
+  /* Dark is reached two ways: the system preference when the root is un-stamped,
+     and an explicit data-theme stamp, which the switch writes and wins either way. */
   @media (prefers-color-scheme: dark){
     :root:not([data-theme="light"]){
-      --ground:#0F141A; --panel:#161D25; --ink:#E5EAF1; --muted:#909DAD;
-      --rule:#242D38; --accent:#68B0A9; --accent-soft:#172B2A;
-      --switch-x:11px; color-scheme:dark;
-    }
-    :root:not([data-theme]):has(#theme-flip:checked){
-      --ground:#F6F8FA; --panel:#FFFFFF; --ink:#16202C; --muted:#5A6675;
-      --rule:#DDE3EA; --accent:#2F6F6B; --accent-soft:#E4EFEE;
-      --switch-x:0px; color-scheme:light;
-    }
-  }
-  @media (prefers-color-scheme: light){
-    :root:not([data-theme]):has(#theme-flip:checked){
       --ground:#0F141A; --panel:#161D25; --ink:#E5EAF1; --muted:#909DAD;
       --rule:#242D38; --accent:#68B0A9; --accent-soft:#172B2A;
       --switch-x:11px; color-scheme:dark;
@@ -62,8 +50,9 @@
   .toc-links a:hover{color:var(--accent)}
   .toc-links a+a::before{content:"\00b7"; margin-right:14px; opacity:.5}
 
-  /* Zero-JS theme switch: the checkbox inverts the system preference, and the
-     knob rides --switch-x so it tracks the resolved theme rather than the box. */
+  /* The knob rides --switch-x, so it tracks the resolved theme off the same
+     cascade as everything else. Hidden until the script that drives it runs. */
+  html:not([data-js]) .tsw{display:none}
   .tsw-input{position:absolute; width:0; height:0; opacity:0}
   .tsw{display:inline-flex; align-items:center; gap:8px; cursor:pointer;
     font-family:"IBM Plex Mono",monospace; font-size:11.5px; color:var(--muted);
@@ -179,6 +168,35 @@
   img{max-width:100%}
   [hidden]{display:none!important}
 </style>
+
+<script>
+/* Runs in <head> so the stamp lands before first paint. Storage throws outright
+   in some contexts, so every access is guarded and falls back to the system. */
+(function(){
+  var KEY="pah-theme", root=document.documentElement, stored=null;
+  try{ stored=localStorage.getItem(KEY); }catch(e){}
+  if(stored==="dark"||stored==="light"){ root.setAttribute("data-theme",stored); }
+  root.setAttribute("data-js","");
+  var mq=window.matchMedia("(prefers-color-scheme: dark)");
+  function isDark(){
+    var set=root.getAttribute("data-theme");
+    return set ? set==="dark" : mq.matches;
+  }
+  function wire(){
+    var box=document.getElementById("theme-flip");
+    if(!box){ return; }
+    box.checked=isDark();
+    box.addEventListener("change",function(){
+      var next=box.checked?"dark":"light";
+      root.setAttribute("data-theme",next);
+      try{ localStorage.setItem(KEY,next); }catch(e){}
+    });
+    mq.addEventListener("change",function(){ box.checked=isDark(); });
+  }
+  if(document.readyState==="loading"){ document.addEventListener("DOMContentLoaded",wire); }
+  else{ wire(); }
+})();
+</script>
 </head>
 <body>
 <div class="wrap">
