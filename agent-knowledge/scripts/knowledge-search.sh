@@ -161,14 +161,14 @@ if [ -f "$REFS_DIR/index.md" ]; then
     # one does: an OR match on one generic word ("limit") is not routing.
     _idx=$(QP="$PATTERN" python3 - "$REFS_DIR/index.md" <<'PYEOF'
 import os, re, sys
-terms = [x for x in os.environ["QP"].split("|") if x]
+terms = list(dict.fromkeys(x for x in os.environ["QP"].split("|") if x))
 rows = []
 for line in open(sys.argv[1], encoding="utf-8"):
     if not line.startswith("| "):
         continue
-    # First cell is either a markdown link around a backticked path or a bare
-    # backticked path, depending on the table.
-    mm = re.match(r"\| *\[?`([^`]+)`", line)
+    # \x60 is a backtick: bash 3.2 parses literal backticks inside this heredoc as
+    # command substitution and dies on the unmatched one (macOS /bin/bash).
+    mm = re.match(r"\| *\[?\x60([^\x60]+)\x60", line)
     if not mm:
         continue
     low = line.lower()

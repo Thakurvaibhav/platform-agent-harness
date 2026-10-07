@@ -56,7 +56,7 @@ SID=""
 if [ ! -t 0 ]; then
   SID=$(python3 -c 'import sys, json
 try:
-    print(str((json.load(sys.stdin) or {}).get("session_id") or "")[:8])
+    print(str((json.load(sys.stdin) or {}).get("session_id") or "")[:64])
 except Exception:
     pass' 2>/dev/null | tr -cd 'A-Za-z0-9_-')
 fi
