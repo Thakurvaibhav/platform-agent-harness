@@ -91,7 +91,9 @@ verbose commands.
 
 Quick reference -- always prefix: `rtk git status/diff/log/show/branch`,
 `rtk gh pr view/list/checks`, `rtk kubectl get/describe/logs`,
-`rtk helm template/lint`. Never prefix: mutating commands, piped/chained, bd commands.
+`rtk helm template/lint`. Never prefix: mutating commands, piped/chained, bd commands,
+`gh pr diff` (rtk drops whole files from it), or anything whose output IS the evidence —
+for that last case prefix `RTK_DISABLE=1` so the autoprefix hook bails too.
 
 # Skill Activation Hints
 

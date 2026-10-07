@@ -23,6 +23,20 @@ if ! command -v rtk >/dev/null 2>&1; then
   exec "${cmd[@]}"
 fi
 
+# Caller's escape hatch for when the raw output IS the evidence.
+if [ "${RTK_DISABLE:-0}" != "0" ]; then
+  exec "${cmd[@]}"
+fi
+
+# `gh pr diff` must never be compressed: rtk drops whole files from it, and a
+# reviewer working off the truncated diff never learns what it skipped. Checked
+# before the allowlist, whose two-token `gh pr` arm would otherwise swallow it.
+case "${cmd[0]} ${cmd[1]:-} ${cmd[2]:-}" in
+  "gh pr diff")
+    exec "${cmd[@]}"
+    ;;
+esac
+
 # Allowlist matches the canonical list in core/protocols/rtk-command-policy.md.
 case "${cmd[0]} ${cmd[1]:-}" in
   "git status"|"git diff"|"git log"|"git show"|"git branch"|\

@@ -7,9 +7,9 @@ The single source of truth for task state, durable memory, the compaction lifecy
 At the start of every task, every sub-agent must:
 
 1. Read this file (bd workflow, constraints, checklists) and — for engineering work — [`code-quality.md`](code-quality.md) (the canonical coding standards: assumptions, simplicity, reuse-first, surgical changes, comments, verification, reflexes R1–R4).
-2. Read [`agent-knowledge/references/index.md`](../../agent-knowledge/references/index.md) to discover available reference docs, project documentation, and topic learnings. From the "Topic learnings" table, load every learnings file whose domain overlaps with your assigned task. When uncertain, load it.
+2. Read [`agent-knowledge/references/index.md`](../../agent-knowledge/references/index.md) to discover what exists. It carries **two keyword tables and you must scan both** — *Topic learnings* for portable method, *Instance tier* for what is true of this estate. Load every file in either table whose keywords overlap your task. When uncertain, load it: a false positive costs less context than a missed lesson.
 3. **Knowledge search** — run [`agent-knowledge/scripts/knowledge-search.sh`](../../agent-knowledge/scripts/knowledge-search.sh) `<2-3 task keywords>` to find prior art across bd memories, the portable learnings tier, **every** org's instance tier, reading notes, and domain docs simultaneously. This catches matches that keyword-only `bd memories <term>` would miss.
-4. Read `agent-knowledge/orgs/<ACTIVE_ORG>/clusters.md` (or the repo equivalent) before any cluster-scoped decision. If it is missing or empty, say "no cluster registry for this org" — never infer cluster identity from cluster names ([`knowledge-tiers.md`](knowledge-tiers.md)).
+4. Read `agent-knowledge/orgs/<ACTIVE_ORG>/clusters.md` (or the repo equivalent) — the one instance file loaded **by default rather than by keyword match**, because nearly all infrastructure work is cluster-scoped (environment, tenancy, provider, namespaces, enablement). Skip it only for work with no cluster dimension at all, such as pure docs or harness config; the rest of that directory routes through step 2 like everything else. If it is missing or empty, say "no cluster registry for this org" — never infer cluster identity from cluster names ([`knowledge-tiers.md`](knowledge-tiers.md)).
 5. **Drift check** (orchestrator only, at session start/resume) — run [`agent-knowledge/scripts/drift-check.sh`](../../agent-knowledge/scripts/drift-check.sh). If warnings are found, surface them to the user before starting work.
 
 Non-engineering sub-agents (`task-planner`, `tool-researcher`): read Constraints, bd context, Learnings protocol, Task completion checklist, and the Handoff contract (in [`safety-and-handoff.md`](safety-and-handoff.md)). Skip [`code-quality.md`](code-quality.md), Git worktree protocol, Amending existing PRs, Base pre-completion checklist, and Post-deploy validation.
@@ -49,6 +49,11 @@ Use these prefixes consistently so memories are categorizable and searchable.
 | `<repo>/perf/<topic>` | Performance findings, sizing, benchmarks | `bd remember "vector 2x memory under burst; set limit to 2Gi" --key <repo>/perf/vector-memory` |
 | `<repo>/status/<topic>` | Active project status tracking | `bd remember "progressive-delivery rollout: 3 of 7 clusters enabled" --key <repo>/status/progressive-delivery` |
 | `<repo>/meta/<topic>` | Harness bookkeeping read by tooling | `bd remember "last consolidation: <date>, promoted N memories" --key <repo>/meta/last-consolidation` |
+| `<repo>/research/<topic>` | Findings from investigating a tool or upstream before acting on it | `bd remember "<tool> v1.4 drops the <field> API; closure measured at <N> MB" --key <repo>/research/<tool>-v14` |
+| `<repo>/baseline/<topic>` | A measured "before" state a later change is graded against | `bd remember "dev p99 <metric> = <value> at <sha>, pre-change" --key <repo>/baseline/dev-pre-change` |
+| `<repo>/validation/<topic>` | The result of running a check, with its evidence | `bd remember "check C5 PASS on prod: <command> returned <evidence>" --key <repo>/validation/prod-c5` |
+
+**`research`, `baseline` and `validation` carry source-level claims more often than any other category — and a run record that cites `file:line`, an upstream issue, or version-specific behaviour is a FINDING, not a run.** Read them before discarding them at consolidation: entries in these three have been bucketed STALE for *looking* like run logs while carrying the only record of a verified upstream defect.
 
 Replace `<repo>` with the actual repo name. The memory text must be **self-contained** — readable without the current session's chat history.
 
@@ -213,7 +218,7 @@ This gate is no longer convention-only — it is backed by [`core/hooks/generic/
 
 - **Capture on discovery, not at task end.** Persist the moment a non-obvious finding appears — batching to the end loses them.
 - **Fastest path:** `agent-knowledge/scripts/learn.sh "<insight>" <domain>/<category>/<topic>` (a low-friction `bd remember` wrapper). `bd remember` directly also works.
-- **Cite, don't re-explain.** Reference an existing entry as `[learnings-<file>.md#<N>]` instead of restating it — citations are logged to `agent-knowledge/metrics/learning-usage.json`, and consolidation prunes by that usage. Re-explaining a known pattern wastes tokens and hides the real usage signal.
+- **Cite, don't re-explain.** Reference an existing entry as `[learnings-<file>.md#<N>]` instead of restating it — citations are logged to `agent-knowledge/metrics/learning-usage.json`, which consolidation reads for **ranking and gap-detection only, never for pruning**: recall beats precision here, so a rarely-cited entry is never removed for low usage. Re-explaining a known pattern wastes tokens and hides the real usage signal.
 
 ## Task completion checklist
 

@@ -8,6 +8,8 @@ agent remember to type `rtk` every time.
 
 Skips when:
   - the command already starts with `rtk`
+  - the command carries a leading `RTK_DISABLE=1` (the caller's escape hatch for
+    when the raw output IS the evidence — see core/protocols/rtk-command-policy.md)
   - the command contains shell chaining / substitution (| && || ; $() `` <( >()
   - the command is not on the allowlist
   - `rtk` is not installed
@@ -28,7 +30,8 @@ ALLOWLIST = [
     # GitHub CLI read ops
     (("gh", "pr", "list"), "gh pr list"),
     (("gh", "pr", "view"), "gh pr view"),
-    (("gh", "pr", "diff"), "gh pr diff"),
+    # `gh pr diff` is deliberately absent: rtk drops whole files from it, and a
+    # reviewer working off the truncated diff never learns what it skipped.
     (("gh", "issue", "list"), "gh issue list"),
     (("gh", "issue", "view"), "gh issue view"),
     (("gh", "run", "view"), "gh run view"),
@@ -124,6 +127,12 @@ def main() -> int:
 
     prefix_tokens, argv = split_prefix_and_argv(command)
     if not argv or not match_allowlist(argv):
+        return 0
+
+    if any(
+        t.startswith("RTK_DISABLE=") and t.split("=", 1)[1] not in ("", "0")
+        for t in prefix_tokens
+    ):
         return 0
 
     new_command = " ".join(prefix_tokens + ["rtk"] + argv)

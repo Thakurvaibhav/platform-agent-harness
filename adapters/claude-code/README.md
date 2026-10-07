@@ -15,8 +15,8 @@ Claude Code reads project memory from `CLAUDE.md` (and `AGENTS.md` as a fallback
 | `core/hooks/generic/rtk-wrapper.sh` | `~/.claude/hooks/rtk-wrapper.sh` | Portable shell fallback for rtk prefixing (the native `rtk hook claude` is preferred — see [Automatic rtk prefixing](#automatic-rtk-prefixing)). |
 | `core/hooks/generic/learning-gate.py` | `~/.claude/hooks/learning-gate.py` | Portable. Learning-capture gate + citation heatmap. Binds to `UserPromptSubmit` + `SubagentStop`. |
 | `core/hooks/factory-droid/ctx-threshold-warn.py` | `~/.claude/hooks/ctx-threshold-warn.py` | Authored for Factory but stdlib-only and runtime-portable. `UserPromptSubmit` context-budget nudge. |
-| `core/hooks/factory-droid/pre-compact-bd-sync.py` | `~/.claude/hooks/pre-compact-bd-sync.py` | Authored for Factory but stdlib-only and runtime-portable. `PreCompact` bd snapshot. |
-| `core/hooks/factory-droid/post-compact-prime-reminder.sh` | `~/.claude/hooks/post-compact-prime-reminder.sh` | Authored for Factory but pure bash and runtime-portable. `SessionStart` `bd prime` reload. |
+| `core/hooks/factory-droid/pre-compact-bd-sync.py` | `~/.claude/hooks/pre-compact-bd-sync.py` | Authored for Factory but stdlib-only and runtime-portable. `PreCompact` session-checkpoint snapshot. |
+| `core/hooks/factory-droid/post-compact-prime-reminder.sh` | `~/.claude/hooks/post-compact-prime-reminder.sh` | Authored for Factory but pure bash and runtime-portable. `SessionStart` `bd prime` reload + checkpoint read-back. |
 | `core/statusline/statusline.sh` | `~/.claude/statusline.sh` | Optional statusline (wire under `statusLine`). |
 | `core/statusline/statusline-context.py` | `~/.claude/statusline-context.py` | Resolved as a sibling of `statusline.sh`; also used by `ctx-threshold-warn.py`. |
 | `installation/command-denylist.md` | `.claude/settings.json` → `permissions.deny` | Translate denylist entries into Claude permission rules (see [`permissions`](#full-claudesettingsjson)). |
@@ -221,7 +221,7 @@ Notes:
 
 - `UserPromptSubmit` runs the context-budget nudge and the learning-capture soft nudge; `SubagentStop` runs the learning-capture hard gate. Both reuse the same `learning-gate.py`.
 - The two events carry **different transcript fields**: `SubagentStop` grades `agent_transcript_path` (the worker's own record); `UserPromptSubmit` grades `transcript_path` (the session). Binding the gate to a sub-agent-stop event on any runtime means checking which field that runtime supplies — grading the parent transcript fails silently in both directions.
-- `PreCompact` matcher `auto|manual` snapshots bd memory before either compaction path. `SessionStart` matchers `startup` and `compact` reload `bd prime`.
+- `PreCompact` matcher `auto|manual` writes the session checkpoint before either compaction path. `SessionStart` matchers `startup` and `compact` reload `bd prime`.
 - `env.CTX_MAX_TOKENS` is an example; set it to your model's effective compaction limit. Add other env (e.g. `BEADS_DB`, `HARNESS_REFS`, `HARNESS_METRICS`) here as needed.
 - `permissions.deny` is the full mutating-command denylist; keep it in sync with [`installation/command-denylist.md`](../../installation/command-denylist.md).
 - `permissions.allow` is a short example. Adopters tailor it to the read-only commands and MCP write tools their workflows require — the two `mcp__<server>__<writeTool>` entries are placeholders for whichever MCP write tools you pre-approve.

@@ -27,7 +27,7 @@ For the wider operating model (the seven pillars), see [`core/protocols/harness-
 - Query `graphify-out/graph.json` before broad repo exploration when it exists.
 - Use `bd` for task state, comments, dependencies, and durable memory.
 - Check `agent-knowledge/references/index.md` before broad searches so existing knowledge is reused.
-- Use `rtk` for simple read-only verbose commands; do not wrap mutating, piped, chained, interactive, or exact-output-sensitive commands.
+- Use `rtk` for simple read-only verbose commands; do not wrap mutating, piped, chained, interactive, or exact-output-sensitive commands, `gh pr diff` (rtk drops whole files from it), or anything whose output IS the evidence.
 - Keep changes surgical and verifiable.
 - Never expose secrets, internal identifiers, cluster names, account IDs, customer names, or private URLs.
 

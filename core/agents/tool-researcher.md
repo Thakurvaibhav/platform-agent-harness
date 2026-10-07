@@ -113,10 +113,11 @@ Sub-agents in most runtimes cannot spawn sub-agents — the nesting is blocked a
 **Order matters:** research (optionally fanned out) → draft the report → verify the drafted claims → present. Verification runs on a draft; you cannot check claims you have not written yet.
 
 ```bash
-timeout <sec> agent-knowledge/scripts/codex-dispatch.sh <role> "<task>" <dir> > /tmp/<name>.out 2>&1 < /dev/null
+timeout <sec> agent-knowledge/scripts/codex-dispatch.sh <role> "<task>" <dir> \
+  > <run-dir>/<name>.out 2>&1 < /dev/null; echo "DISPATCH_EXIT=$?" >> <run-dir>/<name>.out
 ```
 
-Rules:
+The full launch contract — run-unique paths, the end marker, and the three-condition completion test — is canonical in [`core/protocols/parallel-dispatch.md`](../protocols/parallel-dispatch.md). Rules that bite here specifically:
 
 - **Redirect to a file. Never pipe to `head`/`tail`, never truncate.** A truncated capture silently discards findings, and a pipe masks the worker's exit code. Capture everything, read selectively.
 - **`timeout` is mandatory**, not optional — a hung worker can burn hours before anyone notices.

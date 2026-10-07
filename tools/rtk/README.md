@@ -37,7 +37,7 @@ Before every shell call, classify the command:
 
 ```bash
 rtk git diff
-rtk gh pr diff <url>
+rtk gh pr view <url> --json files
 rtk kubectl describe pod <pod> -n <ns>
 rtk helm template <release> <chart>
 ```
@@ -45,7 +45,7 @@ rtk helm template <release> <chart>
 Expanded allowlist:
 
 - Git read-only: `status`, `diff`, `log`, `show`, `branch`
-- GitHub read-only: `pr list`, `pr view`, `pr diff`, `issue list`, `issue view`, `run view`
+- GitHub read-only: `pr list`, `pr view`, `issue list`, `issue view`, `run view`
 - Kubernetes read-only: `get`, `describe`, `logs`, `top`
 - Containers read-only: `docker ps`, `docker logs`
 - Helm read/check: `template`, `lint`, `dependency build`, `show values`
@@ -57,6 +57,8 @@ Expanded allowlist:
 
 Keep raw — do **not** wrap in `rtk`:
 
+- `gh pr diff` — rtk drops whole files from it; a reviewer never learns what was skipped
+- Anything whose output IS the evidence (a render, a plan, a full manifest). Prefix `RTK_DISABLE=1` so an autoprefix hook bails too
 - `git commit`, `git push`
 - Mutating Kubernetes or Helm commands
 - Commands with `|`, `&&`, `||`, `;`, command substitution, or process substitution
