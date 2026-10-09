@@ -4,7 +4,7 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <meta name="description" content="How a CLI coding agent is wired to keep what it learns: dispatch, memory tiers, the consolidation loop, and what each agent reads before it starts work.">
-<meta name="color-scheme" content="light dark">
+<meta name="color-scheme" content="dark light">
 <meta property="og:type" content="website">
 <meta property="og:title" content="Platform Agent Harness">
 <meta property="og:description" content="How a CLI coding agent is wired to keep what it learns: dispatch, memory tiers, the consolidation loop, and what each agent reads before it starts work.">
@@ -16,24 +16,17 @@
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500&family=IBM+Plex+Sans:wght@400;500;600&family=Spectral:wght@400;600&display=swap">
 
 <style>
+  /* Dark is the default surface, in CSS rather than in script, so it holds with
+     JavaScript off. The system preference decides nothing; light is an opt-out. */
   :root{
-    --ground:#F6F8FA; --panel:#FFFFFF; --ink:#16202C; --muted:#5A6675;
-    --rule:#DDE3EA; --accent:#2F6F6B; --accent-soft:#E4EFEE;
-    --switch-x:0px; color-scheme:light;
-  }
-  /* Dark is reached two ways: the system preference when the root is un-stamped,
-     and an explicit data-theme stamp, which the switch writes and wins either way. */
-  @media (prefers-color-scheme: dark){
-    :root:not([data-theme="light"]){
-      --ground:#0F141A; --panel:#161D25; --ink:#E5EAF1; --muted:#909DAD;
-      --rule:#242D38; --accent:#68B0A9; --accent-soft:#172B2A;
-      --switch-x:11px; color-scheme:dark;
-    }
-  }
-  :root[data-theme="dark"]{
     --ground:#0F141A; --panel:#161D25; --ink:#E5EAF1; --muted:#909DAD;
     --rule:#242D38; --accent:#68B0A9; --accent-soft:#172B2A;
     --switch-x:11px; color-scheme:dark;
+  }
+  :root[data-theme="light"]{
+    --ground:#F6F8FA; --panel:#FFFFFF; --ink:#16202C; --muted:#5A6675;
+    --rule:#DDE3EA; --accent:#2F6F6B; --accent-soft:#E4EFEE;
+    --switch-x:0px; color-scheme:light;
   }
 
   *{box-sizing:border-box}
@@ -170,28 +163,23 @@
 </style>
 
 <script>
-/* Runs in <head> so the stamp lands before first paint. Storage throws outright
-   in some contexts, so every access is guarded and falls back to the system. */
+/* Runs in <head> so the stamp lands before first paint. Dark needs no stamp, so
+   only the light opt-out is written; storage throws outright in some contexts. */
 (function(){
   var KEY="pah-theme", root=document.documentElement, stored=null;
   try{ stored=localStorage.getItem(KEY); }catch(e){}
-  if(stored==="dark"||stored==="light"){ root.setAttribute("data-theme",stored); }
+  if(stored==="light"){ root.setAttribute("data-theme","light"); }
   root.setAttribute("data-js","");
-  var mq=window.matchMedia("(prefers-color-scheme: dark)");
-  function isDark(){
-    var set=root.getAttribute("data-theme");
-    return set ? set==="dark" : mq.matches;
-  }
+  function isDark(){ return root.getAttribute("data-theme")!=="light"; }
   function wire(){
     var box=document.getElementById("theme-flip");
     if(!box){ return; }
     box.checked=isDark();
     box.addEventListener("change",function(){
-      var next=box.checked?"dark":"light";
-      root.setAttribute("data-theme",next);
-      try{ localStorage.setItem(KEY,next); }catch(e){}
+      if(box.checked){ root.removeAttribute("data-theme"); }
+      else{ root.setAttribute("data-theme","light"); }
+      try{ localStorage.setItem(KEY, box.checked?"dark":"light"); }catch(e){}
     });
-    mq.addEventListener("change",function(){ box.checked=isDark(); });
   }
   if(document.readyState==="loading"){ document.addEventListener("DOMContentLoaded",wire); }
   else{ wire(); }
