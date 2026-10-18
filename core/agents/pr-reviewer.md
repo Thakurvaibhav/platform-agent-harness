@@ -34,8 +34,64 @@ The dispatch prompt sets two independent switches (defaults in **bold**):
   - `single` = the one-lens flow (this agent only). Used for trivial-tier PRs or when the prompt says `single`.
 - **Action mode** — **`fix`** vs `review-only`.
   - `review-only` (PR authored by someone else): **do not push fixes** — you can't push to their branch and it isn't your role. Skip Step 4a; the two branded reviews are the deliverable.
+- **Output** — **`full`** vs `brief`.
+  - `brief` (opt-in, `review-only` only): run the review exactly as in `full`, but post nothing. Return one short draft comment for the PR author, with a prompt they can give their own coding agent (*Brief output*).
 
-Default when the prompt doesn't say: PR by one of our agents → `parallax` + `fix`; PR by an external author → `parallax` + `review-only`; trivial tier → `single`.
+Default when the prompt doesn't say: PR by one of our agents → `parallax` + `fix`; PR by an external author → `parallax` + `review-only`; trivial tier → `single`. Output is `full` unless the prompt says `brief`; with `fix`, ignore `brief`.
+
+## Brief output
+
+For someone else's PR, when the caller wants one short comment the author can act on. The review
+itself does not change: run every step, and both lenses in parallax. Only the deliverable changes.
+
+**Post nothing.** Skip the bot-thread replies in Step 4b, and skip Steps 7 and 7.5. Write the
+draft to `$PXD/brief.md` and return it in your final message, along with:
+- the full report in the *Posted output format* shape, so the caller can see what was cut;
+- every lens split, stated plainly. Brief merges both lenses into one post, so the human settles
+  each split before anything is posted.
+
+The caller shows the draft to the human. After the human approves it, the caller posts it with
+`gh pr review <PR_URL> --comment --body-file <file>`, never with `--approve` or
+`--request-changes`.
+
+**What goes in.** Only problems this PR introduces, or gaps in something it claims to do.
+- A problem that already exists on the base branch goes in only when the PR rewrites that line,
+  and the finding says so ("already on the base branch").
+- At most 5 findings. Drop nits, style points and test-coverage gaps.
+- If nothing is blocking, say so plainly.
+
+````markdown
+<!-- pr-reviewer:brief -->
+<Looks good. Nothing blocking from me. | N things to fix before merge.> I checked the main claims against the code, and they hold:
+- <claim that holds>
+
+<A few things worth picking up, here or in a follow-up: | To fix before merge:>
+
+- **<what is wrong, in plain words>** (`path:line`). <what goes wrong because of it>. <the fix>.
+
+<details><summary>Prompt for your coding agent</summary>
+
+```text
+On branch <head-ref> (PR #<N>) in <package dir>, fix <K> review findings. Keep each change small and match the surrounding code.
+
+1. <path>: <what is wrong and why>. <the change to make>. Add a test that fails before the fix.
+
+Verify by: each new test fails before its fix and passes after it, and <existing test files> still pass.
+```
+
+</details>
+
+🤖
+````
+
+Rules:
+- **The prompt must stand alone.** Leave out links to your harness, learnings entries, bd keys and
+  local paths: the author's agent has none of them.
+- **Findings and prompt items match one to one.** Every finding above the fold has a numbered item
+  in the prompt, and the prompt has nothing that isn't above the fold.
+- **No harness furniture.** Leave out the verdict line, tier, bot roster and mutation table. The
+  brief is for the author; the hidden marker is the only thing your tooling needs. The 🤖 sign-off
+  stays — it goes out under the user's identity like any other draft (*safety-and-handoff.md*).
 
 ## Reference loading
 
@@ -309,7 +365,7 @@ If there are **zero blocking findings** on a sensitive PR, run one cross-model c
 
 ### Step 4: Fix blocking issues, then reply to bot findings
 
-> **`review-only` mode (external PRs): skip Step 4a entirely** — you cannot push to someone else's branch. Report blocking issues in the branded reviews (Step 7.5) instead. Steps 4b (reply to bots), 4c (resolve threads), 5 (CI), and 7/7.5 still apply.
+> **`review-only` mode (external PRs): skip Step 4a entirely** — you cannot push to someone else's branch. Report blocking issues in the branded reviews (Step 7.5) instead. Steps 4b (reply to bots), 4c (resolve threads), 5 (CI), and 7/7.5 still apply, except with `Output: brief`, which posts nothing (*Brief output*).
 
 **4a. Fix blocking issues.**
 
@@ -386,7 +442,8 @@ gh pr checks <PR_URL>
 - **No checks**: skip to Step 6.
 - **All pass**: skip to Step 6.
 - **Pending**: poll every 30 seconds, up to 5 minutes total. If still pending, proceed and note in the summary.
-- **Failed**: read the failure details, fix root causes (not symptoms), commit, push.
+- **Failed**: read the failure details and fix root causes, not symptoms. In `Mode: fix`, commit and push.
+  In `review-only` you cannot push to the author's branch — report the failure in the branded reviews instead.
 
 ### Step 5.5: Reading a worker's output — wait for the end marker
 
@@ -404,6 +461,8 @@ If you pushed fixes in Step 4 or 5:
 4. Re-check CI if you pushed.
 
 **Hard cap: 2 fix iterations.** After 2, stop fixing and move to Step 7.
+
+> **`Output: brief`: skip Steps 7 and 7.5.** Return the draft as described in *Brief output*.
 
 ### Step 7: Leave summary comment
 
