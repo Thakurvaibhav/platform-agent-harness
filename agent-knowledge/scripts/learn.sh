@@ -15,7 +15,7 @@
 set -o pipefail
 
 INSIGHT="$1"
-KEY="${2:-session/adhoc}"
+KEY="${2:-}"
 
 if [ -z "$INSIGHT" ]; then
   echo "usage: learn.sh \"<insight>\" [<domain>/<category>/<topic>]" >&2
@@ -34,9 +34,15 @@ find_bd_cwd() {
   return 1
 }
 
+# No key given: omit --key so bd derives one from the content. Defaulting to a
+# fixed key made every keyless call overwrite the previous memory in place --
+# `bd remember --key` updates an existing key rather than adding one.
+KEY_ARG=()
+[ -n "$KEY" ] && KEY_ARG=(--key "$KEY")
+
 BD_CWD="$(find_bd_cwd)"
 if [ -n "$BD_CWD" ]; then
-  ( cd "$BD_CWD" && bd remember "$INSIGHT" --key "$KEY" )
+  ( cd "$BD_CWD" && bd remember "$INSIGHT" "${KEY_ARG[@]}" )
 else
-  bd remember "$INSIGHT" --key "$KEY"
+  bd remember "$INSIGHT" "${KEY_ARG[@]}"
 fi
