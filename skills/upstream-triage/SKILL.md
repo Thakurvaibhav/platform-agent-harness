@@ -1,3 +1,16 @@
+---
+name: upstream-triage
+description: |
+  Decide what to do about a confirmed limitation or bug in a third-party dependency —
+  plugin, controller, operator, library — and draft a clean upstream issue when filing
+  is the answer. Use when you have verified a third-party tool does not do what we need:
+  "is this a known issue", "should we file upstream", "file a bug against X", or after
+  reflex R2 confirms the behavior in the source at your pinned version. Triages wait vs
+  work-around vs file by checking whether the project is maintained and a fix is likely.
+  Drafts and confirms before filing, never files automatically, and never leaks internal
+  names or infrastructure detail into the issue body. Do NOT use for bugs in your own
+  repositories.
+---
 # Skill: Upstream Triage
 
 > When you confirm a limitation or bug in a third-party dependency (plugin, controller, operator, library), decide whether to wait, work around, or file upstream, and draft a clean, internal-info-free issue. Draft-and-confirm before filing; never auto-file.

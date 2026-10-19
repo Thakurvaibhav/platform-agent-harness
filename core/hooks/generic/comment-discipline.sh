@@ -140,6 +140,45 @@ def is_comment(text, path):
             return True
     return False
 
+# Quote characters, built with chr() because this whole Python body is carried
+# inside a single-quoted shell string: one literal apostrophe would end it.
+_QUOTE_CHARS = chr(34) + chr(39) + chr(96)
+
+def inline_comment(text, path):
+    """The trailing comment on a line of code, or empty.
+
+    is_comment() only matches a line that STARTS with a comment token, so a
+    comment moved onto the end of a code line reached the gate as ordinary code
+    and the BANNED scan never saw it -- the ticket-ID rule was avoidable just by
+    writing the comment inline. Quote state is tracked so a token inside a string
+    literal (a URL, a fragment anchor) is not read as a comment opener: a false
+    positive here is worse than the miss, because a gate that cries wolf is one
+    somebody turns off.
+    """
+    toks = tuple(openers(path))
+    if not toks:
+        return ""
+    quote, i, n = None, 0, len(text)
+    while i < n:
+        c = text[i]
+        if quote:
+            if c == chr(92):
+                i += 2
+                continue
+            if c == quote:
+                quote = None
+            i += 1
+            continue
+        if c in _QUOTE_CHARS:
+            quote = c
+            i += 1
+            continue
+        for t in toks:
+            if text.startswith(t, i):
+                return text[i:]
+        i += 1
+    return ""
+
 def skip(path):
     return path.endswith(SKIP_SUFFIX) or any(p in path for p in SKIP_PATH)
 
@@ -275,6 +314,17 @@ for raw in sys.stdin:
         else:
             if text.strip():
                 d[1] += 1
+            # A code line can still carry a banned token in a trailing comment.
+            # Density is deliberately NOT incremented: this is a code line that
+            # happens to have a comment, and counting it would change the
+            # comment-ratio maths the gate already reports.
+            frag = inline_comment(text, path)
+            if frag:
+                for rx, label in BANNED:
+                    if rx.search(frag):
+                        findings.append((path, lineno, 0, "%s in code comment" % label,
+                                         text.strip()))
+                        break
             flush()
     elif line.startswith("-"):
         continue          # removed line: no effect on the added-run

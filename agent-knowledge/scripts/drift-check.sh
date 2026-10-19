@@ -194,6 +194,17 @@ check_standard_routing() {
         || WARNINGS+=("DRIFT: codex-dispatch.sh preamble does not name code-quality.md (Codex workers get no standard)")
 }
 
+# check_graph_freshness was defined and never invoked, so the "stale graphify graph"
+# check this script advertises has never run. It takes a repo path, unlike the other
+# checks, which is why it was never wired. Set WORK_ROOT to the directory holding your
+# repos; only repos that already contain graphify-out/ are checked, because warning on
+# every un-graphed repo would bury the real signal.
+if [ -n "${WORK_ROOT:-}" ] && [ -d "$WORK_ROOT" ]; then
+    for _repo in "$WORK_ROOT"/*/; do
+        [ -d "${_repo}graphify-out" ] && check_graph_freshness "${_repo%/}"
+    done
+fi
+
 check_learnings_freshness
 check_memory_count
 check_consolidation_freshness

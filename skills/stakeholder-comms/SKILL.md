@@ -1,3 +1,14 @@
+---
+name: stakeholder-comms
+description: |
+  Draft a team-facing message about a decision, tradeoff, or change — Slack, PR or RFC
+  comment, email — so it is diplomatic, specific, and drives a decision rather than
+  narrating. Use when writing a blurb for the team, announcing a change that affects
+  others, explaining a tradeoff to stakeholders, or pushing back on a proposal without
+  relitigating sign-offs already given. Produces a draft the user sends under their own
+  name; Slack messages are drafted, never sent. Do NOT use for PR descriptions (see
+  create-pr) or routine status replies.
+---
 # Skill: Stakeholder Comms
 
 > Draft team-facing messages (Slack, PR/RFC, email) about a decision, tradeoff, or change so they're diplomatic, clear, and decision-driving -- without relitigating prior sign-offs or making anyone defensive.

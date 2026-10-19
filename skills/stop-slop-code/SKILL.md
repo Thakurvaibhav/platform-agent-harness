@@ -1,3 +1,13 @@
+---
+name: stop-slop-code
+description: |
+  Review a local diff or working tree for structural defects that mark incomplete or
+  lazily generated code: dead abstractions, copy-paste divergence, unused parameters,
+  swallowed errors, tests that assert nothing. Use before pushing, when the user says
+  "find bugs in these changes", "review before I push", or "clean up this code", and as
+  the pre-PR quality gate on a change your own agents wrote. Operates on the local diff,
+  not a PR URL. Do NOT use to review a published pull request (see parallax-review).
+---
 # Skill: Stop Slop (Code Mode)
 
 > Detects structural code problems that indicate incomplete, lazy, or AI-generated code. Run during code review or before PR creation.

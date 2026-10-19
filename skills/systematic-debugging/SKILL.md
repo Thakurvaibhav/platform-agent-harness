@@ -1,3 +1,13 @@
+---
+name: systematic-debugging
+description: |
+  Four-phase root-cause protocol for a bug that has resisted the obvious fix. Use when
+  stuck on a tricky bug, when retries have not converged, when a failure is intermittent,
+  or when the user asks to debug methodically. Enforces evidence before hypothesis, one
+  isolated hypothesis tested at a time, and a defense-in-depth fix rather than a patch at
+  the first place that reproduces. Do NOT use when the cause is already known, or for
+  Kubernetes workload triage (see k8s-debug).
+---
 # Skill: Systematic Debugging
 
 > 4-phase root cause investigation protocol. Prevents blind retry loops by enforcing evidence gathering, hypothesis formation, isolated testing, and defense-in-depth fixes.

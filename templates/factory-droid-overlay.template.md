@@ -126,6 +126,11 @@ After any droid returns a PR URL, evaluate whether to dispatch `pr-reviewer`
 - Single-file config changes (<10 lines)
 - User explicitly says "skip review"
 
+**Precedence: ALWAYS wins.** Evaluate security-sensitive scope *before* any size-based
+exemption. A one-line change to RBAC, a secret, a NetworkPolicy or an escalation policy is a
+**sensitive**-tier review, not a trivial one. The NEVER list applies only to a PR that matched
+nothing in ALWAYS.
+
 **Dispatch template:**
 ```
 Goal: Review and fix PR <url>
