@@ -41,18 +41,19 @@ unmeasurable at the sample size it was taken from.
                                           │
             ┌─────────────────────────────┼─────────────────────────────┐
             │                             │                             │
-   ┌────────▼────────┐         ┌──────────▼────────┐         ┌──────────▼─────────┐
-   │  Specialist     │         │   Durable state   │         │   Local knowledge  │
-   │  sub-agents     │         │   (bd / Beads)    │         │   base + Graphify  │
-   │                 │         │                   │         │                    │
-   │ task-planner    │         │ tasks, comments,  │         │ agent-knowledge/   │
-   │ tool-researcher │         │ memories, ready   │         │  references/       │
-   │ helm-engineer   │         │ queues survive    │         │   index · log ·    │
-   │ argocd-engineer │◄────────┤ compaction        │────────►│   learnings-*.md   │
-   │ platform-engr   │         │                   │         │  (Karpathy Wiki)   │
-   │ pr-reviewer     │         └─────────┬─────────┘         │  scripts/ · metrics│
-   │ general-engineer│                   │                   │  + graph queries   │
-   └────────┬────────┘                   │                   └────────────────────┘
+   ┌────────▼──────────┐       ┌──────────▼────────┐         ┌──────────▼─────────┐
+   │  Specialist       │       │   Durable state   │         │   Local knowledge  │
+   │  sub-agents       │       │   (bd / Beads)    │         │   base + Graphify  │
+   │                   │       │                   │         │                    │
+   │ task-planner      │       │ tasks, comments,  │         │ agent-knowledge/   │
+   │ tool-researcher   │       │ memories, ready   │         │  references/       │
+   │ helm-engineer     │       │ queues survive    │         │   index · log ·    │
+   │ argocd-engineer   │◄──────┤ compaction        │────────►│   learnings-*.md   │
+   │ platform-engineer │       │                   │         │  (Karpathy Wiki)   │
+   │ alert-investigator│       └─────────┬─────────┘         │  scripts/ · metrics│
+   │ pr-reviewer       │                 │                   │  + graph queries   │
+   │ general-engineer  │                 │                   └────────────────────┘
+   └────────┬──────────┘                 │
             │                            ▼
             │            ┌──────────────────────────────────┐
             └───────────►│   Skills (executable playbooks)  │
@@ -111,7 +112,7 @@ For a public companion repo using this exact operating model, see [`Thakurvaibha
 
 | Layer | Path | What it provides |
 | --- | --- | --- |
-| Agent prompts | [`core/agents/`](core/agents/) | 7 specialist sub-agents (planner, researcher, helm, argocd, platform/observability, PR reviewer, general-engineer) with explicit "when to invoke / when NOT to invoke" boundaries |
+| Agent prompts | [`core/agents/`](core/agents/) | 8 specialist sub-agents (planner, researcher, helm, argocd, platform/observability, PR reviewer, read-only alert triage, general-engineer) with explicit "when to invoke / when NOT to invoke" boundaries |
 | Protocols | [`core/protocols/`](core/protocols/) | 11 canonical rules: harness-pillars, code-quality, delegation, bd-and-memory, knowledge-tiers, rtk-command-policy, graphify-first, pr-review-loop, parallel-dispatch, safety-and-handoff, design-framework |
 | Skills | [`skills/`](skills/) | 15 portable executable playbooks (shiny-engineer, create-pr, helm-upgrade, k8s-debug, graphify, contract-validation, adopt-eval, upstream-triage, stakeholder-comms, stop-slop-code, systematic-debugging, ingest-reading, design, parallax-review, verify-claims); observability skills live in `gcx skills install` |
 | Domain packs | [`domain-packs/`](domain-packs/) | Kubernetes safety, Helm essentials, observability-via-gcx — focused, not exhaustive |
