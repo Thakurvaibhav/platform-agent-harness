@@ -1,0 +1,70 @@
+name: gates
+
+# This repository ships verification gates; CI runs them against the repository
+# itself. The local redaction denylist (step 3 of the pre-publish checklist) is
+# git-ignored by design and cannot run here — it stays a pre-push step.
+on:
+  push:
+    branches: [main]
+  pull_request:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  gates:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+
+      - name: Formatting (sanitization/check-format.py)
+        run: python3 sanitization/check-format.py .
+
+      - name: Index integrity (sanitization/check-index.py)
+        run: python3 sanitization/check-index.py .
+
+      - name: Every learnings file is indexed
+        run: |
+          missing=0
+          for f in agent-knowledge/references/learnings-*.md; do
+            grep -q "]($(basename "$f"))" agent-knowledge/references/index.md \
+              || { echo "::error file=$f::not referenced in index.md"; missing=1; }
+          done
+          exit $missing
+
+      - name: Learnings entry numbering is unique
+        run: |
+          rc=0
+          for f in agent-knowledge/references/learnings-*.md; do
+            dup=$(grep -oE '^[0-9]+\.' "$f" | sort | uniq -d | tr '\n' ' ')
+            [ -n "$dup" ] && { echo "::error file=$f::duplicate entry numbers: $dup"; rc=1; }
+          done
+          exit $rc
+
+      - name: Shell syntax
+        run: |
+          rc=0
+          while IFS= read -r f; do bash -n "$f" || rc=1; done \
+            < <(find . -name '*.sh' -not -path './.git/*')
+          exit $rc
+
+      - name: ShellCheck (error level)
+        run: |
+          sudo apt-get update -qq && sudo apt-get install -y -qq shellcheck
+          find . -name '*.sh' -not -path './.git/*' -print0 \
+            | xargs -0 shellcheck -S error
+
+      - name: Python syntax
+        run: python3 -m compileall -q core sanitization tools
+
+      - name: Secret scan (gitleaks)
+        run: |
+          curl -sSL -o /tmp/gl.tar.gz \
+            https://github.com/gitleaks/gitleaks/releases/download/v8.21.2/gitleaks_8.21.2_linux_x64.tar.gz
+          tar -xzf /tmp/gl.tar.gz -C /tmp gitleaks
+          /tmp/gitleaks detect --no-git --redact --source . --exit-code 1

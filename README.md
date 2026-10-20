@@ -1,5 +1,7 @@
 # Platform Agent Harness
 
+[![gates](https://github.com/Thakurvaibhav/platform-agent-harness/actions/workflows/ci.yml/badge.svg)](https://github.com/Thakurvaibhav/platform-agent-harness/actions/workflows/ci.yml) [![License: Apache 2.0](https://img.shields.io/badge/License-Apache%202.0-blue.svg)](LICENSE)
+
 **Turn a CLI coding agent into a coordinated platform engineering teammate.**
 
 A portable, runtime-neutral behavioral specification and coordination protocol for AI agents doing Kubernetes, Helm, ArgoCD, CI, and observability work. Works with [Aider](https://aider.chat/), [Claude Code](https://code.claude.com/), [Codex CLI](https://developers.openai.com/codex/cli), [Factory Droid](https://factory.ai/), [Goose](https://block.github.io/goose/), [OpenCode](https://opencode.ai/), or any CLI agent that can read instructions and run shell commands.
@@ -22,6 +24,10 @@ with diagrams: dispatch, memory tiers, the consolidation loop, and what each age
 | **Design before code** — requirements lock, constraint inventory (hard / convention / preference), candidate shapes, multi-model judge panel ([`core/protocols/design-framework.md`](core/protocols/design-framework.md), driven by the [`design`](skills/design/) skill). |
 | **18 observability skills** install via `gcx skills install --all` — no vendoring. |
 | **Survives a job change.** Knowledge splits into a portable tier (`references/`) and a per-org instance tier ([`agent-knowledge/orgs/`](agent-knowledge/orgs/)), with one switch ([`agent-knowledge/env.sh`](agent-knowledge/env.sh)) for every machine path — see [`core/protocols/knowledge-tiers.md`](core/protocols/knowledge-tiers.md) and the runbook at [`installation/new-org-setup.md`](installation/new-org-setup.md). |
+
+**[Where these numbers come from →](docs/evidence.md)** — measurements quoted verbatim from the
+harness's own corpus, with citations you can open. Including the ones that say a claim is
+unmeasurable at the sample size it was taken from.
 
 ---
 
@@ -142,6 +148,12 @@ The handoff report has a mandatory `## Knowledge updates` section ([`templates/h
   (`git symbolic-ref refs/remotes/origin/HEAD`), never assumed to be `main`; no force-push to protected branches.
 - Read-only by default; runtime denylists pin the rest.
 - All examples and templates use synthetic placeholders (`<cluster>`, `<service>`, `<TICKET-KEY>`).
+
+## License
+
+[Apache-2.0](LICENSE). The knowledge corpus in `agent-knowledge/references/` ships under the same
+licence as the code; it is sanitized production experience, not vendor documentation, and is
+offered without warranty like everything else here.
 
 ## Credits
 
