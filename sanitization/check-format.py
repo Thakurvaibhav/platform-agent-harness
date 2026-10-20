@@ -11,12 +11,12 @@ def main() -> int:
         if p.is_dir() or ".git" in p.parts or "__pycache__" in p.parts:
             continue
         data = p.read_bytes()
-        if data and not data.endswith(b"\n"):
-            issues.append(f"{p.relative_to(root)}: missing trailing newline")
         try:
             text = data.decode("utf-8")
         except UnicodeDecodeError:
-            continue
+            continue  # binary asset: no text formatting rule applies
+        if data and not data.endswith(b"\n"):
+            issues.append(f"{p.relative_to(root)}: missing trailing newline")
         for i, line in enumerate(text.splitlines(), 1):
             if line.rstrip() != line:
                 issues.append(f"{p.relative_to(root)}:{i}: trailing whitespace")
