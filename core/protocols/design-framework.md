@@ -166,6 +166,31 @@ implementation.
 
 ---
 
+### Phase 4 gate — the cold reader
+
+Before the deliverable ships, dispatch **one** worker to read it as someone who just joined.
+Its only job: **list every term, system, flag or prerequisite it cannot resolve** from the
+document plus the files the document links. It proposes nothing and fixes nothing.
+
+Two rules make it work, and both are easy to get wrong:
+
+- **It must NOT run the startup preamble.** No memory prime, no index, no knowledge search, no
+  cluster registry. A reader primed with the corpus can resolve a term the document never
+  defines, which is exactly the failure being tested. Say so in the prompt: *read only the
+  target document and what it links.*
+- **Give it no conversation.** Not the requirements, not the constraint table, not the panel's
+  reasoning — only the artifact. Everything you hand it is a definition the document did not
+  have to supply.
+
+Cheap model, one pass. Anything it cannot resolve is either defined inline, linked, or
+deliberately left — and "deliberately left" is written down as such, not left implied.
+
+The judges in Phase 3 cannot do this job. They are asked whether the design is *right*, and by
+the time they score it they have read the constraint table — which is where half the undefined
+terms are defined. Self-containment has to be tested by something that was never told.
+
+---
+
 ## Anti-patterns
 
 - **One candidate.** Guarantees convergence by review rounds.
@@ -182,3 +207,5 @@ implementation.
   illegible; ship it with the candidates.
 - **Scoring complexity instead of removing it.** A removable component is a defect, not a
   lower score.
+- **A cold reader that was primed.** A reader holding the corpus resolves terms the document
+  never defined, and reports a self-contained doc. The check becomes a rubber stamp.
