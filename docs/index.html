@@ -74,6 +74,7 @@
     .toc-links a{display:block; margin-bottom:7px}
     .toc-links a+a::before{content:none}
     .tsw{margin-top:5px}
+    .toc{align-self:stretch}
     .toc-inner{position:sticky; top:60px}
     .toc ol{list-style:none; margin:14px 0 0; padding:0; counter-reset:t}
     .toc li{counter-increment:t; margin-bottom:9px; line-height:1.35}
@@ -87,7 +88,7 @@
   }
   @media (min-width:1600px){ .wrap{max-width:1280px; grid-template-columns:236px minmax(0,1fr)} }
   html{scroll-behavior:smooth}
-  section{scroll-margin-top:28px}
+  section{scroll-margin-top:72px}  /* clears the sticky tab bar */
   @media (prefers-reduced-motion:reduce){ html{scroll-behavior:auto} }
   h1,h2{font-family:Spectral,Georgia,serif; text-wrap:balance; margin:0}
   h1{font-size:42px; font-weight:600; line-height:1.12; letter-spacing:-.015em}
@@ -162,6 +163,47 @@
   footer{margin-top:64px; padding-top:22px; border-top:1px solid var(--rule);
     font-size:13.5px; color:var(--muted)}
   @media (max-width:560px){ h1{font-size:32px} .layer{grid-template-columns:1fr; gap:4px} }
+
+  /* Tabs. State lives in radio inputs that precede .wrap, so panes switch through
+     the sibling combinator alone and the page still works with JavaScript off. */
+  .tabin{position:absolute; opacity:0; width:1px; height:1px; margin:0}
+  .tabbar{display:flex; flex-wrap:wrap; gap:0 22px; margin-top:26px;
+    border-bottom:1px solid var(--rule); position:sticky; top:0; z-index:5;
+    background:var(--ground)}
+  .tabbar label{font-family:"IBM Plex Mono",monospace; font-size:12.5px; letter-spacing:.04em;
+    color:var(--muted); padding:11px 1px; cursor:pointer; white-space:nowrap;
+    border-bottom:2px solid transparent; margin-bottom:-1px; transition:color .12s}
+  .tabbar label:hover{color:var(--accent)}
+  .pane{display:none}
+  .pane > section:first-child{margin-top:36px}
+  .toc ol.rail{display:none}
+  .defs{position:absolute; width:0; height:0; overflow:hidden}
+  #t-overview:checked ~ .wrap #p-overview{display:block}
+  #t-overview:checked ~ .wrap label[for="t-overview"]{color:var(--ink); border-bottom-color:var(--accent)}
+  #t-overview:checked ~ .wrap .toc ol.rail-overview{display:block}
+  #t-overview:focus-visible ~ .wrap label[for="t-overview"]{outline:2px solid var(--accent); outline-offset:3px}
+  #t-design:checked ~ .wrap #p-design{display:block}
+  #t-design:checked ~ .wrap label[for="t-design"]{color:var(--ink); border-bottom-color:var(--accent)}
+  #t-design:checked ~ .wrap .toc ol.rail-design{display:block}
+  #t-design:focus-visible ~ .wrap label[for="t-design"]{outline:2px solid var(--accent); outline-offset:3px}
+  #t-dispatch:checked ~ .wrap #p-dispatch{display:block}
+  #t-dispatch:checked ~ .wrap label[for="t-dispatch"]{color:var(--ink); border-bottom-color:var(--accent)}
+  #t-dispatch:checked ~ .wrap .toc ol.rail-dispatch{display:block}
+  #t-dispatch:focus-visible ~ .wrap label[for="t-dispatch"]{outline:2px solid var(--accent); outline-offset:3px}
+  #t-review:checked ~ .wrap #p-review{display:block}
+  #t-review:checked ~ .wrap label[for="t-review"]{color:var(--ink); border-bottom-color:var(--accent)}
+  #t-review:checked ~ .wrap .toc ol.rail-review{display:block}
+  #t-review:focus-visible ~ .wrap label[for="t-review"]{outline:2px solid var(--accent); outline-offset:3px}
+  #t-memory:checked ~ .wrap #p-memory{display:block}
+  #t-memory:checked ~ .wrap label[for="t-memory"]{color:var(--ink); border-bottom-color:var(--accent)}
+  #t-memory:checked ~ .wrap .toc ol.rail-memory{display:block}
+  #t-memory:focus-visible ~ .wrap label[for="t-memory"]{outline:2px solid var(--accent); outline-offset:3px}
+  #t-adopt:checked ~ .wrap #p-adopt{display:block}
+  #t-adopt:checked ~ .wrap label[for="t-adopt"]{color:var(--ink); border-bottom-color:var(--accent)}
+  #t-adopt:checked ~ .wrap .toc ol.rail-adopt{display:block}
+  #t-adopt:focus-visible ~ .wrap label[for="t-adopt"]{outline:2px solid var(--accent); outline-offset:3px}
+  @media (max-width:1079px){ .toc ol.rail{display:none} }
+  @media (max-width:560px){ .tabbar{gap:0 15px} .tabbar label{font-size:11.5px} }
 </style>
 <style>
   /* Standalone-hosting reset. The artifact runtime supplied these; a plain page must. */
@@ -194,25 +236,45 @@
 </script>
 </head>
 <body>
+<input class="tabin" type="radio" name="pah-tab" id="t-overview" checked>
+<input class="tabin" type="radio" name="pah-tab" id="t-design">
+<input class="tabin" type="radio" name="pah-tab" id="t-dispatch">
+<input class="tabin" type="radio" name="pah-tab" id="t-review">
+<input class="tabin" type="radio" name="pah-tab" id="t-memory">
+<input class="tabin" type="radio" name="pah-tab" id="t-adopt">
 <div class="wrap">
 
 <nav class="toc" aria-label="Sections">
   <div class="toc-inner">
-    <div class="eyebrow">Contents</div>
-    <ol>
+    <div class="eyebrow">On this tab</div>
+    <ol class="rail rail-overview">
     <li><a href="#why">Why this exists</a></li>
-    <li><a href="#roster">What's in the box</a></li>
+    <li><a href="#roster">Eight specialists</a></li>
+    <li><a href="#scope">What this is not</a></li>
+    </ol>
+    <ol class="rail rail-design">
+    <li><a href="#design">The design framework</a></li>
+    <li><a href="#adoption">Adoption evaluation</a></li>
+    </ol>
+    <ol class="rail rail-dispatch">
+    <li><a href="#protocols">What an agent reads first</a></li>
+    <li><a href="#decomposition">Splitting the work</a></li>
+    </ol>
+    <ol class="rail rail-review">
+    <li><a href="#review">Two independent lenses</a></li>
+    <li><a href="#enforcement">Enforced vs written down</a></li>
+    </ol>
+    <ol class="rail rail-memory">
     <li><a href="#memory">Where knowledge lives</a></li>
     <li><a href="#wiki">Making it findable</a></li>
-    <li><a href="#protocols">How an agent knows any of this</a></li>
-    <li><a href="#decomposition">How a project becomes work</a></li>
-    <li><a href="#consolidation">Keeping knowledge true</a></li>
+    <li><a href="#consolidation">Keeping it true</a></li>
     <li><a href="#context">Why it scales</a></li>
-    <li><a href="#scope">Scope</a></li>
-    <li><a href="#review">How work gets checked</a></li>
-    <li><a href="#enforcement">What has teeth</a></li>
+    </ol>
+    <ol class="rail rail-adopt">
+    <li><a href="#runtimes">Six runtimes</a></li>
+    <li><a href="#skills">Sixteen skills</a></li>
+    <li><a href="#start">Five-minute adoption</a></li>
     <li><a href="#author">Who wrote it</a></li>
-    <li><a href="#start">Next step</a></li>
     </ol>
     <div class="toc-links">
       <a href="https://github.com/Thakurvaibhav/platform-agent-harness">Source on GitHub &rarr;</a>
@@ -230,7 +292,27 @@
   <p class="lede">Claude Code and Codex, wired so they keep what they learn.</p>
   <p class="byline"><b>Vaibhav Thakur</b> · platform engineering</p>
 </header>
+<svg class="defs" width="0" height="0" aria-hidden="true" focusable="false">
+  <defs>
+    <marker id="ar" viewBox="0 0 8 8" refX="7" refY="4" markerWidth="7" markerHeight="7" orient="auto">
+      <polygon points="0,1 7,4 0,7" fill="currentColor"></polygon>
+    </marker>
+    <marker id="ar-a" viewBox="0 0 8 8" refX="7" refY="4" markerWidth="7" markerHeight="7" orient="auto">
+      <polygon points="0,1 7,4 0,7" fill="var(--accent)"></polygon>
+    </marker>
+  </defs>
+</svg>
 
+<div class="tabbar">
+  <label for="t-overview">Overview</label>
+  <label for="t-design">Design</label>
+  <label for="t-dispatch">Dispatch</label>
+  <label for="t-review">Review</label>
+  <label for="t-memory">Memory</label>
+  <label for="t-adopt">Adopt</label>
+</div>
+
+<div class="pane" id="p-overview" data-sections="why roster scope">
 <section id="why">
   <div class="eyebrow">Why this exists</div>
   <h2>A chat starts from zero every time</h2>
@@ -268,83 +350,112 @@
   <p class="note">The role is not tied to one vendor. The same definition runs as a Claude subagent or a Codex worker, and both write findings back to the same store. That is what makes a second opinion genuinely independent rather than the same model agreeing with itself.</p>
 </section>
 
-<section id="memory">
-  <div class="eyebrow">Where knowledge lives</div>
-  <h2>One store, two jobs</h2>
-  <div class="body">
-    <p>The memory layer is <a href="https://github.com/steveyegge/beads">beads</a>, a local issue store, doing two things that look unrelated and are deliberately the same system. It tracks <b>work</b>, as units with real dependencies between them, and it holds <b>what was learned</b>, keyed by domain, category and topic.</p>
-    <p>Keeping them together is what lets a finding from Tuesday's task surface while planning Thursday's.</p>
+<section id="scope">
+  <div class="eyebrow">Scope</div>
+  <h2>What this is not</h2>
+  <ul class="bul">
+    <li><b>Not a new agent.</b> Claude Code and Codex are used as they ship. This is configuration, protocol and glue, which is why it survives their updates instead of breaking on them.</li>
+    <li><b>Not a documentation library.</b> Every file is loaded by an agent in a real session, or it gets deleted. Prose nothing reads is the failure being avoided, not the product.</li>
+    <li><b>Not a benchmark claim.</b> What is measured here is narrow: tokens spent per dispatch, entries promoted per pass, files read per week. No speedup multiplier, because that depends entirely on the work.</li>
+    <li><b>Not finished.</b> About a fifth is enforced by code. The rest is prose an agent follows by choice, and the last section shows how unevenly that lands.</li>
+  </ul>
+</section>
+</div>
+
+<div class="pane" id="p-design" data-sections="design adoption">
+<section id="design">
+  <div class="eyebrow">Before any code</div>
+  <h2>Two or three shapes, judged blind by three models</h2>
+  <p class="sub">Most of what goes wrong in infrastructure is decided before the first file is edited. The design path is a protocol, not a conversation: requirements locked in ten lines, constraints derived and challenged, several genuinely different shapes, then a panel that scores them without seeing each other's answers.</p>
+
+  <ol class="steps">
+    <li><b>Lock requirements &mdash; ten lines, then stop.</b> Problem, success test, non-goals, consumers. Non-goals is the load-bearing field. No design work starts on silence; an explicit nod is required.</li>
+    <li><b>Derive the constraint inventory, then ask.</b> Built from sibling implementations, the cluster registry, domain learnings, live cluster state, the API schema and the CI gates &mdash; never from a questionnaire. Every item is classed <b>hard constraint</b> (cites <code>file:line</code>, schema or live state), <b>convention</b> (a count: "11 of 13 charts do X"), or <b>preference</b> (taste &mdash; decided once, recorded, dropped).</li>
+    <li><b>Produce two or three shapes. Never one.</b> They must differ in approach, not in naming: the simplest thing that works, the one that absorbs the most likely change, the one with the smallest blast radius. A shape that violates a hard constraint is disqualified, not scored.</li>
+    <li><b>Judge blind, then surface the split.</b> Three judges across two vendors score independently. If they pick different winners they see each other's rationale once and may revise. Two rounds, then stop.</li>
+    <li><b>Synthesise.</b> Take the winner, graft what the runners-up solved better, and ship the constraint table, the rubric scores, the unresolved splits and an ordered implementation plan with a verification step attached to each step.</li>
+  </ol>
+
+  <figure>
+    <svg viewBox="0 0 700 226" role="img" aria-label="Two or three candidate shapes go to three judges on two vendors who score independently in round one; agreement produces a verdict, disagreement is surfaced as a split rather than averaged away.">
+      <rect class="dgm-box" x="6" y="78" width="104" height="62" rx="5"></rect>
+      <text class="dgm-t" x="58" y="102" text-anchor="middle">2&ndash;3 shapes</text>
+      <text class="dgm-m" x="58" y="120" text-anchor="middle">different approach</text>
+      <line class="dgm-l" x1="112" y1="96" x2="196" y2="42" marker-end="url(#ar)"></line>
+      <line class="dgm-l" x1="112" y1="109" x2="196" y2="109" marker-end="url(#ar)"></line>
+      <line class="dgm-l" x1="112" y1="122" x2="196" y2="176" marker-end="url(#ar)"></line>
+      <rect class="dgm-box" x="202" y="14" width="190" height="56" rx="5"></rect>
+      <text class="dgm-t" x="297" y="37" text-anchor="middle">fit &amp; correctness</text>
+      <text class="dgm-m" x="297" y="55" text-anchor="middle">vendor A</text>
+      <rect class="dgm-box" x="202" y="81" width="190" height="56" rx="5"></rect>
+      <text class="dgm-t" x="297" y="104" text-anchor="middle">operability</text>
+      <text class="dgm-m" x="297" y="122" text-anchor="middle">vendor A &middot; what 3am looks like</text>
+      <rect class="dgm-hi" x="202" y="148" width="190" height="56" rx="5"></rect>
+      <text class="dgm-t" x="297" y="171" text-anchor="middle">adversarial</text>
+      <text class="dgm-a" x="297" y="189" text-anchor="middle">vendor B &middot; tries to break it</text>
+      <text class="dgm-a" x="406" y="66">round 1: blind</text>
+      <line class="dgm-l" x1="396" y1="42" x2="516" y2="86" marker-end="url(#ar)"></line>
+      <line class="dgm-l" x1="396" y1="109" x2="516" y2="104" marker-end="url(#ar)"></line>
+      <line class="dgm-l" x1="396" y1="176" x2="516" y2="122" marker-end="url(#ar)"></line>
+      <rect class="dgm-box" x="522" y="48" width="172" height="52" rx="5"></rect>
+      <text class="dgm-t" x="608" y="70" text-anchor="middle">same winner</text>
+      <text class="dgm-m" x="608" y="87" text-anchor="middle">verdict</text>
+      <rect class="dgm-hi" x="522" y="114" width="172" height="52" rx="5"></rect>
+      <text class="dgm-t" x="608" y="136" text-anchor="middle">different winners</text>
+      <text class="dgm-a" x="608" y="153" text-anchor="middle">split, both positions</text>
+    </svg>
+    <figcaption>Scores are never averaged. A persistent split between two vendors after each has read the other's reasoning is information about the design, and converting it into a single number destroys exactly the signal three judges were paid for. Differing scores with the same winner is not a split; the scores are soft, the pick is observable.</figcaption>
+  </figure>
+
+  <div class="scroll">
+    <table>
+      <thead><tr><th>Scored per shape</th><th>Scale</th></tr></thead>
+      <tbody>
+        <tr><td>Hard-constraint violations</td><td class="num">pass / fail &mdash; disqualifying</td></tr>
+        <tr><td>Convention alignment</td><td class="num">1&ndash;5</td></tr>
+        <tr><td>Operational blast radius</td><td class="num">1&ndash;5, 5 = smallest</td></tr>
+        <tr><td>Migration and rollback cost</td><td class="num">1&ndash;5, 5 = cheapest</td></tr>
+        <tr><td>Consumer ergonomics</td><td class="num">1&ndash;5</td></tr>
+        <tr><td>Failure modes surfaced</td><td class="num">a count, not a score</td></tr>
+        <tr><td><b>Removable components</b></td><td class="num">a list, not a score</td></tr>
+      </tbody>
+    </table>
   </div>
+
+  <p class="note">The last row is the one that changes behaviour. Each judge answers: <em>name any component that can be removed without losing a stated requirement.</em> A non-empty list sends the shape back to be redrawn &mdash; it does not lower its score. Scoring complexity instead of removing it is how a design accumulates parts nobody can later justify.</p>
+</section>
+
+<section id="adoption">
+  <div class="eyebrow">Before any design</div>
+  <h2>Deciding whether to adopt a thing at all</h2>
+  <p class="sub">A separate path, driven one gate at a time with the human in the loop, for the question that comes earlier: should this tool exist in the stack. It can stop at any gate and write an assessment that says no.</p>
 
   <div class="layers">
     <div class="layer">
-      <div class="n">env.sh</div>
-      <div class="d"><b>The single switch.</b> One file names where work lives, which store to use, and which organisation is current. Everything else reads those values instead of hardcoding paths, so moving machine or employer is one edit.</div>
+      <div class="n">gate 1 &middot; pain</div>
+      <div class="d"><b>Is the pain quantified, and is it already covered?</b> The pain has to be stated as something observable, not as an aspiration. If existing tooling covers it, the eval stops here.</div>
     </div>
     <div class="layer">
-      <div class="n">references/</div>
-      <div class="d"><b>Portable knowledge.</b> Numbered, curated files: method, and third-party behaviour cited at a pinned version. True anywhere, and it travels with you.</div>
+      <div class="n">gate 2 &middot; fit</div>
+      <div class="d"><b>Does it compose with what is already running</b>, and what does it displace? This gate carries the premise check: a wrong premise flips the answer, so premises are confirmed with the human before the recommendation is allowed to rest on them.</div>
     </div>
     <div class="layer">
-      <div class="n">orgs/&lt;org&gt;/</div>
-      <div class="d"><b>Local knowledge.</b> Cluster registry, account IDs, per-environment tables, house conventions. True only of one estate.</div>
-    </div>
-    <div class="layer">
-      <div class="n">the store</div>
-      <div class="d"><b>Working memory.</b> Fast to write mid-task, and the task graph itself. Periodically distilled into the two tiers above.</div>
+      <div class="n">gate 3 &middot; rollout</div>
+      <div class="d"><b>What is the pilot, and what does backing out cost?</b> A pilot that cannot fail visibly is not a pilot.</div>
     </div>
   </div>
 
-  <figure>
-    <svg viewBox="0 0 660 196" role="img" aria-label="An agent reads from every knowledge tier unconditionally, but writes only to the tier for the current organisation.">
-      <defs>
-        <marker id="ar" viewBox="0 0 8 8" refX="7" refY="4" markerWidth="7" markerHeight="7" orient="auto">
-          <polygon points="0,1 7,4 0,7" fill="currentColor"></polygon>
-        </marker>
-        <marker id="ar-a" viewBox="0 0 8 8" refX="7" refY="4" markerWidth="7" markerHeight="7" orient="auto">
-          <polygon points="0,1 7,4 0,7" fill="var(--accent)"></polygon>
-        </marker>
-      </defs>
-      <rect class="dgm-box" x="6" y="72" width="104" height="52" rx="5"></rect>
-      <text class="dgm-t" x="58" y="94" text-anchor="middle">agent</text>
-      <text class="dgm-m" x="58" y="111" text-anchor="middle">any task</text>
-      <line class="dgm-l" x1="300" y1="34" x2="118" y2="88" marker-end="url(#ar)"></line>
-      <line class="dgm-l" x1="300" y1="98" x2="118" y2="98" marker-end="url(#ar)"></line>
-      <line class="dgm-l" x1="300" y1="162" x2="118" y2="108" marker-end="url(#ar)"></line>
-      <text class="dgm-m" x="188" y="130">reads every tier</text>
-      <rect class="dgm-box" x="306" y="14" width="196" height="42" rx="5"></rect>
-      <text class="dgm-t" x="404" y="32" text-anchor="middle">references/</text>
-      <text class="dgm-m" x="404" y="48" text-anchor="middle">portable</text>
-      <rect class="dgm-hi" x="306" y="78" width="196" height="42" rx="5"></rect>
-      <text class="dgm-t" x="404" y="96" text-anchor="middle">orgs/&lt;current&gt;/</text>
-      <text class="dgm-a" x="404" y="112" text-anchor="middle">active</text>
-      <rect class="dgm-box" x="306" y="142" width="196" height="42" rx="5"></rect>
-      <text class="dgm-t" x="404" y="160" text-anchor="middle">orgs/&lt;previous&gt;/</text>
-      <text class="dgm-m" x="404" y="176" text-anchor="middle">precedent</text>
-      <path class="dgm-l-hi" d="M 58 68 L 58 8 L 560 8 L 560 84" marker-end="url(#ar-a)"></path>
-      <text class="dgm-a" x="528" y="102">writes</text>
-    </svg>
-    <figcaption>The asymmetry is the design. Which organisation is active decides where new writes land; it never narrows a read. Knowledge from a previous estate stays searchable as precedent without its specifics leaking into the portable tier, which is what makes the portable tier safe to take with you.</figcaption>
-  </figure>
-</section>
-
-<section id="wiki">
-  <div class="eyebrow">Making it findable</div>
-  <h2>Built as an LLM wiki</h2>
-  <div class="body">
-    <p>Adapted from Karpathy's LLM Wiki: documentation written to be read by a model rather than a person, where retrieval is the design constraint instead of an afterthought. The practical test is whether an agent reads it <em>before</em> it starts grepping the repo. A pile of markdown notes never passes that test.</p>
-  </div>
   <ul class="bul">
-    <li><b>Entries are numbered and citable.</b> An agent writes <code>[learnings-argocd.md#42]</code> and a later reader goes straight to it. Knowledge compounds instead of being silently rewritten.</li>
-    <li><b>The index is a catalogue</b> of every file, with keyword and cross-reference columns, so an agent finds the right file without reading all of them.</li>
-    <li><b>The log is an append-only chronology</b>, one entry per non-trivial task, currently around 160.</li>
+    <li><b>The verdict earns the format.</b> An open question produces an assessment; only a passing verdict produces a proposal. The requester does not get to pre-pick the shape of the answer.</li>
+    <li><b>Every environment-dependent claim is grounded against live config</b>, not against a repo grep, because the repo is what was intended and the cluster is what is true.</li>
+    <li><b>Unverifiable claims are marked, never dropped and never asserted.</b></li>
   </ul>
-  <div class="body" style="margin-top:16px">
-    <p>The index answers "where is this written down". The log answers "what happened, and when".</p>
-  </div>
-  <p class="note">Search runs across all three at once, plus the working store, so one query covers both the durable and the recent. The failure this prevents is specific and was observed repeatedly before the search step existed: an agent re-derives a conclusion from scratch that was already recorded, sometimes from the same incident a day earlier.</p>
-</section>
 
+  <p class="note">The tool landscape &mdash; versions, alternatives, maturity, blast radius &mdash; is the one piece delegated out to a research specialist. Everything that depends on this specific estate stays with the session that can see it.</p>
+</section>
+</div>
+
+<div class="pane" id="p-dispatch" data-sections="protocols decomposition">
 <section id="protocols">
   <div class="eyebrow">How an agent knows any of this</div>
   <h2>One file is loaded at birth</h2>
@@ -406,6 +517,150 @@
   </div>
 
   <p class="note">Wide, repetitive work takes the other shape. The same playbook against twenty clusters is twenty independent units fanned out at once, capped at around ten concurrent workers. Running a dependent chain in parallel is the most common way this goes wrong.</p>
+</section>
+</div>
+
+<div class="pane" id="p-review" data-sections="review enforcement">
+<section id="review">
+  <div class="eyebrow">How work gets checked</div>
+  <h2>Two models that never compare notes</h2>
+  <p class="sub">Every non-trivial change gets two passes. The independence is the mechanism: the second model never sees the first one's findings, because a second opinion from the same model is not one.</p>
+
+  <figure>
+    <svg viewBox="0 0 660 200" role="img" aria-label="A pull request is reviewed by two independent passes that never exchange findings, each posting its own review.">
+      <rect class="dgm-box" x="6" y="76" width="96" height="52" rx="5"></rect>
+      <text class="dgm-t" x="54" y="98" text-anchor="middle">change</text>
+      <text class="dgm-m" x="54" y="115" text-anchor="middle">a PR</text>
+      <line class="dgm-l" x1="104" y1="92" x2="182" y2="52" marker-end="url(#ar)"></line>
+      <line class="dgm-l" x1="104" y1="112" x2="182" y2="152" marker-end="url(#ar)"></line>
+      <rect class="dgm-box" x="188" y="20" width="208" height="56" rx="5"></rect>
+      <text class="dgm-t" x="292" y="42" text-anchor="middle">correctness pass</text>
+      <text class="dgm-m" x="292" y="60" text-anchor="middle">verify the claims</text>
+      <rect class="dgm-box" x="188" y="126" width="208" height="56" rx="5"></rect>
+      <text class="dgm-t" x="292" y="148" text-anchor="middle">adversarial pass</text>
+      <text class="dgm-m" x="292" y="166" text-anchor="middle">try to break it</text>
+      <line class="dgm-l" x1="292" y1="84" x2="292" y2="118" stroke-dasharray="4 4"></line>
+      <line class="dgm-l" x1="280" y1="95" x2="304" y2="107"></line>
+      <line class="dgm-l" x1="304" y1="95" x2="280" y2="107"></line>
+      <text class="dgm-a" x="312" y="105">nothing shared</text>
+      <line class="dgm-l" x1="398" y1="48" x2="470" y2="48" marker-end="url(#ar)"></line>
+      <line class="dgm-l" x1="398" y1="154" x2="470" y2="154" marker-end="url(#ar)"></line>
+      <rect class="dgm-hi" x="476" y="22" width="178" height="52" rx="5"></rect>
+      <text class="dgm-t" x="565" y="44" text-anchor="middle">review posted</text>
+      <text class="dgm-m" x="565" y="61" text-anchor="middle">blocking first</text>
+      <rect class="dgm-hi" x="476" y="128" width="178" height="52" rx="5"></rect>
+      <text class="dgm-t" x="565" y="150" text-anchor="middle">review posted</text>
+      <text class="dgm-m" x="565" y="167" text-anchor="middle">what escaped</text>
+    </svg>
+    <figcaption>The adversarial pass builds its attacks from what the code is <em>supposed to prevent</em>, never from the existing tests. Deriving them from the assertions measures your own imagination rather than the suite. Where the two passes disagree, that disagreement is the first thing shown.</figcaption>
+  </figure>
+
+  <p class="note">Reviews lead with blocking findings only, one line each, naming the consequence, capped at five. Everything else folds away. Nothing is deleted; the reading path is just short enough that a human finishes it.</p>
+</section>
+
+<section id="enforcement">
+  <div class="eyebrow">What has teeth</div>
+  <h2>Enforced, and merely written down</h2>
+  <p class="sub">Worth being precise about, because the difference decides what holds under pressure.</p>
+
+  <div class="scroll">
+    <table>
+      <thead><tr><th>Enforced, code that runs</th><th>Rule</th><th>On fail</th></tr></thead>
+      <tbody>
+        <tr><td class="ag">comment gate</td><td>No comment block over 2 lines. No ticket IDs, dates or author names in source.</td><td class="num">exit 1</td></tr>
+        <tr><td class="ag">test gate</td><td>No function docstring over 13 lines. Added test volume within a budget scaled to the change.</td><td class="num">exit 1</td></tr>
+        <tr><td class="ag">render matrix</td><td>Chart changes rendered across every cluster, diffed against the merge base.</td><td class="num">blocking</td></tr>
+        <tr><td class="ag">capture gate</td><td>A specialist that did real work and recorded nothing is stopped.</td><td class="num">blocks</td></tr>
+        <tr><td class="ag">output rewrite</td><td>Eligible read-only commands compressed before they run.</td><td class="num">automatic</td></tr>
+        <tr><td class="ag">drift check</td><td>Stale graphs, store over threshold, distillation overdue.</td><td class="num">warns</td></tr>
+      </tbody>
+    </table>
+  </div>
+
+  <div class="scroll">
+    <table>
+      <thead><tr><th>Written down, followed by choice</th><th>Status</th></tr></thead>
+      <tbody>
+        <tr><td>Search prior art before implementing</td><td class="num">logged, never blocked</td></tr>
+        <tr><td>Which tier a finding belongs in</td><td class="num">judgment</td></tr>
+        <tr><td>Commit and PR title conventions</td><td class="num">no lint in repo</td></tr>
+        <tr><td>Tone, altitude, raising a risk once</td><td class="num">unfalsifiable</td></tr>
+      </tbody>
+    </table>
+  </div>
+
+  <p class="note">Roughly <b>2,100 lines of code against 9,000 lines of prose</b>. The split is deliberate: a rule belongs in prose only if it is short enough to survive attention decay, and anything longer should become a count a script can check. <b>The written-down half does not reliably fire.</b> Measured reading in the first week of a new estate was two file reads and zero citations. When a documented rule keeps being broken, the fix is the enforcement point rather than the wording.</p>
+</section>
+</div>
+
+<div class="pane" id="p-memory" data-sections="memory wiki consolidation context">
+<section id="memory">
+  <div class="eyebrow">Where knowledge lives</div>
+  <h2>One store, two jobs</h2>
+  <div class="body">
+    <p>The memory layer is <a href="https://github.com/steveyegge/beads">beads</a>, a local issue store, doing two things that look unrelated and are deliberately the same system. It tracks <b>work</b>, as units with real dependencies between them, and it holds <b>what was learned</b>, keyed by domain, category and topic.</p>
+    <p>Keeping them together is what lets a finding from Tuesday's task surface while planning Thursday's.</p>
+  </div>
+
+  <div class="layers">
+    <div class="layer">
+      <div class="n">env.sh</div>
+      <div class="d"><b>The single switch.</b> One file names where work lives, which store to use, and which organisation is current. Everything else reads those values instead of hardcoding paths, so moving machine or employer is one edit.</div>
+    </div>
+    <div class="layer">
+      <div class="n">references/</div>
+      <div class="d"><b>Portable knowledge.</b> Numbered, curated files: method, and third-party behaviour cited at a pinned version. True anywhere, and it travels with you.</div>
+    </div>
+    <div class="layer">
+      <div class="n">orgs/&lt;org&gt;/</div>
+      <div class="d"><b>Local knowledge.</b> Cluster registry, account IDs, per-environment tables, house conventions. True only of one estate.</div>
+    </div>
+    <div class="layer">
+      <div class="n">the store</div>
+      <div class="d"><b>Working memory.</b> Fast to write mid-task, and the task graph itself. Periodically distilled into the two tiers above.</div>
+    </div>
+  </div>
+
+  <figure>
+    <svg viewBox="0 0 660 196" role="img" aria-label="An agent reads from every knowledge tier unconditionally, but writes only to the tier for the current organisation.">
+      <rect class="dgm-box" x="6" y="72" width="104" height="52" rx="5"></rect>
+      <text class="dgm-t" x="58" y="94" text-anchor="middle">agent</text>
+      <text class="dgm-m" x="58" y="111" text-anchor="middle">any task</text>
+      <line class="dgm-l" x1="300" y1="34" x2="118" y2="88" marker-end="url(#ar)"></line>
+      <line class="dgm-l" x1="300" y1="98" x2="118" y2="98" marker-end="url(#ar)"></line>
+      <line class="dgm-l" x1="300" y1="162" x2="118" y2="108" marker-end="url(#ar)"></line>
+      <text class="dgm-m" x="188" y="130">reads every tier</text>
+      <rect class="dgm-box" x="306" y="14" width="196" height="42" rx="5"></rect>
+      <text class="dgm-t" x="404" y="32" text-anchor="middle">references/</text>
+      <text class="dgm-m" x="404" y="48" text-anchor="middle">portable</text>
+      <rect class="dgm-hi" x="306" y="78" width="196" height="42" rx="5"></rect>
+      <text class="dgm-t" x="404" y="96" text-anchor="middle">orgs/&lt;current&gt;/</text>
+      <text class="dgm-a" x="404" y="112" text-anchor="middle">active</text>
+      <rect class="dgm-box" x="306" y="142" width="196" height="42" rx="5"></rect>
+      <text class="dgm-t" x="404" y="160" text-anchor="middle">orgs/&lt;previous&gt;/</text>
+      <text class="dgm-m" x="404" y="176" text-anchor="middle">precedent</text>
+      <path class="dgm-l-hi" d="M 58 68 L 58 8 L 560 8 L 560 84" marker-end="url(#ar-a)"></path>
+      <text class="dgm-a" x="528" y="102">writes</text>
+    </svg>
+    <figcaption>The asymmetry is the design. Which organisation is active decides where new writes land; it never narrows a read. Knowledge from a previous estate stays searchable as precedent without its specifics leaking into the portable tier, which is what makes the portable tier safe to take with you.</figcaption>
+  </figure>
+</section>
+
+<section id="wiki">
+  <div class="eyebrow">Making it findable</div>
+  <h2>Built as an LLM wiki</h2>
+  <div class="body">
+    <p>Adapted from Karpathy's LLM Wiki: documentation written to be read by a model rather than a person, where retrieval is the design constraint instead of an afterthought. The practical test is whether an agent reads it <em>before</em> it starts grepping the repo. A pile of markdown notes never passes that test.</p>
+  </div>
+  <ul class="bul">
+    <li><b>Entries are numbered and citable.</b> An agent writes <code>[learnings-argocd.md#42]</code> and a later reader goes straight to it. Knowledge compounds instead of being silently rewritten.</li>
+    <li><b>The index is a catalogue</b> of every file, with keyword and cross-reference columns, so an agent finds the right file without reading all of them.</li>
+    <li><b>The log is an append-only chronology</b>, one entry per non-trivial task, currently around 160.</li>
+  </ul>
+  <div class="body" style="margin-top:16px">
+    <p>The index answers "where is this written down". The log answers "what happened, and when".</p>
+  </div>
+  <p class="note">Search runs across all three at once, plus the working store, so one query covers both the durable and the recent. The failure this prevents is specific and was observed repeatedly before the search step existed: an agent re-derives a conclusion from scratch that was already recorded, sometimes from the same incident a day earlier.</p>
 </section>
 
 <section id="consolidation">
@@ -531,96 +786,61 @@
 
   <p class="note">Two smaller savings compound quietly. Verbose read-only commands are rewritten before they run by <a href="https://github.com/rtk-ai/rtk">rtk</a>, compressing output by 60 to 90 percent; nobody has to remember, because it is a hook rather than a habit, and mutating or piped commands are never touched. Architecture questions go to a <a href="https://github.com/safishamsi/graphify">Graphify</a> repo graph instead of linear file reads, which is worth roughly two orders of magnitude on "what calls this".</p>
 </section>
+</div>
 
-<section id="scope">
-  <div class="eyebrow">Scope</div>
-  <h2>What this is not</h2>
-  <ul class="bul">
-    <li><b>Not a new agent.</b> Claude Code and Codex are used as they ship. This is configuration, protocol and glue, which is why it survives their updates instead of breaking on them.</li>
-    <li><b>Not a documentation library.</b> Every file is loaded by an agent in a real session, or it gets deleted. Prose nothing reads is the failure being avoided, not the product.</li>
-    <li><b>Not a benchmark claim.</b> What is measured here is narrow: tokens spent per dispatch, entries promoted per pass, files read per week. No speedup multiplier, because that depends entirely on the work.</li>
-    <li><b>Not finished.</b> About a fifth is enforced by code. The rest is prose an agent follows by choice, and the last section shows how unevenly that lands.</li>
-  </ul>
-</section>
-
-<section id="review">
-  <div class="eyebrow">How work gets checked</div>
-  <h2>Two models that never compare notes</h2>
-  <p class="sub">Every non-trivial change gets two passes. The independence is the mechanism: the second model never sees the first one's findings, because a second opinion from the same model is not one.</p>
-
-  <figure>
-    <svg viewBox="0 0 660 200" role="img" aria-label="A pull request is reviewed by two independent passes that never exchange findings, each posting its own review.">
-      <rect class="dgm-box" x="6" y="76" width="96" height="52" rx="5"></rect>
-      <text class="dgm-t" x="54" y="98" text-anchor="middle">change</text>
-      <text class="dgm-m" x="54" y="115" text-anchor="middle">a PR</text>
-      <line class="dgm-l" x1="104" y1="92" x2="182" y2="52" marker-end="url(#ar)"></line>
-      <line class="dgm-l" x1="104" y1="112" x2="182" y2="152" marker-end="url(#ar)"></line>
-      <rect class="dgm-box" x="188" y="20" width="208" height="56" rx="5"></rect>
-      <text class="dgm-t" x="292" y="42" text-anchor="middle">correctness pass</text>
-      <text class="dgm-m" x="292" y="60" text-anchor="middle">verify the claims</text>
-      <rect class="dgm-box" x="188" y="126" width="208" height="56" rx="5"></rect>
-      <text class="dgm-t" x="292" y="148" text-anchor="middle">adversarial pass</text>
-      <text class="dgm-m" x="292" y="166" text-anchor="middle">try to break it</text>
-      <line class="dgm-l" x1="292" y1="84" x2="292" y2="118" stroke-dasharray="4 4"></line>
-      <line class="dgm-l" x1="280" y1="95" x2="304" y2="107"></line>
-      <line class="dgm-l" x1="304" y1="95" x2="280" y2="107"></line>
-      <text class="dgm-a" x="312" y="105">nothing shared</text>
-      <line class="dgm-l" x1="398" y1="48" x2="470" y2="48" marker-end="url(#ar)"></line>
-      <line class="dgm-l" x1="398" y1="154" x2="470" y2="154" marker-end="url(#ar)"></line>
-      <rect class="dgm-hi" x="476" y="22" width="178" height="52" rx="5"></rect>
-      <text class="dgm-t" x="565" y="44" text-anchor="middle">review posted</text>
-      <text class="dgm-m" x="565" y="61" text-anchor="middle">blocking first</text>
-      <rect class="dgm-hi" x="476" y="128" width="178" height="52" rx="5"></rect>
-      <text class="dgm-t" x="565" y="150" text-anchor="middle">review posted</text>
-      <text class="dgm-m" x="565" y="167" text-anchor="middle">what escaped</text>
-    </svg>
-    <figcaption>The adversarial pass builds its attacks from what the code is <em>supposed to prevent</em>, never from the existing tests. Deriving them from the assertions measures your own imagination rather than the suite. Where the two passes disagree, that disagreement is the first thing shown.</figcaption>
-  </figure>
-
-  <p class="note">Reviews lead with blocking findings only, one line each, naming the consequence, capped at five. Everything else folds away. Nothing is deleted; the reading path is just short enough that a human finishes it.</p>
-</section>
-
-<section id="enforcement">
-  <div class="eyebrow">What has teeth</div>
-  <h2>Enforced, and merely written down</h2>
-  <p class="sub">Worth being precise about, because the difference decides what holds under pressure.</p>
+<div class="pane" id="p-adopt" data-sections="runtimes skills start author">
+<section id="runtimes">
+  <div class="eyebrow">Where it runs</div>
+  <h2>Six runtimes, one instruction contract</h2>
+  <p class="sub">The harness is not a Claude Code project that happens to tolerate other tools. The role definitions, protocols and skills are written harness-neutral; each runtime gets an adapter that says only where its files go and what it can and cannot do natively.</p>
 
   <div class="scroll">
     <table>
-      <thead><tr><th>Enforced, code that runs</th><th>Rule</th><th>On fail</th></tr></thead>
+      <thead><tr><th>Runtime</th><th>Instruction file</th><th>Native subagents</th><th>Hooks</th></tr></thead>
       <tbody>
-        <tr><td class="ag">comment gate</td><td>No comment block over 2 lines. No ticket IDs, dates or author names in source.</td><td class="num">exit 1</td></tr>
-        <tr><td class="ag">test gate</td><td>No function docstring over 13 lines. Added test volume within a budget scaled to the change.</td><td class="num">exit 1</td></tr>
-        <tr><td class="ag">render matrix</td><td>Chart changes rendered across every cluster, diffed against the merge base.</td><td class="num">blocking</td></tr>
-        <tr><td class="ag">capture gate</td><td>A specialist that did real work and recorded nothing is stopped.</td><td class="num">blocks</td></tr>
-        <tr><td class="ag">output rewrite</td><td>Eligible read-only commands compressed before they run.</td><td class="num">automatic</td></tr>
-        <tr><td class="ag">drift check</td><td>Stale graphs, store over threshold, distillation overdue.</td><td class="num">warns</td></tr>
+        <tr><td class="ag">Claude Code</td><td><code>CLAUDE.md</code> or <code>AGENTS.md</code></td><td>yes</td><td class="num">yes</td></tr>
+        <tr><td class="ag">Codex CLI</td><td><code>AGENTS.md</code>, root and nested</td><td>via dispatch script</td><td class="num">yes</td></tr>
+        <tr><td class="ag">Factory Droid</td><td><code>AGENTS.md</code></td><td>yes, custom droids</td><td class="num">yes</td></tr>
+        <tr><td class="ag">OpenCode</td><td><code>AGENTS.md</code></td><td>yes</td><td class="num">&mdash;</td></tr>
+        <tr><td class="ag">Goose</td><td><code>.goosehints</code> or <code>AGENTS.md</code></td><td>&mdash;</td><td class="num">&mdash;</td></tr>
+        <tr><td class="ag">Aider</td><td><code>CONVENTIONS.md</code> via config</td><td>&mdash;</td><td class="num">&mdash;</td></tr>
       </tbody>
     </table>
   </div>
 
+  <p class="note">Where a runtime has no subagent concept, the layer degrades honestly rather than pretending: the roles become conventions plus shell workflow, and the parallel-dispatch machinery is simply unavailable. Skills install to the cross-tool <code>~/.agents/skills/</code> convention where the runtime reads it. Nothing in the portable half names a vendor.</p>
+</section>
+
+<section id="skills">
+  <div class="eyebrow">What it can be asked to do</div>
+  <h2>Sixteen procedures, each one a file</h2>
+  <p class="sub">A skill is a written procedure an agent loads when the work matches it &mdash; not a plugin, not code. They exist because the same task done from memory drifts, and a procedure that is checked in can be corrected once and stay corrected.</p>
+
   <div class="scroll">
     <table>
-      <thead><tr><th>Written down, followed by choice</th><th>Status</th></tr></thead>
+      <thead><tr><th>Skill</th><th>What it runs</th></tr></thead>
       <tbody>
-        <tr><td>Search prior art before implementing</td><td class="num">logged, never blocked</td></tr>
-        <tr><td>Which tier a finding belongs in</td><td class="num">judgment</td></tr>
-        <tr><td>Commit and PR title conventions</td><td class="num">no lint in repo</td></tr>
-        <tr><td>Tone, altitude, raising a risk once</td><td class="num">unfalsifiable</td></tr>
+        <tr><td class="ag">design</td><td>The framework on the previous tab: requirements lock, constraint inventory, candidate shapes, blind multi-model panel.</td></tr>
+        <tr><td class="ag">adopt-eval</td><td>Gated adoption evaluation that is allowed to end in no.</td></tr>
+        <tr><td class="ag">parallax-review</td><td>The two-lens review, posted as two separate reviews that never saw each other.</td></tr>
+        <tr><td class="ag">stop-slop-code</td><td>Reads a local diff for the structural marks of unfinished work before anyone else sees it.</td></tr>
+        <tr><td class="ag">shiny-engineer</td><td>Build a feature or fix a non-trivial bug with the refinement loop attached.</td></tr>
+        <tr><td class="ag">systematic-debugging</td><td>Four-phase root cause, for a bug that already survived the obvious fix.</td></tr>
+        <tr><td class="ag">k8s-debug</td><td>Read-only workload triage: crash loops, OOM kills, probe failures.</td></tr>
+        <tr><td class="ag">investigate-alert</td><td>Read-only alert triage returning cause, scope and impact. Mutates nothing.</td></tr>
+        <tr><td class="ag">helm-upgrade</td><td>Subchart and appVersion bumps, rendered across every cluster before the claim.</td></tr>
+        <tr><td class="ag">contract-validation</td><td>Validate a change against an explicit written contract rather than against a vibe.</td></tr>
+        <tr><td class="ag">verify-claims</td><td>Check an assertion about third-party behaviour against that tool's source at the pinned version.</td></tr>
+        <tr><td class="ag">upstream-triage</td><td>Decide what to do about a confirmed third-party defect, and draft the issue. Never files it unasked.</td></tr>
+        <tr><td class="ag">graphify</td><td>Build and query a repository graph for architecture and dependency questions.</td></tr>
+        <tr><td class="ag">create-pr</td><td>Open a PR with the body discipline the review loop expects.</td></tr>
+        <tr><td class="ag">stakeholder-comms</td><td>Draft the team-facing message about a decision or a tradeoff.</td></tr>
+        <tr><td class="ag">ingest-reading</td><td>Pull an external source into the corpus as citable notes instead of a dead link.</td></tr>
       </tbody>
     </table>
   </div>
 
-  <p class="note">Roughly <b>2,100 lines of code against 9,000 lines of prose</b>. The split is deliberate: a rule belongs in prose only if it is short enough to survive attention decay, and anything longer should become a count a script can check. <b>The written-down half does not reliably fire.</b> Measured reading in the first week of a new estate was two file reads and zero citations. When a documented rule keeps being broken, the fix is the enforcement point rather than the wording.</p>
-</section>
-
-<section id="author">
-  <div class="eyebrow">Who wrote it</div>
-  <h2>None of this was designed in the abstract</h2>
-  <div class="body">
-    <p>Built by <b>Vaibhav Thakur</b>, platform engineering. The patterns here come from production platform-engineering work; the harness vendors and sanitizes that work into a portable kit, with real cluster names, ticket prefixes and internal URLs taken out on the way.</p>
-    <p>The same operating model runs a public companion repo, <a href="https://github.com/Thakurvaibhav/k8s">Thakurvaibhav/k8s</a>, for anyone who would rather read it applied than described. Elsewhere: <a href="https://www.linkedin.com/in/vaibhavthakur/">LinkedIn</a>.</p>
-  </div>
+  <p class="note">Three domain packs ship alongside them &mdash; Kubernetes safety rules, Helm essentials, observability wiring &mdash; plus templates for the instruction contract, a dispatch prompt, a validation contract and a redaction denylist. The packs are the part that is specific to this kind of work; everything else is not.</p>
 </section>
 
 <section id="start">
@@ -634,11 +854,63 @@
   </ul>
 </section>
 
+<section id="author">
+  <div class="eyebrow">Who wrote it</div>
+  <h2>None of this was designed in the abstract</h2>
+  <div class="body">
+    <p>Built by <b>Vaibhav Thakur</b>, platform engineering. The patterns here come from production platform-engineering work; the harness vendors and sanitizes that work into a portable kit, with real cluster names, ticket prefixes and internal URLs taken out on the way.</p>
+    <p>The same operating model runs a public companion repo, <a href="https://github.com/Thakurvaibhav/k8s">Thakurvaibhav/k8s</a>, for anyone who would rather read it applied than described. Elsewhere: <a href="https://www.linkedin.com/in/vaibhavthakur/">LinkedIn</a>.</p>
+  </div>
+</section>
+</div>
+
 <footer>
   <p>Licensed <a href="https://github.com/Thakurvaibhav/platform-agent-harness/blob/main/LICENSE">Apache-2.0</a> &mdash; the knowledge corpus under the same terms as the code, and offered without warranty like everything else here.</p>
 </footer>
 
 </main>
 </div>
+
+<script>
+/* Deep links keep working: a #section id selects the tab that holds it, and the
+   selected tab is written back to the hash. Without this the radios still switch
+   panes on click; only the linking is lost. */
+(function(){
+  var panes=[].slice.call(document.querySelectorAll(".pane"));
+  function tabFor(id){
+    for(var i=0;i<panes.length;i++){
+      if(panes[i].id==="p-"+id) return panes[i].id.slice(2);
+      if((" "+panes[i].getAttribute("data-sections")+" ").indexOf(" "+id+" ")>-1) return panes[i].id.slice(2);
+    }
+    return null;
+  }
+  function select(tab){
+    var box=document.getElementById("t-"+tab);
+    if(box && !box.checked){ box.checked=true; }
+  }
+  function fromHash(){
+    var id=(location.hash||"").replace(/^#/,"");
+    if(!id) return;
+    var tab=tabFor(id);
+    if(!tab) return;
+    select(tab);
+    var el=document.getElementById(id);
+    if(el && el.classList.contains("pane")===false){
+      el.scrollIntoView({block:"start",behavior:"auto"});
+    }
+  }
+  panes.forEach(function(p){
+    var tab=p.id.slice(2), box=document.getElementById("t-"+tab);
+    if(box){ box.addEventListener("change",function(){
+      if(box.checked){
+        try{ history.replaceState(null,"","#"+tab); }catch(e){}
+        window.scrollTo(0,0);
+      }
+    }); }
+  });
+  window.addEventListener("hashchange",fromHash);
+  fromHash();
+})();
+</script>
 </body>
 </html>
