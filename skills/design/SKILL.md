@@ -106,6 +106,27 @@ Winner + grafted ideas from runners-up. Emit the framework's deliverable section
 tables, mermaid, config sketches. No prose walls, no summary-of-the-summary. Every claim
 grounded (`file:line` / live state / source at our version) or tagged `UNVERIFIED (assumption)`.
 
+### 5.5 Cold reader — the self-containment gate
+
+One worker, cheap model, read-only. Framework section: *Phase 4 gate — the cold reader*.
+
+The prompt is deliberately the **opposite** of the standard dispatch preamble:
+
+> Read ONLY `<design doc path>` and the files it links. Do **not** prime memory, read the index,
+> the shared protocols, the cluster registry or any `learnings-*.md`, and do not run the
+> knowledge search. You have no prior context and must not acquire any.
+> List every term, system, flag, path, acronym or prerequisite you cannot resolve from what you
+> read. For each: where it appears, and what you would have to be told. Propose nothing, fix
+> nothing, judge nothing.
+> Verify by: every item on your list is traceable to a line in the document; you read no file
+> outside the document and its links.
+
+Each item is resolved one of three ways: defined inline, linked, or written down as deliberately
+out of scope. Silence is not one of them.
+
+**Do not reuse a judge for this** — a judge has read the constraint table, which is where half
+the undefined terms are defined.
+
 ### 6. Route
 
 Write to `docs/<topic>/design/<name>.md`. Never edit an existing design

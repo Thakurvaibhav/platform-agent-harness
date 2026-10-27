@@ -53,5 +53,6 @@ Step 3.5, Step 7.5) and the dispatch matrix in
 ## Notes
 
 - The two lenses are **independent** — the Codex prompt never receives the Claude findings, and the correctness pass runs before its output is read. Divergence is signal; both are posted even when they agree.
+- That independence is **gated, not assumed**: the adversarial prompt is checked for copy-paste of the correctness lens's findings before dispatch, with a planted-finding control proving the check can fail (pr-reviewer Step 3.5, *Isolation gate*). A lens that quotes a finding back is contaminated and its verdict is discarded.
 - Read-only by construction: the adversarial lens works in an isolated worktree at the merge-base and never mutates. In `review-only` mode nothing is pushed at all.
 - Cost: two model runs per PR. Fine for sensitive/standard; for a trivial PR prefer a single-lens review.

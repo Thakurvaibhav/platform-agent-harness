@@ -50,6 +50,7 @@ bd remember "<self-contained insight>" --key <repo>/<prefix>/<topic>
 - **Target architecture FIRST** — sub-agents bias toward current repo state; buried targets get ignored.
 - **bd task ID + ticket** — claim discipline and traceability.
 - **Verify by** — the most important section. Vague verification produces vague results.
+- **Zero-decision gate — implementation handoffs only.** Before sending a prompt that asks a worker to *build* something, read it back: does it leave any **architectural or behavioural** choice unmade — a schema, an API path, a dependency, how a new edge case is handled? If yes the prompt fails: decide it and write the decision in, or say explicitly that the worker owns that call. Ordinary implementation judgment (naming, loop shape, which helper) stays with the worker. Research, exploration and triage dispatches are exempt: for those the decision *is* the output.
 - **Memory** — every non-trivial dispatch teaches the harness something.
 
 ## For parallel dispatch

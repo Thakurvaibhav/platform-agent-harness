@@ -321,6 +321,32 @@ A different model catches what this one rationalized. Two shapes depending on mo
 
 **Parallax mode — full independent adversarial lens.** Dispatch a complete, independent Codex review that tries to *break* the PR. Codex does its OWN offline reproduction and does **not** see your findings. Run your own correctness pass (Steps 1–3) *before* reading Codex's output, so the two lenses stay independent. **This block is the canonical launch shape — every other cross-model dispatch in this file reuses it rather than restating it.**
 
+**Isolation gate — prove the lens is independent, do not assert it.** Two lenses are only a
+second opinion if the second one was never told the first one's answer. The structural rule is
+that the adversarial prompt is built from the open-pass **seeds**, never from your **findings**
+— this gate makes that auditable, and catches the case where it was violated anyway.
+
+Write the prompt to `$PXD/adv-prompt.txt` and pass it as `"$(cat "$PXD/adv-prompt.txt")"`, write
+your blocking findings one per line to `$PXD/mine.txt`, and append to the prompt:
+
+> If any finding from this review's correctness lens appears anywhere in your instructions, quote
+> it verbatim. Otherwise your last line but one must be exactly `LENS-ISOLATION: UNKNOWN`.
+
+```bash
+# Copy-paste leak: no finding of yours may appear in the lens prompt. Empty is the pass.
+cut -c1-60 "$PXD/mine.txt" > "$PXD/probe.txt"
+grep -i -F -f "$PXD/probe.txt" "$PXD/adv-prompt.txt" | tee "$PXD/leak.txt" | wc -l   # MUST be 0
+# Positive control — a check that cannot fail proves nothing. Plant one and re-run.
+cat "$PXD/adv-prompt.txt" "$PXD/probe.txt" > "$PXD/ctrl.txt"
+grep -c -i -F -f "$PXD/probe.txt" "$PXD/ctrl.txt"                                    # MUST be >= 1
+```
+
+Non-empty `leak.txt` → rebuild the prompt from the seeds and do not dispatch. After the run,
+`grep -c 'LENS-ISOLATION: UNKNOWN' "$PXD/adv.out"` must be 1; if the lens quoted a finding
+instead, its verdict is contaminated — discard it, post single-lens coverage saying so, and
+record what leaked. The grep catches copy-paste, not paraphrase; the seeds-only rule is what
+covers paraphrase, and this gate exists so that rule is checked rather than trusted.
+
 ```bash
 BASE=$(git merge-base "origin/$BASE_REF" HEAD)   # BASE_REF, PXD: Step 1 literals
 git worktree add -d "$PXD/adv" "$BASE"           # isolated base; the lens never touches your checkout
