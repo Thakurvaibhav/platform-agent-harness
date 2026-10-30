@@ -93,8 +93,21 @@ emit_ranked() {
         any=1
         # No -C1: an entry is already ONE long line, so context triples a 1-2KB line.
         # Truncate too — the ranking above routes; these lines only prove the hit.
+        # Entries are one line each, so a matched line IS an entry line and its
+        # leading "N." IS the citation. Print it as file.md#N, not :LINE:, or the
+        # reader has to open the file and scan to cite what it already found.
         rg -inH --color=never -m "$per_file" "$PATTERN" "$f" 2>/dev/null \
-            | cut -c1-240 | sed "s|$HOME_DIR/||"
+            | sed "s|$HOME_DIR/||" \
+            | awk -F: 'BEGIN{OFS=":"}
+                 { path=$1; line=$2; $1=""; $2=""; text=substr($0,3);
+                   sub(/^references\//,"",path);
+                   if (match(text,/^[0-9]+\. /)) {
+                     n=substr(text,1,RLENGTH-2);
+                     printf "%s#%s  %s\n", path, n, substr(text,RLENGTH+1);
+                   } else {
+                     printf "%s:%s:%s\n", path, line, text;
+                   } }' \
+            | cut -c1-240
     done <<< "$ranked"
     [ "$any" = 1 ] || echo "(no matches)"
 }
