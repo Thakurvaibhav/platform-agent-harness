@@ -30,7 +30,9 @@ once-a-year gotcha). See templates/commands/consolidate.md.
 Config (env):
   LEARN_GATE_DISABLE=1     -> no gating/nudging (logging still runs)
   LEARN_METRICS_DISABLE=1  -> no citation/read logging
-  LEARN_TOOLUSE_MIN  (default 8)  -> tool-use count that counts as "substantive"
+  LEARN_TOOLUSE_READONLY (default 20) -> tool-use count that counts as "substantive"
+                                         when nothing was mutated. LEARN_TOOLUSE_MIN is the
+                                         former name and is still honoured if set.
   LEARN_MAIN_GAP     (default 2)  -> work-minus-persist gap that triggers the soft nudge
   HARNESS_METRICS                 -> metrics dir (default ~/.agent-knowledge/metrics)
   HARNESS_REFS                    -> learnings dir (default ~/.agent-knowledge/references)
@@ -94,6 +96,15 @@ ROUTER_FILE_RE = re.compile(
 SEARCH_RE = re.compile(r"\b(?:grep|rg|ag|ack|fgrep|egrep)\b")
 QUOTED_RE = re.compile(r"""'[^']*'|"[^"]*\"""")
 TMP = "/tmp"
+
+
+def citable_reads(stats):
+    """Distinct files this worker opened that CAN carry a `#N` citation.
+
+    The router files and the search script are read constantly and have no entry
+    numbers, so counting them would make every worker look like it owed a citation.
+    """
+    return set(stats["learnings_reads"]) - set(ROUTER_FILES) - {"knowledge-search.sh"}
 
 
 def _envint(name, default):
@@ -317,7 +328,8 @@ def handle_subagent_stop(data, stats):
         return
     persisted = stats["bd_remembers"] > 0 or stats["learnings_writes"] > 0
     substantive = (stats["mutations"] > 0 or stats["commits_prs"] > 0
-                   or stats["tool_uses"] >= _envint("LEARN_TOOLUSE_MIN", 8))
+                   or stats["tool_uses"] >= _envint(
+                       "LEARN_TOOLUSE_READONLY", _envint("LEARN_TOOLUSE_MIN", 20)))
     if substantive and not persisted:
         reason = (
             f"You completed substantive work ({stats['mutations']} file edit(s), "
@@ -329,6 +341,25 @@ def handle_subagent_stop(data, stats):
             "<domain>/<category>/<topic>` (or `bd remember`, or append to the matching "
             "agent-knowledge/references/learnings-*.md). If nothing was genuinely "
             "non-obvious, state that explicitly in one line, then finish."
+        )
+        print(json.dumps({"decision": "block", "reason": reason}))
+        return
+
+    # Reading the corpus without ever pointing at it is why entry coverage sits at a
+    # few percent. 1, not 3: measured on one estate, half of all worker sessions open
+    # ZERO topic files and only a fifth open three, so 3 could never fire for most.
+    opened = citable_reads(stats)
+    cite_min = _envint("LEARN_CITE_MIN", 1)
+    if substantive and len(opened) >= cite_min and not stats["citations"]:
+        shown = ", ".join(sorted(opened)[:3])
+        reason = (
+            f"You read {len(opened)} knowledge file(s) ({shown}) and cited nothing. "
+            "Cite the entries you actually used as `[learnings-<file>.md#<N>]` (or "
+            "`[orgs/<org>/<file>.md#<N>]`) in your final report and build on them rather "
+            "than re-deriving: the citation is what lets the next agent find the same "
+            "answer, and what ranks an entry as worth keeping. Citations never prune. "
+            "Add them now. If nothing you read actually informed this task, say so in one "
+            "line, then finish."
         )
         print(json.dumps({"decision": "block", "reason": reason}))
 
