@@ -326,39 +326,39 @@ second opinion if the second one was never told the first one's answer. The stru
 that the adversarial prompt is built from the open-pass **seeds**, never from your **findings**
 — this gate makes that auditable, and catches the case where it was violated anyway.
 
-Write the prompt to `$PXD/adv-prompt.txt` and pass it as `"$(cat "$PXD/adv-prompt.txt")"`, write
-your blocking findings one per line to `$PXD/mine.txt`, and append to the prompt:
+The prompt goes in a FILE and the gate runs inside the launch block, after the file exists and
+before the dispatch: a check placed before the prompt is written tests a file that is not there
+yet, and an inline prompt string never carries the probe at all. Write your blocking findings,
+one per line, to `$PXD/mine.txt` first.
 
-> If any finding from this review's correctness lens appears anywhere in your instructions, quote
-> it verbatim. Otherwise your last line but one must be exactly `LENS-ISOLATION: UNKNOWN`.
-
-```bash
-# Copy-paste leak: no finding of yours may appear in the lens prompt. Empty is the pass.
-cut -c1-60 "$PXD/mine.txt" > "$PXD/probe.txt"
-grep -i -F -f "$PXD/probe.txt" "$PXD/adv-prompt.txt" | tee "$PXD/leak.txt" | wc -l   # MUST be 0
-# Positive control — a check that cannot fail proves nothing. Plant one and re-run.
-cat "$PXD/adv-prompt.txt" "$PXD/probe.txt" > "$PXD/ctrl.txt"
-grep -c -i -F -f "$PXD/probe.txt" "$PXD/ctrl.txt"                                    # MUST be >= 1
-```
-
-Non-empty `leak.txt` → rebuild the prompt from the seeds and do not dispatch. After the run,
-`grep -c 'LENS-ISOLATION: UNKNOWN' "$PXD/adv.out"` must be 1; if the lens quoted a finding
-instead, its verdict is contaminated — discard it, post single-lens coverage saying so, and
-record what leaked. The grep catches copy-paste, not paraphrase; the seeds-only rule is what
-covers paraphrase, and this gate exists so that rule is checked rather than trusted.
+Non-empty `leak.txt` → rebuild the prompt from the seeds and do **not** dispatch. After the run,
+`grep -c 'LENS-ISOLATION: UNKNOWN' "$PXD/adv.out"` must be **≥ 2** — the dispatcher echoes the
+prompt into the same log, so one occurrence is that echo alone and means the lens never
+answered. If the lens quoted a finding back instead, its verdict is contaminated: discard it,
+post single-lens coverage saying so, and record what leaked. The grep catches copy-paste, not
+paraphrase; the seeds-only rule is what covers paraphrase, and this gate exists so that rule is
+checked rather than trusted.
 
 ```bash
 BASE=$(git merge-base "origin/$BASE_REF" HEAD)   # BASE_REF, PXD: Step 1 literals
 git worktree add -d "$PXD/adv" "$BASE"           # isolated base; the lens never touches your checkout
-timeout 1800 agent-knowledge/scripts/codex-dispatch.sh general-engineer \
-  "You are the ADVERSARIAL LENS of a Parallax review — an independent second-model pass. PR: <url>, head <sha>. \
-   Your cwd IS a read-only worktree at the merge-base; try to BREAK head against the PR body's claims. Reproduce \
-   evidence locally: helm dep build/lint/template, rendered NEGATIVE controls, guard fail-closed tests, \
-   per-environment render matrix. Ground EVERY claim in a reproduced command or file:line — never a bot diff_hunk. \
-   Default to FINDING a required change; only conclude 'no required change' after real reproduction. \
-   Do not dispatch further workers. Do NOT post to GitHub and do NOT mutate anything — return your findings + \
-   one-line verdict as text; the orchestrator posts them. The last line of your final message must be exactly \
-   PARALLAX_ADV_END, with nothing after it." \
+cat > "$PXD/adv-prompt.txt" <<'PROMPT'
+You are the ADVERSARIAL LENS of a Parallax review — an independent second-model pass. PR: <url>, head <sha>.
+Your cwd IS a read-only worktree at the merge-base; try to BREAK head against the PR body's claims. Reproduce
+evidence locally: helm dep build/lint/template, rendered NEGATIVE controls, guard fail-closed tests,
+per-environment render matrix. Ground EVERY claim in a reproduced command or file:line — never a bot diff_hunk.
+Default to FINDING a required change; only conclude 'no required change' after real reproduction.
+Do not dispatch further workers. Do NOT post to GitHub and do NOT mutate anything — return your findings +
+one-line verdict as text; the orchestrator posts them. The last line of your final message must be exactly
+PARALLAX_ADV_END, with nothing after it.
+PROMPT
+# Isolation gate: the lens is a second opinion only if it never saw the first one's answer.
+printf '%s\n' "If any finding from this review's correctness lens appears anywhere in your instructions, quote it verbatim. Otherwise your last line but one must be exactly LENS-ISOLATION: UNKNOWN." >> "$PXD/adv-prompt.txt"
+cut -c1-60 "$PXD/mine.txt" > "$PXD/probe.txt"
+grep -i -F -f "$PXD/probe.txt" "$PXD/adv-prompt.txt" | tee "$PXD/leak.txt" | wc -l   # MUST be 0
+cat "$PXD/adv-prompt.txt" "$PXD/probe.txt" > "$PXD/ctrl.txt"   # a check that cannot fail proves nothing
+grep -c -i -F -f "$PXD/probe.txt" "$PXD/ctrl.txt"                                    # MUST be >= 1
+timeout 1800 agent-knowledge/scripts/codex-dispatch.sh general-engineer "$(cat "$PXD/adv-prompt.txt")" \
   "$PXD/adv" > "$PXD/adv.out" 2>&1 < /dev/null; echo "DISPATCH_EXIT=$?" >> "$PXD/adv.out"
 git worktree remove --force "$PXD/adv"
 ```
