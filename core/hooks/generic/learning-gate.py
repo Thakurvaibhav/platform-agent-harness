@@ -102,7 +102,7 @@ def citable_reads(stats):
     The router files and the search script are read constantly and have no entry
     numbers, so counting them would make every worker look like it owed a citation.
     """
-    return set(stats["reads"]) - set(ROUTER_FILES) - {"knowledge-search.sh"}
+    return set(stats["learnings_reads"]) - set(ROUTER_FILES) - {"knowledge-search.sh"}
 
 
 def _envint(name, default):
