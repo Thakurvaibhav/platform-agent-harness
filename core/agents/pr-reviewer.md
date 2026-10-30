@@ -44,7 +44,7 @@ Default when the prompt doesn't say: PR by one of our agents → `parallax` + `f
 For someone else's PR, when the caller wants one short comment the author can act on. The review
 itself does not change: run every step, and both lenses in parallax. Only the deliverable changes.
 
-**Post nothing.** Skip the bot-thread replies in Step 4b, and skip Steps 7 and 7.5. Write the
+**Post nothing — and that means every external write, not just the posts.** Skip the bot-thread replies in Step 4b **and the thread resolution in Step 4c**, and skip Steps 7 and 7.5. Resolving a thread is a mutation on someone else's PR, and in brief mode you have addressed nothing to justify it. Write the
 draft to `$PXD/brief.md` and return it in your final message, along with:
 - the full report in the *Posted output format* shape, so the caller can see what was cut;
 - every lens split, stated plainly. Brief merges both lenses into one post, so the human settles

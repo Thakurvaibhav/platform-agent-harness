@@ -46,6 +46,10 @@ Step 3.5, Step 7.5) and the dispatch matrix in
    - `Style: parallax`
    - `Mode: review-only` (external) or `fix` (ours)
    - `Tier: <standard | sensitive>`
+   - `Output: brief` — **only** when the user asked for a short comment, an agent prompt for the
+     author, or said "brief". The reviewer then posts nothing, writes the draft to `$PXD/brief.md`
+     and returns it; you show it to the user and post only after they approve. Omitting this switch
+     on a request for a draft turns it into two published reviews on someone else's PR.
    - the PR URL, a one-line context, and any constraints the user gave.
 
 5. **Relay the outcome:** confirm both lenses posted (🔍 correctness + 🧨 adversarial), surface the two verdicts, and **flag any disagreement between the lenses** for the human to adjudicate — never reconcile it silently.
