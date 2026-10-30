@@ -81,7 +81,7 @@ Persist the moment you hit something non-obvious — a gotcha, a non-obvious fix
 - **Fastest path:** `agent-knowledge/scripts/learn.sh "<insight>" <domain>/<category>/<topic>` (a low-friction `bd remember` wrapper). `bd remember` directly also works.
 - **Reusable engineering knowledge** belongs in `agent-knowledge/references/learnings-*.md`; **operational/uncertain** state in `bd`; **runtime-only config trivia** in runtime-native memory. See "Memory routing" in [`core/protocols/bd-and-memory.md`](../core/protocols/bd-and-memory.md). Never write the same fact to two stores.
 - **Machine-enforced** via [`core/hooks/generic/learning-gate.py`](../core/hooks/generic/learning-gate.py): a hard gate for sub-agents (blocks stop once if substantive work persisted nothing) and a soft nudge for the main session.
-- **Cite, don't re-explain.** Reference existing entries as `[learnings-<file>.md#<N>]`; citations logged to `agent-knowledge/metrics/learning-usage.json` drive consolidation pruning, so citing beats restating.
+- **Cite, don't re-explain.** Reference existing entries as `[learnings-<file>.md#<N>]`; citations logged to `agent-knowledge/metrics/learning-usage.json` drive **ranking and gap-detection only, never pruning** — a rarely-cited entry is never removed for low usage. The instance tier is citable the same way, as `[orgs/<org>/<file>.md#<N>]`. Citing beats restating.
 - **Kill switch:** `LEARN_GATE_DISABLE=1` disables gating and nudging.
 
 ## Graphify-first workflow

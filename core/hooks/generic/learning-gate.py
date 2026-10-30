@@ -30,7 +30,9 @@ once-a-year gotcha). See templates/commands/consolidate.md.
 Config (env):
   LEARN_GATE_DISABLE=1     -> no gating/nudging (logging still runs)
   LEARN_METRICS_DISABLE=1  -> no citation/read logging
-  LEARN_TOOLUSE_MIN  (default 8)  -> tool-use count that counts as "substantive"
+  LEARN_TOOLUSE_READONLY (default 20) -> tool-use count that counts as "substantive"
+                                         when nothing was mutated. LEARN_TOOLUSE_MIN is the
+                                         former name and is still honoured if set.
   LEARN_MAIN_GAP     (default 2)  -> work-minus-persist gap that triggers the soft nudge
   HARNESS_METRICS                 -> metrics dir (default ~/.agent-knowledge/metrics)
   HARNESS_REFS                    -> learnings dir (default ~/.agent-knowledge/references)
@@ -326,7 +328,8 @@ def handle_subagent_stop(data, stats):
         return
     persisted = stats["bd_remembers"] > 0 or stats["learnings_writes"] > 0
     substantive = (stats["mutations"] > 0 or stats["commits_prs"] > 0
-                   or stats["tool_uses"] >= _envint("LEARN_TOOLUSE_MIN", 8))
+                   or stats["tool_uses"] >= _envint(
+                       "LEARN_TOOLUSE_READONLY", _envint("LEARN_TOOLUSE_MIN", 20)))
     if substantive and not persisted:
         reason = (
             f"You completed substantive work ({stats['mutations']} file edit(s), "
