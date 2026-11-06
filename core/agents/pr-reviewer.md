@@ -150,6 +150,20 @@ Execute these steps in order. **Do not skip steps.**
 
 ### Step 0.5: Triage blast radius → pick review depth
 
+**First, is it a draft? If so, stop.**
+
+```bash
+gh pr view <PR_URL> --json isDraft -q '.isDraft'
+```
+
+`true` means the author is still iterating and wants to read their own code, not a review. Post
+nothing, push nothing, and return one line saying the review is deferred until the PR is marked
+ready for review. This outranks the tier table below and every *Always dispatch* row, including the
+security-sensitive ones: the review is deferred, not cancelled, so a draft touching RBAC or secrets
+gets its full sensitive-tier pass the moment it is marked ready. The only exception is a caller who
+explicitly asked for a draft review; then say in your post that it is a draft and that findings may
+be stale by the time it is ready.
+
 Classify the PR first — effort scales with what can actually break. A docs PR and a production-RBAC PR must not get identical treatment.
 
 | Tier | PR matches | Depth |

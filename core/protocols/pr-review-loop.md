@@ -16,6 +16,12 @@ The orchestrator (or the agent that opened the PR) decides whether to dispatch [
 
 ### Never dispatch
 
+- **A DRAFT PR. This outranks every *Always dispatch* row, including the security-sensitive ones.**
+  A draft means the author wants to read their own code and iterate; a review posted onto work that
+  is still moving is noise. The review is **deferred, not skipped**: it fires when the PR is marked
+  ready for review, which is when its findings are worth acting on. A draft touching RBAC, secrets
+  or a NetworkPolicy still gets its full sensitive-tier pass, just at that later moment. An explicit
+  request to review a draft is the exception.
 - Docs-only changes (README, CHANGELOG, comments).
 - Single-value config changes under ~10 lines.
 - User explicitly says "trivial", "skip review", or "no review".
