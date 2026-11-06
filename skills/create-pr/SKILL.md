@@ -105,6 +105,14 @@ pr_number="$(gh pr view --json number -q .number)"
 gh pr checks "$pr_number"
 ```
 
+## Draft PRs carry almost nothing
+
+If the user asks for a draft, a WIP, or says it is not ready for review, pass `--draft` and keep the
+body to the ticket link plus one line on what the branch does. Skip the sections above: no Why, no
+Validation, no Risk, no rendered output. The code is what they want to read, and they will say when
+to make it ready. That is also when the full body and the review arrive, so **do not dispatch a
+reviewer on a draft** (*Never dispatch* in `core/protocols/pr-review-loop.md`).
+
 ## PR title
 
 **Canonical rule: *PR titles* in [`core/protocols/bd-and-memory.md`](../../core/protocols/bd-and-memory.md).**
