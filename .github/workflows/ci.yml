@@ -60,7 +60,7 @@ jobs:
             | xargs -0 shellcheck -S error
 
       - name: Python syntax
-        run: python3 -m compileall -q core sanitization tools
+        run: python3 -m compileall -q core sanitization tools agent-knowledge
 
       - name: Secret scan (gitleaks)
         run: |

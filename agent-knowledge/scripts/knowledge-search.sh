@@ -113,6 +113,16 @@ emit_ranked() {
 }
 
 # Decide file-search backend.
+# SEARCH_BACKEND=bm25 ranks ENTRIES instead of files, so a hit is already the
+# citable `file.md#N`. The file ranking below is a raw match count with no length
+# term and no IDF, which lets the largest files win queries they do not answer.
+# Default stays ripgrep: flip it once your own corpus shows the same skew.
+BM25_MODE=0
+BM25_BIN="${HARNESS_SCRIPTS:-$(dirname "$0")}/bm25-search.py"
+if [ "${SEARCH_BACKEND:-ripgrep}" = "bm25" ] && [ -x "$BM25_BIN" ]; then
+    BM25_MODE=1
+fi
+
 QMD_MODE=0
 if [ "${SEARCH_BACKEND:-ripgrep}" = "qmd" ] && command -v qmd >/dev/null 2>&1; then
     QMD_MODE=1
@@ -209,6 +219,13 @@ fi
 echo ""
 
 # --- Section 3: portable tier ---
+if [ "$BM25_MODE" = 1 ]; then
+    echo "### entries, BM25-ranked (both tiers — the citation is the result)"
+    echo ""
+    HARNESS_HOME="$HOME_DIR" HARNESS_REFS="$REFS_DIR" HARNESS_ORGS="$ORGS_DIR" \
+        "$BM25_BIN" -n "${BM25_HITS:-12}" $QUERY || echo "(bm25 failed)"
+    echo ""
+else
 echo "### learnings (project)"
 echo ""
 if [ -d "$REFS_DIR" ]; then
@@ -248,6 +265,7 @@ else
     echo ""
     echo "(no orgs dir at $ORGS_DIR — nothing to search)"
     echo ""
+fi
 fi
 
 # --- Section 5: reading notes (separate trust tier) ---
