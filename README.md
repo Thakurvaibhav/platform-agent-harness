@@ -4,158 +4,132 @@
 
 **Turn a CLI coding agent into a coordinated platform engineering teammate.**
 
-A portable, runtime-neutral behavioral specification and coordination protocol for AI agents doing Kubernetes, Helm, ArgoCD, CI, and observability work. Works with [Aider](https://aider.chat/), [Claude Code](https://code.claude.com/), [Codex CLI](https://developers.openai.com/codex/cli), [Factory Droid](https://factory.ai/), [Goose](https://block.github.io/goose/), [OpenCode](https://opencode.ai/), or any CLI agent that can read instructions and run shell commands.
+A runtime-neutral behavioural spec and coordination protocol for agents doing Kubernetes, Helm,
+ArgoCD, CI and observability work. Most agent setups stop at "give it a system prompt". This is
+everything around the prompt: dispatch, memory that survives compaction, a second opinion on risky
+PRs, and safe-by-default command policy.
 
-> Most agent setups stop at "give it a system prompt." That falls apart on real infra work — multi-step rollouts, second opinions on risky PRs, memory that survives context resets, safe Kubernetes defaults, and parallel investigation across clusters. This harness adds the **behavioral specification and coordination protocol around the prompt.**
+Runs under [Claude Code](https://code.claude.com/), [Codex CLI](https://developers.openai.com/codex/cli),
+[Factory Droid](https://factory.ai/), [OpenCode](https://opencode.ai/), [Goose](https://block.github.io/goose/)
+and [Aider](https://aider.chat/).
 
-**[Read the overview →](https://thakurvaibhav.github.io/platform-agent-harness/)** — how the pieces fit together,
-with diagrams: dispatch, memory tiers, the consolidation loop, and what each agent actually reads at birth.
+**[Read the illustrated overview](https://thakurvaibhav.github.io/platform-agent-harness/)**, which
+has the diagrams this README deliberately does not.
 
----
-
-| **Why it pays off** |
-| :--- |
-| **~70x fewer tokens** for architecture questions via [Graphify](https://github.com/safishamsi/graphify) graph queries vs. linear file reads. |
-| **60–90% token compression** on verbose CLI output via [`rtk`](https://github.com/rtk-ai/rtk) with zero workflow change. |
-| **Cross-session memory** via [`bd`](https://github.com/steveyegge/beads) — task state, comments, and durable learnings survive every compaction. |
-| **Hand-curated knowledge base** ([`agent-knowledge/references/`](agent-knowledge/references/)) — markdown-only `index.md`, `log.md`, and numbered `learnings-*.md` agents read before they grep the repo. Adapted from [Karpathy's LLM Wiki](https://gist.github.com/karpathy/442a6bf555914893e9891c11519de94f). |
-| **3x+ wall-clock speedup** on N-cluster validation via parallel sub-agent dispatch ([`core/protocols/parallel-dispatch.md`](core/protocols/parallel-dispatch.md)). |
-| **Second-agent PR review** with structured bot-reply protocol ([`core/protocols/pr-review-loop.md`](core/protocols/pr-review-loop.md)). |
-| **Design before code** — requirements lock, constraint inventory (hard / convention / preference), candidate shapes, multi-model judge panel ([`core/protocols/design-framework.md`](core/protocols/design-framework.md), driven by the [`design`](skills/design/) skill). |
-| **18 observability skills** install via `gcx skills install --all` — no vendoring. |
-| **Survives a job change.** Knowledge splits into a portable tier (`references/`) and a per-org instance tier ([`agent-knowledge/orgs/`](agent-knowledge/orgs/)), with one switch ([`agent-knowledge/env.sh`](agent-knowledge/env.sh)) for every machine path — see [`core/protocols/knowledge-tiers.md`](core/protocols/knowledge-tiers.md) and the runbook at [`installation/new-org-setup.md`](installation/new-org-setup.md). |
-
-**[Where these numbers come from →](docs/evidence.md)** — measurements quoted verbatim from the
-harness's own corpus, with citations you can open. Including the ones that say a claim is
-unmeasurable at the sample size it was taken from.
-
----
-
-## The operating model
-
-```
-                     ┌─────────────────────────────────────────────────┐
-                     │                  AGENTS.md                      │
-                     │  routing rules · safety defaults · memory keys  │
-                     └────────────────────┬────────────────────────────┘
-                                          │
-            ┌─────────────────────────────┼─────────────────────────────┐
-            │                             │                             │
-   ┌────────▼──────────┐       ┌──────────▼────────┐         ┌──────────▼─────────┐
-   │  Specialist       │       │   Durable state   │         │   Local knowledge  │
-   │  sub-agents       │       │   (bd / Beads)    │         │   base + Graphify  │
-   │                   │       │                   │         │                    │
-   │ task-planner      │       │ tasks, comments,  │         │ agent-knowledge/   │
-   │ tool-researcher   │       │ memories, ready   │         │  references/       │
-   │ helm-engineer     │       │ queues survive    │         │   index · log ·    │
-   │ argocd-engineer   │◄──────┤ compaction        │────────►│   learnings-*.md   │
-   │ platform-engineer │       │                   │         │  (Karpathy Wiki)   │
-   │ alert-investigator│       └─────────┬─────────┘         │  scripts/ · metrics│
-   │ pr-reviewer       │                 │                   │  + graph queries   │
-   │ general-engineer  │                 │                   └────────────────────┘
-   └────────┬──────────┘                 │
-            │                            ▼
-            │            ┌──────────────────────────────────┐
-            └───────────►│   Skills (executable playbooks)  │
-                         │                                  │
-                         │   shiny-engineer · create-pr ·   │
-                         │   helm-upgrade · k8s-debug ·     │
-                         │   graphify · contract-validation │
-                         │                                  │
-                         │   + 18 observability skills      │
-                         │     via `gcx skills install`     │
-                         └────────────────┬─────────────────┘
-                                          │
-                              ┌───────────▼────────────┐
-                              │   Token economics      │
-                              │                        │
-                              │   rtk command policy   │
-                              │   (native / rtk-safe / │
-                              │    raw-required)       │
-                              └────────────────────────┘
-```
-
-The compaction-and-recovery loop is documented end-to-end in [`LIFECYCLE.md`](LIFECYCLE.md).
-
-## 5-minute adoption
+## Install
 
 ```bash
-# 1. Install the three required tools
+# 1. The three tools the harness composes
 curl -fsSL https://raw.githubusercontent.com/steveyegge/beads/main/scripts/install.sh | bash   # bd
 pipx install graphify                                                                          # graph
 curl -fsSL https://raw.githubusercontent.com/rtk-ai/rtk/master/install.sh | bash               # rtk
 
-# Optional: Grafana stack? Install gcx + the 18-skill bundle.
-brew install grafana/grafana/gcx
-gcx skills install --all                                                                       # → ~/.agents/skills/
-
-# 2. Clone the harness somewhere you can reference it
-git clone https://github.com/<owner>/platform-agent-harness ~/platform-agent-harness
+# 2. Clone it somewhere you can reference
+git clone https://github.com/Thakurvaibhav/platform-agent-harness ~/platform-agent-harness
 export HARNESS=~/platform-agent-harness
 
 # 3. Drop the instruction contract into your infra repo
 cp "$HARNESS/templates/AGENTS.template.md" ./AGENTS.md
 
-# 4. Initialize task state and build a repo graph
+# 4. Initialise task state and build a repo graph
 bd init && bd prime
 graphify . --no-viz
 
-# 5. Wire your runtime — pick one from adapters/
+# 5. Wire your runtime
 cat "$HARNESS/adapters/<your-runtime>/README.md"
 ```
 
-Customize the placeholders in `AGENTS.md` (cluster naming, repo conventions, contact names) and you are running. Every adapter README has a concrete file-mapping table, copy commands, and verification steps.
+Fill in the placeholders in `AGENTS.md` (cluster naming, repo conventions, contacts) and you are
+running. Each adapter README carries a file-mapping table, copy commands and verification steps.
 
-For a public companion repo using this exact operating model, see [`Thakurvaibhav/k8s`](https://github.com/Thakurvaibhav/k8s) — a GitOps-driven "Platform in a Box" with Argo CD App-of-Apps, Envoy Gateway, Prometheus/Thanos, Kyverno, and Sealed Secrets.
+Running Grafana? `brew install grafana/grafana/gcx && gcx skills install --all` adds 18
+observability skills to `~/.agents/skills/`. Nothing is vendored here.
 
-## What is in the box
+## What you get
 
-| Layer | Path | What it provides |
+| | Count | Where |
 | --- | --- | --- |
-| Agent prompts | [`core/agents/`](core/agents/) | 8 specialist sub-agents (planner, researcher, helm, argocd, platform/observability, PR reviewer, read-only alert triage, general-engineer) with explicit "when to invoke / when NOT to invoke" boundaries |
-| Protocols | [`core/protocols/`](core/protocols/) | 11 canonical rules: harness-pillars, code-quality, delegation, bd-and-memory, knowledge-tiers, rtk-command-policy, graphify-first, pr-review-loop, parallel-dispatch, safety-and-handoff, design-framework |
-| Skills | [`skills/`](skills/) | 15 portable executable playbooks (shiny-engineer, create-pr, helm-upgrade, k8s-debug, graphify, contract-validation, adopt-eval, upstream-triage, stakeholder-comms, stop-slop-code, systematic-debugging, ingest-reading, design, parallax-review, verify-claims); observability skills live in `gcx skills install` |
-| Domain packs | [`domain-packs/`](domain-packs/) | Kubernetes safety, Helm essentials, observability-via-gcx — focused, not exhaustive |
-| Hooks | [`core/hooks/`](core/hooks/) | Transcript-parsing pre-compact session checkpoint, rtk autoprefix, context-threshold warning, learning-capture gate |
-| Tools | [`tools/`](tools/) | One-pagers for bd, Graphify, rtk, gcx with upstream install links |
-| Adapters | [`adapters/`](adapters/) | Concrete wiring for 6 CLI agent runtimes |
-| Agent knowledge | [`agent-knowledge/`](agent-knowledge/) | Shared, runtime-neutral knowledge home (see [`agent-knowledge/README.md`](agent-knowledge/README.md)): `references/` (**portable tier** — hand-curated `index.md`, `log.md`, numbered `learnings-*.md` — Karpathy LLM Wiki pattern), `orgs/<org>/` (**instance tier** — cluster registries, inventories, anything true of one estate), `env.sh` (the single switch for machine paths + `ACTIVE_ORG`), `scripts/` (knowledge-search, drift-check, learn, codex-dispatch, codex-session-prime, auto-consolidate), `metrics/` (read-frequency + citation telemetry), `reading/` (external-source distilled notes, separate trust tier) |
-| Templates | [`templates/`](templates/) | `AGENTS.template.md` to drop into your repo + dispatch / handoff / validation contracts |
-| Examples | [`examples/`](examples/) | 2 end-to-end worked stories: Helm chart upgrade and alert investigation |
-| Sanitization | [`sanitization/`](sanitization/) | Pre-publish gate using trufflehog + gitleaks + local denylist |
+| Specialist sub-agents | 8 | [`core/agents/`](core/agents/) |
+| Canonical protocols | 11 | [`core/protocols/`](core/protocols/) |
+| Executable skills | 16 | [`skills/`](skills/) |
+| Runtime adapters | 6 | [`adapters/`](adapters/) |
+| Domain packs | 3 | [`domain-packs/`](domain-packs/) |
+| Hooks | 10 | [`core/hooks/`](core/hooks/) |
+| Worked examples | 2 | [`examples/`](examples/) |
+| Curated learnings | 25 files, 1,766 entries | [`agent-knowledge/references/`](agent-knowledge/references/) |
 
-## Knowledge feedback loop
+Plus [`templates/`](templates/) for the instruction contract and the dispatch, handoff and
+validation shapes; [`tools/`](tools/) one-pagers; and [`sanitization/`](sanitization/), a
+pre-publish gate over trufflehog, gitleaks and a local denylist.
 
-Every sub-agent ends a non-trivial task with a four-step **Task Completion Checklist** (canonical: [`core/protocols/bd-and-memory.md`](core/protocols/bd-and-memory.md)):
+## How it fits together
 
-1. `bd remember` — persist any non-obvious finding as a self-contained memory.
-2. Append one line to [`agent-knowledge/references/log.md`](agent-knowledge/references/log.md).
-3. If a finding refines or contradicts an existing item, update or `CONFLICT:`-flag the right `agent-knowledge/references/learnings-*.md` entry.
-4. Update [`agent-knowledge/references/index.md`](agent-knowledge/references/index.md) only when a doc was added or removed.
+`AGENTS.md` is the contract every agent reads at birth: routing rules, safety defaults, memory
+keys. From there three things carry state between sessions.
 
-The handoff report has a mandatory `## Knowledge updates` section ([`templates/handoff-report.template.md`](templates/handoff-report.template.md)) — agents must list what they changed, or write `None.` next to each row. This is the explicit gate that keeps the local knowledge base alive across sessions.
+**Specialist sub-agents** take scoped work, one job each, with explicit "when NOT to invoke"
+boundaries. **[`bd`](https://github.com/steveyegge/beads)** holds tasks, comments and durable
+memories, so a compaction costs nothing. **[`agent-knowledge/`](agent-knowledge/)** is a
+hand-curated markdown knowledge base that agents read *before* they grep the repo, in the shape of
+[Karpathy's LLM Wiki](https://gist.github.com/karpathy/442a6bf555914893e9891c11519de94f).
+
+That knowledge splits in two, which is what makes the harness survive a job change: a **portable
+tier** (`references/`, method and tool behaviour) and an **instance tier**
+([`agent-knowledge/orgs/<org>/`](agent-knowledge/orgs/), cluster registries and anything true of one estate). One switch in
+[`agent-knowledge/env.sh`](agent-knowledge/env.sh) moves every machine path and the active org. See
+[`core/protocols/knowledge-tiers.md`](core/protocols/knowledge-tiers.md) and the runbook at
+[`installation/new-org-setup.md`](installation/new-org-setup.md).
+
+Agents are required to feed it back. Every non-trivial task ends on a completion checklist that
+persists findings and flags contradictions, and the [handoff report](templates/handoff-report.template.md) has a mandatory
+`## Knowledge updates` section that must say what changed or say `None.`
+Canonical: [`core/protocols/bd-and-memory.md`](core/protocols/bd-and-memory.md).
+
+The compaction and recovery loop is documented end to end in [`LIFECYCLE.md`](LIFECYCLE.md).
+
+## Why it pays off
+
+- **~70x fewer tokens** for architecture questions, via [Graphify](https://github.com/safishamsi/graphify)
+  graph queries instead of linear file reads.
+- **60 to 90% compression** on verbose CLI output, via [`rtk`](https://github.com/rtk-ai/rtk), with
+  no workflow change.
+- **3x+ wall-clock** on N-cluster validation, via parallel dispatch
+  ([`core/protocols/parallel-dispatch.md`](core/protocols/parallel-dispatch.md)).
+- **A second model reviews every risky PR**, and never sees the first one's findings
+  ([`core/protocols/pr-review-loop.md`](core/protocols/pr-review-loop.md)).
+- **Design before code**: requirements lock, constraint inventory, candidate shapes, a multi-model
+  judge panel ([`core/protocols/design-framework.md`](core/protocols/design-framework.md)).
+
+**[Where these numbers come from](docs/evidence.md)**, quoted from the harness's own corpus with
+citations you can open, including the ones that say a claim is unmeasurable at the sample size it
+was taken from.
 
 ## What this is not
 
-- Not a documentation library. Every file pulls weight in a real agent session.
-- Not org-specific. Real cluster names, ticket prefixes, and internal URLs have been redacted. The patterns are portable.
-- Not a fork of any agent runtime. The same instruction contract loads under all six runtimes via the adapters.
+- Not a documentation library. Every file is loaded by an agent in a real session, or it goes.
+- Not org-specific. Cluster names, ticket prefixes and internal URLs are redacted; the patterns are not.
+- Not a fork of any runtime. One instruction contract loads under all six, through the adapters.
 
 ## Safety defaults
 
-- No mutating Kubernetes commands (`apply|create|delete|patch|replace|edit|scale|rollout|...`).
-- No `helm install|upgrade|uninstall|rollback`.
-- No pushes to the repository's **default/protected branch** — resolved per repo
-  (`git symbolic-ref refs/remotes/origin/HEAD`), never assumed to be `main`; no force-push to protected branches.
-- Read-only by default; runtime denylists pin the rest.
-- All examples and templates use synthetic placeholders (`<cluster>`, `<service>`, `<TICKET-KEY>`).
+- No mutating Kubernetes verbs (`apply`, `create`, `delete`, `patch`, `replace`, `edit`, `scale`, `rollout`).
+- No `helm install`, `upgrade`, `uninstall` or `rollback`.
+- No pushes to the default or protected branch, resolved per repo with
+  `git symbolic-ref refs/remotes/origin/HEAD` and never assumed to be `main`. No force-push to a
+  protected branch.
+- Read-only by default. Runtime denylists pin the rest ([`installation/command-denylist.md`](installation/command-denylist.md)).
+- Examples and templates use synthetic placeholders only: `<cluster>`, `<service>`, `<TICKET-KEY>`.
 
-## License
+## Licence and credits
 
-[Apache-2.0](LICENSE). The knowledge corpus in `agent-knowledge/references/` ships under the same
-licence as the code; it is sanitized production experience, not vendor documentation, and is
-offered without warranty like everything else here.
+[Apache-2.0](LICENSE). The knowledge corpus ships under the same licence as the code. It is
+sanitized production experience, not vendor documentation, and comes without warranty like
+everything else here.
 
-## Credits
+The patterns come from production platform-engineering work; this repo vendors and sanitizes that
+work into a portable kit. The runtimes and tools it composes are upstream open-source projects, listed
+in [`installation/prerequisites.md`](installation/prerequisites.md).
 
-The patterns here come from production platform-engineering work. The harness vendors and sanitizes that work into a portable kit. The agent runtimes and tools it composes are all upstream open-source projects — see [`installation/prerequisites.md`](installation/prerequisites.md).
+For the same operating model applied in public, see
+[`Thakurvaibhav/k8s`](https://github.com/Thakurvaibhav/k8s): a GitOps "Platform in a Box" with Argo
+CD App-of-Apps, Envoy Gateway, Prometheus/Thanos, Kyverno and Sealed Secrets.
