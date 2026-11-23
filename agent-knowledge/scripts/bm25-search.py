@@ -12,7 +12,8 @@ tokenize() are untouched by it: they were already corpus-agnostic, and only the
 corpus builder differs. --pairs prints those hits as key + body pairs.
 
 Usage: bm25-search.py [-n N] [--json] [--files] <query terms...>
-       bm25-search.py --docs-json [--pairs] [-n N] <query terms...> < docs.json
+       bm25-search.py --docs-json --pairs [-n N] <query terms...> < docs.json
+       bm25-search.py --skipped
 """
 
 import json
@@ -48,8 +49,12 @@ def doc_key(path):
     return rel if rel.startswith("orgs/") else os.path.basename(path)
 
 
-def corpus():
-    """Every numbered entry, as (citation, text). One entry is one line."""
+def corpus(skipped=None):
+    """Every numbered entry, as (citation, text). One entry is one line.
+
+    Files with no citable entries are collected into `skipped` when a list is
+    passed, so the caller can fall back to a text match instead of dropping them.
+    """
     paths = []
     refs = REFS_DIR
     if os.path.isdir(refs):
@@ -74,6 +79,8 @@ def corpus():
         # A repeated number means the file is a procedural list, not entries:
         # `#N` would be ambiguous, so it is not citable and is skipped.
         if not seen or len(set(seen)) != len(seen):
+            if skipped is not None:
+                skipped.append(p)
             continue
         key = doc_key(p)
         for line, m in zip(lines, nums):
@@ -87,12 +94,13 @@ def json_docs(fh):
 
     Tolerates both shapes bd has emitted: a {key: body} object and a list of
     {key, content} records. Same tolerance as the shell caller this replaces, so a
-    bd output change breaks both or neither.
+    bd output change breaks both or neither. Returns None when the payload will not
+    parse, so an unreadable hive stays distinguishable from one that held no match.
     """
     try:
         d = json.load(fh)
     except Exception:
-        return []
+        return None
     items = d.items() if isinstance(d, dict) else [(m.get("key"), m.get("content", "")) for m in d]
     return [(k, " ".join(str(v).split())) for k, v in items if k]
 
@@ -135,6 +143,7 @@ def rank(query, docs, limit):
 def main():
     args = sys.argv[1:]
     limit, as_json, by_file, docs_json, pairs = 12, False, False, False, False
+    list_skipped = False
     rest = []
     while args:
         a = args.pop(0)
@@ -148,12 +157,30 @@ def main():
             docs_json = True
         elif a == "--pairs":
             pairs = True
+        elif a == "--skipped":
+            list_skipped = True
         else:
             rest.append(a)
+    if list_skipped:
+        sk = []
+        corpus(sk)
+        print("\n".join(sk))
+        return 0
     if not rest:
         print("\n".join(__doc__.strip().splitlines()[-2:]), file=sys.stderr)
         return 2
-    docs = json_docs(sys.stdin) if docs_json else corpus()
+    bodies = {}
+    if docs_json:
+        docs = json_docs(sys.stdin)
+        if docs is None:
+            print("(bd memories unreadable)")
+            return 0
+        # A bd key IS the searchable part of a memory, so index it alongside the body
+        # the way the ripgrep path did. Display still shows the body alone.
+        bodies = dict(docs)
+        docs = [(k, k + " " + b) for k, b in docs]
+    else:
+        docs = corpus()
     # by_file folds entries into files and pairs reports a total, so both need every
     # hit ranked before the slice rather than a ranking truncated to the limit.
     hits = rank(" ".join(rest), docs, len(docs) if (by_file or pairs) else limit)
@@ -162,6 +189,7 @@ def main():
             print("(no matches in bd memories)")
             return 0
         for _s, key, text in hits[:limit]:
+            text = bodies.get(key, text)
             print("  %s" % key)
             print("    %s" % (text[:320] + ("…" if len(text) > 320 else "")))
         if len(hits) > limit:
@@ -184,7 +212,10 @@ def main():
         print("(no matches)")
         return 0
     for s, cite, text in hits:
-        body = text[len(cite.split("#")[1]) + 2:].strip() if text else ""
+        # A hive key has no "#N" to strip; only an entry citation does.
+        num = cite.split("#", 1)[1] if "#" in cite else ""
+        text = bodies.get(cite, text)
+        body = text[len(num) + 2:].strip() if (text and num) else (text or "").strip()
         print("%-42s %s" % (cite, body[:150]))
     return 0
 

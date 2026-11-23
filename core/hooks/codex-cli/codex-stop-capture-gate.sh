@@ -12,7 +12,7 @@
 #   * unmeasurable != pass (learnings-agent-workflow.md#64).
 #
 # Payload (stdin): transcript_path, stop_hook_active (loop guard).
-# Output: {"continue":true} = allow. {"continue":false,"stopReason":...} = block once.
+# Output: {"continue":true} = allow. {"decision":"block","reason":...} = block once.
 #
 # DETECTION MUST READ ONLY TOOL-INVOCATION FIELDS (`arguments.cmd`, `input`), never
 # message, reasoning, or tool-OUTPUT lines. The session-prime hook injects the protocol
@@ -38,7 +38,10 @@ def out(s):
     print(s); sys.exit(0)
 
 def block(reason):
-    out(json.dumps({"continue": False, "stopReason": reason}))
+    # `decision: block` carries the reason back as a continuation prompt. `continue:
+    # false` only sets should_stop, which KILLS the turn and feeds the worker nothing
+    # (codex-rs/hooks/src/events/stop.rs, rust-v0.153.4).
+    out(json.dumps({"decision": "block", "reason": reason}))
 
 def envint(name, default):
     try:
@@ -86,15 +89,20 @@ CAPTURE = re.compile(r"\bbd\s+remember\b|\bbd\s+comments\s+add\b|learn\.sh", re.
 KNOWLEDGE = re.compile(r"learnings-[\w.\-]+\.md|orgs/[\w.\-]+/[\w.\-]+\.md")
 
 tool_calls = mutated = captured = 0
+seen = parsed = 0
 declined = False
 
 try:
     with open(path, errors="ignore") as fh:
         for line in fh:
+            if not line.strip():
+                continue
+            seen += 1
             try:
                 d = json.loads(line)
             except Exception:
                 continue
+            parsed += 1
             p = d.get("payload", d)
             t = str(p.get("type", ""))
 
@@ -130,12 +138,20 @@ try:
                 if CAPTURE.search(probe) or (is_write and KNOWLEDGE.search(probe)):
                     captured += 1
 
-            # Explicit opt-out, stated by the assistant.
+            # Explicit opt-out, stated by the assistant. A `message` payload also
+            # carries developer- and user-role instruction injection, so the role is
+            # checked: otherwise prompt text quoting the opt-out excuses every session.
             elif t in ("message", "assistant", "agent_message"):
+                if t == "message" and str(p.get("role", "")) != "assistant":
+                    continue
                 blob = json.dumps(p)
                 if "no ingestible insight" in blob.lower():
                     declined = True
 except Exception:
+    block(UNMEASURABLE)
+
+# A transcript whose every line is unparseable is unmeasurable, not an idle session.
+if seen and not parsed:
     block(UNMEASURABLE)
 
 substantive = mutated >= 1 or tool_calls >= envint("LEARN_TOOLUSE_READONLY", 20)

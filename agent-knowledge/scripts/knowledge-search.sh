@@ -11,8 +11,10 @@
 #   5. $HARNESS_DOCS                                 : domain docs (optional)
 #   6. bd memories (key + value text)                : the hive, printed LAST on purpose
 #
-# Sections 2 and 3 rank files by match count and print the ranking before any match
-# lines: the ranking is the routing signal, the lines are only proof. See emit_ranked.
+# Under SEARCH_BACKEND=ripgrep, sections 2 and 3 rank files by match count and print
+# the ranking before the match lines: the ranking is the routing signal, the lines are
+# only proof. Under the bm25 default they collapse into one ranked-entry section, plus
+# a text match over the files that have no citable entries. See emit_ranked.
 #
 # INVARIANT: the orgs tier is searched UNCONDITIONALLY — no ACTIVE_ORG filter on any
 # read path. Rule, rationale, and failure mode: knowledge-tiers.md § ACTIVE_ORG.
@@ -256,6 +258,17 @@ if [ "$BM25_MODE" = 1 ]; then
     HARNESS_HOME="$HOME_DIR" HARNESS_REFS="$REFS_DIR" HARNESS_ORGS="$ORGS_DIR" \
         "$BM25_BIN" -n "${BM25_HITS:-12}" $QUERY || echo "(bm25 failed)"
     echo ""
+    # A file whose list numbering repeats has no citable `#N`, so the ranker drops it
+    # entirely. The instance tier's cluster registries are exactly that shape, so
+    # without this they vanish from the default backend with no trace in the output.
+    _skipped=$(HARNESS_HOME="$HOME_DIR" HARNESS_REFS="$REFS_DIR" HARNESS_ORGS="$ORGS_DIR" \
+        "$BM25_BIN" --skipped 2>/dev/null)
+    if [ -n "$_skipped" ]; then
+        echo "### unranked files (no citable entries, text match)"
+        echo ""
+        ( IFS=$'\n'; set -f; emit_ranked 2 $_skipped )
+        echo ""
+    fi
 else
 echo "### learnings (project)"
 echo ""

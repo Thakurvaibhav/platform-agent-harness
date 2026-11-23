@@ -64,11 +64,13 @@ body = re.sub(r"<!--.*?-->", "", body, flags=re.S)
 
 # A <details> block costs the reader one line: its <summary>. Collapse each to
 # that single line so rendered output stays allowed without buying silence.
+# `<details open>` renders EXPANDED on GitHub, so it costs full price and is skipped
+# here: collapsing it too let any body pass by adding one attribute.
 def collapse(m):
     inner = m.group(0)
     summary = re.search(r"<summary>(.*?)</summary>", inner, flags=re.S)
     return "<details> " + (summary.group(1).strip() if summary else "details")
-body = re.sub(r"<details.*?</details>", collapse, body, flags=re.S)
+body = re.sub(r"<details(?![^>]*\bopen\b).*?</details>", collapse, body, flags=re.S | re.I)
 
 FOOTER = re.compile("|".join([
     "\U0001f916 Generated with", r"Generated with \[[^]]+\]",

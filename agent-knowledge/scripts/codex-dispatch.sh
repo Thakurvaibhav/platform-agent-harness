@@ -80,7 +80,8 @@ export HARNESS_DEPTH=$((HARNESS_DEPTH + 1))
 # error, never a silent fall-through to full access. A typo must not quietly hand
 # a worker the whole filesystem.
 SANDBOX_ARGS=()
-case "${CODEX_SANDBOX:-full}" in
+# `-full`, not `:-full`: an EMPTY value is a typo, not a request for the default.
+case "${CODEX_SANDBOX-full}" in
   full) ;;   # no flag: codex's own default (danger-full-access)
   bounded)
     : "${BEADS_DB:?CODEX_SANDBOX=bounded needs BEADS_DB (source agent-knowledge/env.sh)}"
@@ -98,8 +99,13 @@ case "${CODEX_SANDBOX:-full}" in
     for _root in "$HOME/Library/Caches/helm" "$HOME/.config/gcloud" "$HOME/.cache"; do
       if [ -d "$_root" ]; then WRITABLE+=("$_root"); fi
     done
+    # Escape before interpolating, backslash first: a root holding a bare `"` closes
+    # the JSON string early and the rest of the path becomes extra writable roots.
     _json=""
-    for _root in "${WRITABLE[@]}"; do _json="$_json,\"$_root\""; done
+    for _root in "${WRITABLE[@]}"; do
+      _esc=${_root//\\/\\\\}; _esc=${_esc//\"/\\\"}
+      _json="$_json,\"$_esc\""
+    done
     SANDBOX_ARGS=(
       --sandbox workspace-write
       -c sandbox_workspace_write.network_access=true
