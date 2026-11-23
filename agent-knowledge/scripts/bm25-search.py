@@ -6,7 +6,13 @@ normalisation and no IDF: the two 370 KB files win queries they have nothing to
 do with, and a generic term weighs the same as a rare one. This ranks ENTRIES,
 so the result is already the citable unit the caller needs.
 
+--docs-json ranks documents handed to it on stdin instead of the file corpus, so the
+bd hive gets the same IDF and length normalisation as the entries. rank() and
+tokenize() are untouched by it: they were already corpus-agnostic, and only the
+corpus builder differs. --pairs prints those hits as key + body pairs.
+
 Usage: bm25-search.py [-n N] [--json] [--files] <query terms...>
+       bm25-search.py --docs-json [--pairs] [-n N] <query terms...> < docs.json
 """
 
 import json
@@ -76,6 +82,21 @@ def corpus():
     return docs
 
 
+def json_docs(fh):
+    """[(key, text)] from a `bd memories --json` payload on stdin.
+
+    Tolerates both shapes bd has emitted: a {key: body} object and a list of
+    {key, content} records. Same tolerance as the shell caller this replaces, so a
+    bd output change breaks both or neither.
+    """
+    try:
+        d = json.load(fh)
+    except Exception:
+        return []
+    items = d.items() if isinstance(d, dict) else [(m.get("key"), m.get("content", "")) for m in d]
+    return [(k, " ".join(str(v).split())) for k, v in items if k]
+
+
 def rank(query, docs, limit):
     q = [t for t in tokenize(query) if t]
     if not q or not docs:
@@ -113,7 +134,7 @@ def rank(query, docs, limit):
 
 def main():
     args = sys.argv[1:]
-    limit, as_json, by_file = 12, False, False
+    limit, as_json, by_file, docs_json, pairs = 12, False, False, False, False
     rest = []
     while args:
         a = args.pop(0)
@@ -123,13 +144,33 @@ def main():
             as_json = True
         elif a == "--files":
             by_file = True
+        elif a == "--docs-json":
+            docs_json = True
+        elif a == "--pairs":
+            pairs = True
         else:
             rest.append(a)
     if not rest:
-        print(__doc__.strip().splitlines()[-1], file=sys.stderr)
+        print("\n".join(__doc__.strip().splitlines()[-2:]), file=sys.stderr)
         return 2
-    hits = rank(" ".join(rest), corpus(), 200 if by_file else limit)
+    docs = json_docs(sys.stdin) if docs_json else corpus()
+    # by_file folds entries into files and pairs reports a total, so both need every
+    # hit ranked before the slice rather than a ranking truncated to the limit.
+    hits = rank(" ".join(rest), docs, len(docs) if (by_file or pairs) else limit)
+    if pairs:
+        if not hits:
+            print("(no matches in bd memories)")
+            return 0
+        for _s, key, text in hits[:limit]:
+            print("  %s" % key)
+            print("    %s" % (text[:320] + ("…" if len(text) > 320 else "")))
+        if len(hits) > limit:
+            print()
+            print("  ... %d more matches not shown, narrow the query or use: bd memories <keyword>"
+                  % (len(hits) - limit))
+        return 0
     if by_file:
+        hits = hits[:200]
         best = {}
         for s, cite, _ in hits:
             f = cite.split("#", 1)[0]

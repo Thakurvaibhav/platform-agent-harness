@@ -13,6 +13,33 @@
 #   codex-dispatch.sh <specialist> "<task>" [target-dir]
 #   codex-dispatch.sh helm-engineer "Bump <chart> to 1.2.0" /path/to/repo
 #
+# Sandbox (CODEX_SANDBOX env var, NOT a positional arg: every caller passes
+# <specialist> "<task>" <dir> positionally and must keep working untouched):
+#   unset | full   default. No --sandbox flag, so codex uses its own default.
+#                  That is danger-full-access: the worker may write anywhere the
+#                  user can. Unchanged behaviour for every existing caller.
+#   bounded        workspace-write + network + a writable allowlist. Network stays
+#                  ON, so helm/gh/git/curl work. Opt-in only.
+#                  Writable: the target dir, /tmp and $TMPDIR (codex's own
+#                  defaults), plus the allowlist below. NOT writable: $HOME, the
+#                  knowledge home, the runtime's own config dirs, or any repo
+#                  outside the target dir. So this bounds TAMPERING, not reading:
+#                  reads stay open everywhere and the network is on, so it is not
+#                  an exfiltration control.
+#
+#   CODEX_SANDBOX=bounded codex-dispatch.sh general-engineer "audit X" /path
+#
+# What `bounded` costs, measured on codex-cli 0.153.4, not guessed:
+#   - `git commit` fails. codex write-protects .git even inside the workspace.
+#   - A nested codex-dispatch.sh fails; a worker cannot write the codex config
+#     dir. The depth ceiling already discourages that, this hard-fails it.
+#   - `read-only` is NOT offered: bd takes a LOCK on open, so read-only breaks
+#     `bd prime` itself and the worker starts with no hive at all.
+#   - Replayed green: helm dep build (http + oci), helm template, gh pr view,
+#     gh pr diff, git clone, bd prime, bd memories, knowledge-search.sh, learn.sh,
+#     kubectl, gcloud auth list, rtk. The capture gate fires identically under
+#     both modes (same prompt, controlled comparison).
+#
 # Fan-out (run several, each on a DISTINCT bd task, to avoid hive write races):
 #   codex-dispatch.sh A "taskA" & codex-dispatch.sh B "taskB" & wait
 #
@@ -24,6 +51,8 @@
 #                        (default: ~/.agent-knowledge/codex-agents)
 #   KNOWLEDGE_HOME     — path to knowledge references dir
 #                        (default: ~/.agent-knowledge/references)
+#   CODEX_SANDBOX      : full (default) or bounded (see above)
+#   BEADS_DB           : bd hive directory, required by CODEX_SANDBOX=bounded
 #   HARNESS_DEPTH      — dispatch-hop counter, managed by this script (see below)
 set -euo pipefail
 
@@ -47,6 +76,43 @@ if [ "$HARNESS_DEPTH" -ge 2 ]; then
 fi
 export HARNESS_DEPTH=$((HARNESS_DEPTH + 1))
 
+# Sandbox mode. Validated against a closed set: an unrecognised value is a hard
+# error, never a silent fall-through to full access. A typo must not quietly hand
+# a worker the whole filesystem.
+SANDBOX_ARGS=()
+case "${CODEX_SANDBOX:-full}" in
+  full) ;;   # no flag: codex's own default (danger-full-access)
+  bounded)
+    : "${BEADS_DB:?CODEX_SANDBOX=bounded needs BEADS_DB (source agent-knowledge/env.sh)}"
+    HIVE="$(cd "$BEADS_DB" 2>/dev/null && pwd -P)" \
+      || { echo "codex-dispatch: BEADS_DB=$BEADS_DB is not a readable directory" >&2; exit 4; }
+    WRITABLE=("$HIVE")
+    # Each candidate below is here because a real worker command failed without it,
+    # and each is added ONLY if it exists, so a machine without that tool gets a
+    # working sandbox instead of a root pointing at nothing:
+    #   helm cache    -> `helm dep build` cannot refresh a repo index, which then
+    #                    fails `helm template`, the rendered-proof step. On Linux
+    #                    that cache lives under ~/.cache, already covered below.
+    #   gcloud config -> gcloud writes a log file before doing anything else.
+    #   .cache        -> shared cache dir for assorted CLIs.
+    for _root in "$HOME/Library/Caches/helm" "$HOME/.config/gcloud" "$HOME/.cache"; do
+      if [ -d "$_root" ]; then WRITABLE+=("$_root"); fi
+    done
+    _json=""
+    for _root in "${WRITABLE[@]}"; do _json="$_json,\"$_root\""; done
+    SANDBOX_ARGS=(
+      --sandbox workspace-write
+      -c sandbox_workspace_write.network_access=true
+      -c "sandbox_workspace_write.writable_roots=[${_json#,}]"
+    )
+    ;;
+  *)
+    echo "codex-dispatch: CODEX_SANDBOX='$CODEX_SANDBOX' is not valid. Use 'full' or 'bounded'." >&2
+    echo "  Refusing to guess: an unrecognised value will NOT fall back to full access." >&2
+    exit 4
+    ;;
+esac
+
 AGENTS_DIR="${AGENTS_DIR:-$HOME/.claude/agents}"
 CODEX_AGENTS_DIR="${CODEX_AGENTS_DIR:-$HOME/.agent-knowledge/codex-agents}"
 KNOWLEDGE_HOME="${KNOWLEDGE_HOME:-$HOME/.agent-knowledge/references}"
@@ -67,7 +133,8 @@ ROLE_BODY="$(awk 'NR==1 && /^---[[:space:]]*$/{f=1; next} f && /^---[[:space:]]*
 
 PREAMBLE="## Standard preamble
 - Run \`bd prime --memories-only\` first to load the shared hive memory.
-- Read $KNOWLEDGE_HOME/shared-protocols-core.md for shared protocols (or equivalent).
+- Read $KNOWLEDGE_HOME/shared-protocols-core.md for shared protocols (or equivalent),
+  and $KNOWLEDGE_HOME/code-quality.md before writing code.
 - Search prior art: knowledge-search.sh <keywords>; cite [learnings-<file>.md#<N>].
 - Prefix verbose read-only shell with rtk. Never prefix mutating or piped commands.
 - Before finishing, persist non-obvious findings: bd remember \"<insight>\" --key <domain>/<category>/<topic>.
@@ -84,4 +151,5 @@ $TASK"
 # < /dev/null: codex exec HANGS on "Reading additional input from stdin..." if stdin
 # stays open (inherited from the caller). Closing it here means callers can't get this
 # wrong — the dispatcher is the single place that has to remember.
-exec codex exec --skip-git-repo-check --cd "$DIR" "$FULL_PROMPT" < /dev/null
+exec codex exec --skip-git-repo-check "${SANDBOX_ARGS[@]+"${SANDBOX_ARGS[@]}"}" \
+  --cd "$DIR" "$FULL_PROMPT" < /dev/null

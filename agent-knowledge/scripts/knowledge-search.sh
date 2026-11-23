@@ -4,14 +4,14 @@
 # Usage: knowledge-search.sh <query terms...>
 #
 # Searches:
-#   1. bd memories (key + value text)                — always ripgrep
-#   2. references/index.md                           — CURATED router, ranked by distinct terms
-#   3. references/learnings-*.md                     — PORTABLE tier (method, vendor behavior)
-#   4. orgs/*/*.md                                   — INSTANCE tier, EVERY org, always
-#   5. reading/*.md                                  — external notes, separate trust tier
-#   6. $HARNESS_DOCS                                 — domain docs (optional)
+#   1. references/index.md                           : CURATED router, ranked by distinct terms
+#   2. references/learnings-*.md                     : PORTABLE tier (method, vendor behavior)
+#   3. orgs/*/*.md                                   : INSTANCE tier, EVERY org, always
+#   4. reading/*.md                                  : external notes, separate trust tier
+#   5. $HARNESS_DOCS                                 : domain docs (optional)
+#   6. bd memories (key + value text)                : the hive, printed LAST on purpose
 #
-# Sections 3 and 4 rank files by match count and print the ranking before any match
+# Sections 2 and 3 rank files by match count and print the ranking before any match
 # lines: the ranking is the routing signal, the lines are only proof. See emit_ranked.
 #
 # INVARIANT: the orgs tier is searched UNCONDITIONALLY — no ACTIVE_ORG filter on any
@@ -25,7 +25,8 @@
 #   HARNESS_DOCS  — domain docs directory (optional)
 #   BEADS_DIR     — beads database location (default: auto-discover)
 #
-# Backend seam: SEARCH_BACKEND=qmd (bd memories stay ripgrep). NEVER flip without
+# Backend seam: SEARCH_BACKEND defaults to bm25, which ranks entries in both tiers AND
+# the hive. `ripgrep` restores the file match-count path. NEVER flip to `qmd` without
 # a qmd `orgs` collection — the instance tier vanishes silently. knowledge-tiers.md.
 
 set -o pipefail
@@ -112,33 +113,52 @@ emit_ranked() {
     [ "$any" = 1 ] || echo "(no matches)"
 }
 
-# Decide file-search backend.
-# SEARCH_BACKEND=bm25 ranks ENTRIES instead of files, so a hit is already the
-# citable `file.md#N`. The file ranking below is a raw match count with no length
-# term and no IDF, which lets the largest files win queries they do not answer.
-# Default stays ripgrep: flip it once your own corpus shows the same skew.
+# Decide file-search backend. Default is bm25: it ranks ENTRIES instead of files, so a
+# hit is already the citable `file.md#N`, with IDF and length normalisation.
+# SEARCH_BACKEND=ripgrep restores the file ranking below, a raw match count with no
+# length term and no IDF, which lets the largest files win queries they do not answer.
+# That path is also the automatic fallback when bm25-search.py is missing.
 BM25_MODE=0
 BM25_BIN="${HARNESS_SCRIPTS:-$(dirname "$0")}/bm25-search.py"
-if [ "${SEARCH_BACKEND:-ripgrep}" = "bm25" ] && [ -x "$BM25_BIN" ]; then
+if [ "${SEARCH_BACKEND:-bm25}" = "bm25" ] && [ -x "$BM25_BIN" ]; then
     BM25_MODE=1
 fi
 
 QMD_MODE=0
-if [ "${SEARCH_BACKEND:-ripgrep}" = "qmd" ] && command -v qmd >/dev/null 2>&1; then
+if [ "${SEARCH_BACKEND:-bm25}" = "qmd" ] && command -v qmd >/dev/null 2>&1; then
     QMD_MODE=1
 fi
 
 echo "## Knowledge Search: $QUERY"
 echo ""
 
-# --- Section 1: bd memories (always ripgrep) ---
-echo "### bd memories"
-echo ""
-# `bd memories` prints key and body on separate lines, so a line-wise grep
-# returns one or the other. Match whole records instead.
-BD_JSON=$(bd memories --json 2>/dev/null || echo "")
-if [ -n "$BD_JSON" ]; then
-    printf '%s' "$BD_JSON" | PATTERN="$PATTERN" /usr/bin/python3 -c '
+# --- Section 6: bd memories, DEFINED here and CALLED LAST (call site at end) ---
+# The order is deliberate and was measured. This section used to print FIRST and was
+# 9,387 bytes of a 13,976 byte result on one real query, 67% of the output, while the
+# BM25-ranked entries that answered that query were 2,350 bytes and printed fourth. An
+# agent that read the first screen and moved on never reached the answer. The routed,
+# citable layers lead now; the hive follows.
+bd_memories_section() {
+    echo "### bd memories"
+    echo ""
+    # `bd memories` prints key and body on separate lines, so a line-wise grep
+    # returns one or the other. Match whole records instead.
+    BD_JSON=$(bd memories --json 2>/dev/null || echo "")
+    if [ -z "$BD_JSON" ]; then
+        echo "(bd memories unavailable)"
+        echo ""
+        return 0
+    fi
+    if [ "$BM25_MODE" = 1 ]; then
+        # Same ranker as the entries section, so a generic term stops weighing as much
+        # as a rare one. The fallback below is a pure OR match taking the first 25 hits
+        # in dict order with no ranking at all, and on four real queries 15 to 19 of
+        # those 25 matched exactly ONE query term.
+        printf '%s' "$BD_JSON" \
+            | "$BM25_BIN" --docs-json --pairs -n "${BD_HITS:-25}" $QUERY \
+            || echo "(bd ranking failed)"
+    else
+        printf '%s' "$BD_JSON" | PATTERN="$PATTERN" /usr/bin/python3 -c '
 import json, os, re, sys
 try: d = json.load(sys.stdin)
 except Exception: print("(bd memories unreadable)"); raise SystemExit
@@ -156,22 +176,22 @@ if len(hits) > CAP:
     print()
     print("  ... %d more matches not shown — narrow the query or use: bd memories <keyword>" % (len(hits) - CAP))
 '
-else
-    echo "(bd memories unavailable)"
-fi
+    fi
+    echo ""
+}
 
-echo ""
-
-# --- Sections 2-6: files (qmd if enabled, else ripgrep per-source) ---
+# --- Sections 1-5: files (qmd if enabled, else ripgrep per-source) ---
 if [ "$QMD_MODE" = 1 ]; then
     echo "### files (qmd)"
     echo ""
     qmd search "$QUERY" --files -n 30 2>/dev/null || echo "(qmd search failed — check collections)"
     echo ""
+    # This path returns early, so it needs its own call to keep the hive in the output.
+    bd_memories_section
     exit 0
 fi
 
-# --- Section 2: the curated router ---
+# --- Section 1: the curated router ---
 # index.md's Keywords columns are hand-maintained and are the whole point of the
 # two-tier system, yet a raw grep over file BODIES bypasses them: a keyword that is an
 # intent hook ("pod debugging") rather than a literal string in the text routed nothing.
@@ -194,10 +214,21 @@ for line in open(sys.argv[1], encoding="utf-8"):
     mm = re.match(r"\| *\[?\x60([^\x60]+)\x60", line)
     if not mm:
         continue
-    low = line.lower()
+    # Score the row's OWN name plus its prose, never its LINK columns. Cross-refs
+    # (portable table) and Portable counterpart (instance table) both hold backticked
+    # file names, so every row that merely linked to learnings-terraform.md scored a
+    # free hit on the term "terraform": measured, "terraform state lock" ranked
+    # learnings-observability.md ABOVE learnings-terraform.md on exactly that false hit.
+    # Stripping backticked file names AFTER the first is shape-independent, so it holds
+    # for both tables, and the leading name stays because matching a file by its own
+    # name is real routing. Only file-like tokens go: the summary column uses backticks
+    # for code terms (`bd forget`) that are legitimate keywords.
+    own = mm.group(1)
+    rest = re.sub(r"\x60[^\x60]*\.(?:md|sh|py|json)\x60", " ", line[mm.end():])
+    low = (own + " " + rest).lower()
     hits = sum(1 for x in terms if x.lower() in low)
     if hits:
-        rows.append((hits, mm.group(1)))
+        rows.append((hits, own))
 rows.sort(key=lambda r: (-r[0], r[1]))
 best = rows[0][0] if rows else 0
 for h, f in rows[:8]:
@@ -218,7 +249,7 @@ fi
 
 echo ""
 
-# --- Section 3: portable tier ---
+# --- Section 2: portable tier ---
 if [ "$BM25_MODE" = 1 ]; then
     echo "### entries, BM25-ranked (both tiers — the citation is the result)"
     echo ""
@@ -236,7 +267,7 @@ fi
 
 echo ""
 
-# --- Section 4: instance tier — every org, unconditionally (see header) ---
+# --- Section 3: instance tier, every org, unconditionally (see header) ---
 # Guard with -d: an unmatched glob expands to its literal pattern, not to nothing.
 if [ -d "$ORGS_DIR" ]; then
     _found_org=0
@@ -268,7 +299,7 @@ else
 fi
 fi
 
-# --- Section 5: reading notes (separate trust tier) ---
+# --- Section 4: reading notes (separate trust tier) ---
 echo "### reading (external notes)"
 echo ""
 if [ -d "$READING_DIR" ] && ls "$READING_DIR"/*.md >/dev/null 2>&1; then
@@ -279,10 +310,13 @@ fi
 
 echo ""
 
-# --- Section 6: domain docs (optional) ---
+# --- Section 5: domain docs (optional) ---
 if [ -n "${HARNESS_DOCS:-}" ] && [ -d "$HARNESS_DOCS" ]; then
     echo "### domain docs"
     echo ""
     rg -ilH --color=never "$PATTERN" "$HARNESS_DOCS" 2>/dev/null | head -10 || echo "(no matches in domain docs)"
     echo ""
 fi
+
+# The hive prints after the routed, citable layers. See bd_memories_section.
+bd_memories_section

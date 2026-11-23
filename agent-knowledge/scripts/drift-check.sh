@@ -11,6 +11,8 @@
 #   5. Learnings file exists but is not indexed in index.md (discovery gap)
 #   6. index.md references a learnings file that does not exist (dangling)
 #   7. Asymmetric cross-ref: A's "See also:" lists B, but B does not list A back
+#   7b. Instance tier: an org file's "See also:" points at a learnings file that
+#       does not exist (dangling)
 #
 # Exit codes: 0 = clean, 1 = warnings found (non-blocking)
 
@@ -163,6 +165,23 @@ check_reference_consistency() {
             # does B's See-also line reference A back?
             grep -m1 -i 'See also:' "$REFS_DIR/$b" | grep -q "$a" \
                 || WARNINGS+=("DRIFT: cross-ref asymmetry — $a lists $b, but $b's 'See also:' omits $a")
+        done
+    done
+
+    # 7b. Instance tier. Symmetry is NOT expected there (an org file points at its
+    # portable counterpart, not the reverse), but a pointer to a file that no longer
+    # exists is just as dead, and nothing else in this script looks at that tier.
+    local o
+    local orgs_dir="${HARNESS_ORGS:-$(dirname "$REFS_DIR")/orgs}"
+    for o in "$orgs_dir"/*/*.md; do
+        [ -f "$o" ] || continue
+        local oa; oa="orgs/$(basename "$(dirname "$o")")/$(basename "$o")"
+        local oline; oline="$(grep -m1 -i 'See also:' "$o")"
+        [ -n "$oline" ] || continue
+        local t
+        for t in $(printf '%s' "$oline" | grep -oE 'learnings-[a-z0-9-]+\.md' | sort -u); do
+            [ -f "$REFS_DIR/$t" ] \
+                || WARNINGS+=("DRIFT: $oa 'See also:' references $t but the file does not exist")
         done
     done
 }

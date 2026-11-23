@@ -120,12 +120,22 @@ Wire hooks via `~/.codex/hooks.json`:
           }
         ]
       }
+    ],
+    "Stop": [
+      {
+        "hooks": [
+          {
+            "type": "command",
+            "command": "<path-to>/core/hooks/codex-cli/codex-stop-capture-gate.sh"
+          }
+        ]
+      }
     ]
   }
 }
 ```
 
-The SessionStart hook warms the bd hive and surfaces the memory count. Codex hooks **must** emit valid JSON to stdout (the `hookSpecificOutput` contract); plain text triggers "invalid session start JSON output" errors.
+The SessionStart hook warms the bd hive and surfaces the memory count. The Stop hook is the learning-capture gate, giving Codex workers the same bar Claude's `SubagentStop` enforces: substantive work with nothing persisted blocks the stop once (`LEARN_GATE_DISABLE=1` to disable). See [`core/hooks/README.md`](../../core/hooks/README.md). Codex hooks **must** emit valid JSON to stdout (the `hookSpecificOutput` contract); plain text triggers "invalid session start JSON output" errors.
 
 **Hook trust:** Editing `hooks.json` triggers one-time interactive re-trust. Headless `codex exec` skips untrusted hooks unless `--dangerously-bypass-hook-trust` is passed. For unattended enforcement, prefer git hooks (post-commit) over Codex trust-gated hooks.
 
@@ -142,6 +152,8 @@ codex-dispatch.sh A "taskA" /repo & codex-dispatch.sh B "taskB" /repo & wait
 ```
 
 The script loads specialist role definitions from `core/agents/<name>.md` (strips YAML frontmatter), prepends the standard hive preamble, and wraps `codex exec --skip-git-repo-check --cd <dir>`.
+
+`CODEX_SANDBOX=bounded` switches a dispatch to `workspace-write` with the network still on and a writable allowlist (the bd hive, plus the tool caches that exist on the host). It bounds tampering, not reading: reads stay open and the network is on, so it is not an exfiltration control. Default is `full`, which passes no `--sandbox` flag and leaves codex's own default in place; an unrecognised value is refused rather than falling back to full access. Costs, measured on codex-cli 0.153.4: `git commit` fails (codex write-protects `.git` even inside the workspace) and a nested dispatch fails because a worker cannot write the codex config dir. `read-only` is deliberately not offered, since bd takes a lock on open and `bd prime` itself would fail.
 
 ### Dispatching Codex FROM Claude (cross-runtime review)
 
