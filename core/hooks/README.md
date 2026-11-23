@@ -14,6 +14,7 @@ The end-to-end compaction lifecycle these hooks implement is documented in [`LIF
 | [generic/learning-gate.py](generic/learning-gate.py) | Learning-capture gate; records usage telemetry — reads + citations (see below). |
 | [generic/comment-discipline.sh](generic/comment-discipline.sh) | Blocking gate on code-comment discipline: banned refs, 2-line block ceiling, per-file density, 13-line ceiling on a Python function / function-body docstring. |
 | [generic/test-discipline.sh](generic/test-discipline.sh) | Blocking gate on test VOLUME: added test LOC within `TEST_FIXED_LINES + MAX_TEST_RATIO x` added prod LOC (defaults `220` and `1.2`). |
+| [generic/pr-body-discipline.sh](generic/pr-body-discipline.sh) | Blocking gate on PR BODY length: visible non-blank lines within `MAX_BODY_LINES` (default `40`). Takes `--file <body>` before `gh pr create`, `--pr <n>` on an open PR, or a body on stdin. |
 
 > The knowledge-home scripts (`knowledge-search.sh`, `drift-check.sh`, `learn.sh`) live in [`agent-knowledge/scripts/`](../../agent-knowledge/scripts/), not here — they belong to the shared knowledge home, not the runtime event hooks.
 
@@ -41,7 +42,7 @@ Reads of the **router files** — `index.md` and the protocol files the startup 
 | `HARNESS_METRICS` | `~/.agent-knowledge/metrics` | Where usage telemetry (reads + citations) is written. |
 | `HARNESS_ROUTER_FILES` | `index.md,bd-and-memory.md,code-quality.md` | Comma-separated router files whose reads are counted. Rename them here if your layout differs. |
 
-## The two discipline gates
+## The discipline gates
 
 [`generic/comment-discipline.sh`](generic/comment-discipline.sh) and [`generic/test-discipline.sh`](generic/test-discipline.sh) share one interface — `--staged`, `--base <ref>`, a bare invocation (diff vs merge-base with the **resolved** base branch — `--base`/`$BASE_REF`, else the PR's `baseRefName`, else `origin/HEAD`), or a diff on stdin with `-`. Exit `0` clean, `1` findings, `2` usage error **or an unresolvable base** — a gate that could not measure must never read as a pass. Both are **blocking** before a push and both are re-run at review time.
 
@@ -49,10 +50,21 @@ They bound the two things a reviewer otherwise keeps writing by hand:
 
 - **Prose volume.** The docstring rule matters as much as the `#` rules: without it an author moves an essay out of a comment block into a triple-quoted string and passes untouched. Module and class docstrings are exempt at any length — the target is a multi-paragraph *function* docstring, or narrative prose standing in a function body.
 - **Test volume.** The allowance is affine (`FIXED + RATIO x prod`), not a plain ratio, because one test carries a fixed scaffolding cost that does not shrink with the change.
+- **PR-body volume.** [`generic/pr-body-discipline.sh`](generic/pr-body-discipline.sh) bounds the same prose one surface over: an author who cannot put the essay in a comment block puts it in the PR description. It counts only what a reader sees before expanding anything, so collapsed `<details>` and bot-injected HTML comments cost nothing, and it reads a body file (`--file`) before the PR exists rather than a diff.
 
 Both thresholds are env-tunable (`MAX_COMMENT_LINES`, `MAX_DOCSTRING_LINES`, `TEST_FIXED_LINES`, `MAX_TEST_RATIO`). Retune to the repo rather than waiving the gate — a count can be argued with only by changing the count. The standards they enforce are canonical in [`core/protocols/code-quality.md`](../protocols/code-quality.md).
 
 **Prove a gate can fail before trusting it.** Feed each one a diff built to trip it and confirm it exits 1, then a clean control and confirm it exits 0. A threshold that has never fired has not been shown capable of firing.
+
+## Adapter hooks (Codex CLI)
+
+| Path | Event | Purpose |
+| --- | --- | --- |
+| [codex-cli/codex-stop-capture-gate.sh](codex-cli/codex-stop-capture-gate.sh) | Stop | Learning-capture gate for Codex workers: same policy as `generic/learning-gate.py`'s hard gate, with a Codex transcript adapter. Wiring: [adapters/codex-cli/README.md](../../adapters/codex-cli/README.md). |
+
+The policy is shared, so the two files change together. What is Codex-specific is only the transcript shape: Codex records a file write as `custom_tool_call(name=apply_patch)` plus `patch_apply_end` rather than a `function_call`, and carries the shell script in `input` on current rollouts and in `arguments.cmd` on older ones. Reading one shape only leaves every command invisible and the gate grades a busy session as idle.
+
+Detection reads **tool-invocation fields only**, never message, reasoning or tool-output lines: a session-prime hook injects protocol text containing `bd remember ... --key` and the learnings filenames into the transcript, so a naive grep finds "captured" in every session and the gate silently never fires.
 
 ## Adapter hooks (Factory Droid examples)
 
