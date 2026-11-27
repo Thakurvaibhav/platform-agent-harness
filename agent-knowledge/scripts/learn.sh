@@ -1,18 +1,25 @@
 #!/usr/bin/env bash
-# learn.sh — one-liner to persist a learning without ceremony.
+# learn.sh: one-liner to persist a learning without ceremony.
 #
 # Usage:
-#   learn.sh "<insight>"                          # key defaults to session/adhoc
+#   learn.sh "<insight>"                          # bd derives the key from the content
 #   learn.sh "<insight>" <domain>/<category>/<topic>
 #
 # Resolves where to run `bd remember`:
 #   1. Walk up from CWD to the first dir that owns a .beads database.
-#   2. Else fall back to $BEADS_DIR if it is set and exists.
+#   2. Else fall back to the directory holding $BEADS_DB, which env.sh owns.
 #   3. Else run `bd remember` in the current directory.
 #
 # Lower friction = it actually happens. Capture on discovery, not at task end.
 
 set -o pipefail
+
+# Hooks and cron do not reliably source a login shell, so pick up this machine's
+# paths here rather than assuming the caller's environment already has them.
+# Resolved relative to this script so the home can live anywhere.
+_SELF_HOME="$(cd "$(dirname "$0")/.." 2>/dev/null && pwd)"
+# shellcheck source=/dev/null
+[ -f "$_SELF_HOME/env.sh" ] && . "$_SELF_HOME/env.sh"
 
 INSIGHT="$1"
 KEY="${2:-}"
@@ -28,9 +35,10 @@ find_bd_cwd() {
     [ -d "$dir/.beads" ] && { echo "$dir"; return 0; }
     dir="$(dirname "$dir")"
   done
-  if [ -n "${BEADS_DIR:-}" ] && [ -d "$BEADS_DIR/.beads" ]; then
-    echo "$BEADS_DIR"; return 0
-  fi
+  # ${VAR-} not ${VAR:-}: with no hive configured the -d test fails and the caller
+  # falls back to running bd in CWD, which is the honest degradation.
+  local hive="${BEADS_DB-}"
+  [ -d "$hive" ] && { dirname "$hive"; return 0; }
   return 1
 }
 

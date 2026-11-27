@@ -11,7 +11,11 @@ bd hive gets the same IDF and length normalisation as the entries. rank() and
 tokenize() are untouched by it: they were already corpus-agnostic, and only the
 corpus builder differs. --pairs prints those hits as key + body pairs.
 
-Usage: bm25-search.py [-n N] [--json] [--files] <query terms...>
+--verdict prefixes the output with `# coverage=<f> hits=<n>`: how much of the
+query, weighted by IDF, the TOP hit actually contains. The caller decides what
+counts as too little; this script holds no threshold.
+
+Usage: bm25-search.py [-n N] [--json] [--files] [--verdict] <query terms...>
        bm25-search.py --docs-json --pairs [-n N] <query terms...> < docs.json
        bm25-search.py --skipped
 """
@@ -29,18 +33,61 @@ HOME_DIR = os.environ.get("HARNESS_HOME") or os.path.expanduser("~/.agent-knowle
 REFS_DIR = os.environ.get("HARNESS_REFS") or os.path.join(HOME_DIR, "references")
 ORGS_DIR = os.environ.get("HARNESS_ORGS") or os.path.join(HOME_DIR, "orgs")
 ENTRY_RE = re.compile(r"^(\d+)\. ")
-# Keep hyphenated and underscored identifiers whole (kube-dns, force_ssl) AND
-# index their parts, so a query for either spelling finds the entry.
-TOKEN_RE = re.compile(r"[a-z0-9]+(?:[-_][a-z0-9]+)*")
+# Matched on the ORIGINAL text, not a lowercased copy: lowercasing first destroys
+# the case boundary camel_parts() needs. Case is dropped per piece afterwards.
+TOKEN_RE = re.compile(r"[A-Za-z0-9]+(?:[-_][A-Za-z0-9]+)*")
+CAMEL_RE = re.compile(r"[A-Z]+(?![a-z])|[A-Z][a-z0-9]*|[a-z0-9]+")
 K1, B = 1.2, 0.75
+
+# Closed-class function words only, each dropped from the list if it is also an
+# identifier or domain term here: "set", "check", "run", "all", "no" and "re"
+# all failed that test and are deliberately absent. Entries are written as full
+# sentences, so "the" appears in 93.6% of them and "is" in 80.8%: on a
+# sentence-shaped query they were 5.1% of the top hit's score and kept two
+# on-topic entries out of the top five. Mean document length 153 -> 110.
+STOPWORDS = frozenset("""
+a an the this that these those
+i we you he she it they them us me him her
+my our your his its their
+is are was were be been being am
+do does did has have had
+can could will would shall should may might must cannot
+and or but if then than because while when where which who whom whose whether
+though although
+of in on at to for with from by as into onto about
+not never only also very just even still already yet rather too
+both each any some such
+there here what how why so one
+s t
+""".split())
+
+
+def camel_parts(word):
+    """Sub-pieces of a camelCase/PascalCase word, or [] if it is not camel.
+
+    A split containing a one-character piece is rejected whole rather than
+    trimmed: mTLS splits as m + TLS and IPv4 as I + Pv4, and emitting the long
+    half broadened queries onto every TLS entry. Measured on 20 known items,
+    rejecting these splits moved the one demotion this caused from rank 29 to 16.
+    """
+    sub = CAMEL_RE.findall(word)
+    return sub if len(sub) > 1 and all(len(s) > 1 for s in sub) else []
 
 
 def tokenize(text):
     out = []
-    for t in TOKEN_RE.findall(text.lower()):
-        out.append(t)
-        if "-" in t or "_" in t:
-            out.extend(p for p in re.split(r"[-_]", t) if p)
+    for raw in TOKEN_RE.findall(text):
+        pieces = [raw]
+        parts = [p for p in re.split(r"[-_]", raw) if p] if ("-" in raw or "_" in raw) else [raw]
+        if parts != [raw]:
+            # Keep hyphenated and underscored identifiers whole (kube-dns,
+            # force_ssl) AND index their parts, so either spelling finds the entry.
+            pieces += parts
+        for p in parts:
+            # Same bargain for camelCase, which the hyphen rule did not cover:
+            # PeerAuthentication, nodeSelector and syncPolicy returned nothing.
+            pieces += camel_parts(p)
+        out.extend(w for w in (x.lower() for x in pieces) if w not in STOPWORDS)
     return out
 
 
@@ -105,10 +152,20 @@ def json_docs(fh):
     return [(k, " ".join(str(v).split())) for k, v in items if k]
 
 
+class Ranked(list):
+    """Hits, plus `coverage`: the share of the query the TOP hit actually answers.
+
+    A plain list subclass, not a (hits, coverage) tuple, because every existing
+    caller indexes and iterates the return value directly.
+    """
+
+    coverage = 0.0
+
+
 def rank(query, docs, limit):
     q = [t for t in tokenize(query) if t]
     if not q or not docs:
-        return []
+        return Ranked()
     toks = [tokenize(text) for _, text in docs]
     lens = [len(t) for t in toks]
     avg = sum(lens) / float(len(lens))
@@ -135,15 +192,25 @@ def rank(query, docs, limit):
                 continue
             s += idf[w] * (f * (K1 + 1)) / (f + K1 * (1 - B + B * lens[i] / avg))
         if s > 0:
-            scored.append((s, docs[i][0], docs[i][1]))
+            scored.append((s, docs[i][0], docs[i][1], i))
     scored.sort(key=lambda r: (-r[0], r[1]))
-    return scored[:limit]
+    top = scored[:limit]
+    out = Ranked((s, cite, text) for s, cite, text, _ in top)
+    if top:
+        # Weighted by IDF, not a raw term count: a hit matching only "argocd" and
+        # "chart" out of five terms answered the cheap half. The score cannot say
+        # this on its own, since it rises with term frequency.
+        counts = tfs[top[0][3]]
+        total = sum(idf[w] for w in set(q))
+        if total:
+            out.coverage = sum(idf[w] for w in set(q) if counts.get(w)) / total
+    return out
 
 
 def main():
     args = sys.argv[1:]
     limit, as_json, by_file, docs_json, pairs = 12, False, False, False, False
-    list_skipped = False
+    list_skipped = verdict = False
     rest = []
     while args:
         a = args.pop(0)
@@ -159,6 +226,8 @@ def main():
             pairs = True
         elif a == "--skipped":
             list_skipped = True
+        elif a == "--verdict":
+            verdict = True
         else:
             rest.append(a)
     if list_skipped:
@@ -167,7 +236,7 @@ def main():
         print("\n".join(sk))
         return 0
     if not rest:
-        print("\n".join(__doc__.strip().splitlines()[-2:]), file=sys.stderr)
+        print("\n".join(__doc__.strip().splitlines()[-3:]), file=sys.stderr)
         return 2
     bodies = {}
     if docs_json:
@@ -184,6 +253,9 @@ def main():
     # by_file folds entries into files and pairs reports a total, so both need every
     # hit ranked before the slice rather than a ranking truncated to the limit.
     hits = rank(" ".join(rest), docs, len(docs) if (by_file or pairs) else limit)
+    matched = len(hits)
+    if verdict:
+        print("# coverage=%.3f hits=%d" % (hits.coverage, min(matched, limit)))
     if pairs:
         if not hits:
             print("(no matches in bd memories)")
@@ -192,10 +264,10 @@ def main():
             text = bodies.get(key, text)
             print("  %s" % key)
             print("    %s" % (text[:320] + ("…" if len(text) > 320 else "")))
-        if len(hits) > limit:
+        if matched > limit:
             print()
             print("  ... %d more matches not shown, narrow the query or use: bd memories <keyword>"
-                  % (len(hits) - limit))
+                  % (matched - limit))
         return 0
     if by_file:
         hits = hits[:200]
@@ -212,10 +284,10 @@ def main():
         print("(no matches)")
         return 0
     for s, cite, text in hits:
-        # A hive key has no "#N" to strip; only an entry citation does.
-        num = cite.split("#", 1)[1] if "#" in cite else ""
         text = bodies.get(cite, text)
-        body = text[len(num) + 2:].strip() if (text and num) else (text or "").strip()
+        # Strip the entry number by PATTERN, not by arithmetic on the citation: a
+        # --docs-json key carries no "#", and indexing that split raised IndexError.
+        body = ENTRY_RE.sub("", text, count=1).strip() if text else ""
         print("%-42s %s" % (cite, body[:150]))
     return 0
 

@@ -12,9 +12,7 @@ The end-to-end compaction lifecycle these hooks implement is documented in [`LIF
 | [generic/post-task-memory.sh](generic/post-task-memory.sh) | Wrapper for `bd remember` with sanitization guard. |
 | [generic/rtk-wrapper.sh](generic/rtk-wrapper.sh) | Wraps documented `rtk-safe` commands with `rtk`. |
 | [generic/learning-gate.py](generic/learning-gate.py) | Learning-capture gate; records usage telemetry — reads + citations (see below). |
-| [generic/comment-discipline.sh](generic/comment-discipline.sh) | Blocking gate on code-comment discipline: banned refs, 2-line block ceiling, per-file density, 13-line ceiling on a Python function / function-body docstring. |
-| [generic/test-discipline.sh](generic/test-discipline.sh) | Blocking gate on test VOLUME: added test LOC within `TEST_FIXED_LINES + MAX_TEST_RATIO x` added prod LOC (defaults `220` and `1.2`). |
-| [generic/pr-body-discipline.sh](generic/pr-body-discipline.sh) | Blocking gate on PR BODY length: visible non-blank lines within `MAX_BODY_LINES` (default `40`). Takes `--file <body>` before `gh pr create`, `--pr <n>` on an open PR, or a body on stdin. |
+| [generic/discipline.py](generic/discipline.py) | The three blocking gates, one tool, selected by first argument. **`comment`**: banned refs, 2-line block ceiling, per-file density, 13-line ceiling on a Python function / function-body docstring. **`test`**: added test LOC within `TEST_FIXED_LINES + MAX_TEST_RATIO x` added prod LOC (defaults `220` and `1.2`). **`pr-body`**: visible non-blank lines within `MAX_BODY_LINES` (default `40`), taking `--file <body>` before `gh pr create`, `--pr <n>` on an open PR, or a body on stdin. |
 
 > The knowledge-home scripts (`knowledge-search.sh`, `drift-check.sh`, `learn.sh`) live in [`agent-knowledge/scripts/`](../../agent-knowledge/scripts/), not here — they belong to the shared knowledge home, not the runtime event hooks.
 
@@ -44,13 +42,13 @@ Reads of the **router files** — `index.md` and the protocol files the startup 
 
 ## The discipline gates
 
-[`generic/comment-discipline.sh`](generic/comment-discipline.sh) and [`generic/test-discipline.sh`](generic/test-discipline.sh) share one interface — `--staged`, `--base <ref>`, a bare invocation (diff vs merge-base with the **resolved** base branch — `--base`/`$BASE_REF`, else the PR's `baseRefName`, else `origin/HEAD`), or a diff on stdin with `-`. Exit `0` clean, `1` findings, `2` usage error **or an unresolvable base** — a gate that could not measure must never read as a pass. Both are **blocking** before a push and both are re-run at review time.
+[`generic/discipline.py comment`](generic/discipline.py) and [`generic/discipline.py test`](generic/discipline.py) share one interface — `--staged`, `--base <ref>`, a bare invocation (diff vs merge-base with the **resolved** base branch — `--base`/`$BASE_REF`, else the PR's `baseRefName`, else `origin/HEAD`), or a diff on stdin with `-`. Exit `0` clean, `1` findings, `2` usage error **or an unresolvable base** — a gate that could not measure must never read as a pass. Both are **blocking** before a push and both are re-run at review time.
 
 They bound the two things a reviewer otherwise keeps writing by hand:
 
 - **Prose volume.** The docstring rule matters as much as the `#` rules: without it an author moves an essay out of a comment block into a triple-quoted string and passes untouched. Module and class docstrings are exempt at any length — the target is a multi-paragraph *function* docstring, or narrative prose standing in a function body.
 - **Test volume.** The allowance is affine (`FIXED + RATIO x prod`), not a plain ratio, because one test carries a fixed scaffolding cost that does not shrink with the change.
-- **PR-body volume.** [`generic/pr-body-discipline.sh`](generic/pr-body-discipline.sh) bounds the same prose one surface over: an author who cannot put the essay in a comment block puts it in the PR description. It counts only what a reader sees before expanding anything, so collapsed `<details>` and bot-injected HTML comments cost nothing, and it reads a body file (`--file`) before the PR exists rather than a diff.
+- **PR-body volume.** [`generic/discipline.py pr-body`](generic/discipline.py) bounds the same prose one surface over: an author who cannot put the essay in a comment block puts it in the PR description. It counts only what a reader sees before expanding anything, so collapsed `<details>` and bot-injected HTML comments cost nothing, and it reads a body file (`--file`) before the PR exists rather than a diff.
 
 Both thresholds are env-tunable (`MAX_COMMENT_LINES`, `MAX_DOCSTRING_LINES`, `TEST_FIXED_LINES`, `MAX_TEST_RATIO`). Retune to the repo rather than waiving the gate — a count can be argued with only by changing the count. The standards they enforce are canonical in [`core/protocols/code-quality.md`](../protocols/code-quality.md).
 

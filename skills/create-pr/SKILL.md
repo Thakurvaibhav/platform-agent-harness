@@ -64,9 +64,9 @@ git log "origin/$BASE_REF"..HEAD --oneline
 # Omit --base on purpose: each script resolves the REMOTE default branch itself, which
 # stays correct in a repo whose default is not `main` and cannot go stale the way a
 # local ref does. Pass --base only to override a resolution you know to be wrong.
-core/hooks/generic/comment-discipline.sh || {
+core/hooks/generic/discipline.py comment || {
   echo "refuse: fix the comments and amend, then re-run"; exit 1; }
-core/hooks/generic/test-discipline.sh || {
+core/hooks/generic/discipline.py test || {
   echo "refuse: cut the tests or name the contract each pins, then re-run"; exit 1; }
 
 # Push the feature branch (set upstream on first push)

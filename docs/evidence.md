@@ -75,7 +75,7 @@ about the thing it claimed to cover. A comment-policy gate only inspected lines 
 comment token, so the rule it enforced was avoidable by moving the comment inline. Both shipped in
 this repository, were found by audit, and are fixed in
 [`agent-knowledge/scripts/drift-check.sh`](../agent-knowledge/scripts/drift-check.sh) and
-[`core/hooks/generic/comment-discipline.sh`](../core/hooks/generic/comment-discipline.sh) — and the
+[`core/hooks/generic/discipline.py comment`](../core/hooks/generic/discipline.py) — and the
 CI in [`.github/workflows/ci.yml`](../.github/workflows/ci.yml) now runs this repository's own gates
 against itself on every pull request, which is the only reason to believe the next one is checking
 anything.

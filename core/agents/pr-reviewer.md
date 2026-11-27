@@ -269,11 +269,11 @@ Deterministic checks first, so judgment is spent only on what a script cannot de
 
 ```bash
 BASE="$(gh pr view <PR> --json baseRefName -q .baseRefName)"
-core/hooks/generic/comment-discipline.sh --base "$BASE"
-core/hooks/generic/test-discipline.sh    --base "$BASE"
+core/hooks/generic/discipline.py comment --base "$BASE"
+core/hooks/generic/discipline.py test    --base "$BASE"
 ```
 
-`comment-discipline.sh` bounds prose (banned refs, 2-line block ceiling, per-file density, 13-line ceiling on a Python function / function-body docstring). `test-discipline.sh` bounds test VOLUME against `220 + 1.2 x added prod LOC` — an affine allowance, not a ratio, because a single test carries a fixed scaffolding cost that does not shrink with the change. Over the allowance, ask of each extra test **which contract it pins**; the ones pinning module structure, exact internal call arguments, or library behaviour covered elsewhere are the ones to cut. It reports one finding with the computed numbers — quote them.
+`discipline.py comment` bounds prose (banned refs, 2-line block ceiling, per-file density, 13-line ceiling on a Python function / function-body docstring). `discipline.py test` bounds test VOLUME against `220 + 1.2 x added prod LOC` — an affine allowance, not a ratio, because a single test carries a fixed scaffolding cost that does not shrink with the change. Over the allowance, ask of each extra test **which contract it pins**; the ones pinning module structure, exact internal call arguments, or library behaviour covered elsewhere are the ones to cut. It reports one finding with the computed numbers — quote them.
 
 Exit 1 = findings, reported as `file:line`. **Report every one** — this gate exists because the prose rule it replaced was violated repeatedly, so do not re-exercise the judgment it was written to remove. In `fix` mode, relocate the rationale into the PR body rather than deleting it; the content is usually worth keeping and only its location is wrong.
 
@@ -557,7 +557,7 @@ also `bd remember` it>
 - **Iterations**: <1 or 2>
 - **Areas reviewed**: <categories from Step 3>
 - **Claims checked**: <claim-by-claim; anything unproven tagged `UNVERIFIED (assumption)`>
-- **Mechanical gates (Step 2.7)**: <comment-discipline / test-discipline: clean, or the counts>
+- **Mechanical gates (Step 2.7)**: <discipline.py comment / test: clean, or the counts>
 - **Harness preflight (Step 2.8)**: <4/4 answered | which are unanswered>
 - **Adversarial cross-verify**: <per blocking finding: confirmed / refuted — dropped / split,
   or "N/A — not sensitive tier">
