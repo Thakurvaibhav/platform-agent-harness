@@ -16,41 +16,44 @@ Scope: the knowledge tiers, the path switch, credentials, and placement verifica
 
 ## §0. Ask the user first
 
-Ask all of these in one message, with the defaults shown, and accept "use the default" for any of them. Do not edit `env.sh` without answers.
+Ask all of these in one message, with the defaults shown, and accept "use the default" for any of them. Do not edit `config.sh` without answers.
 
 | # | Question | Default | Becomes |
 | --- | --- | --- | --- |
 | 1 | Short name for the new org (lowercase, no spaces) | — *(must be answered)* | `ACTIVE_ORG` |
 | 2 | Where should repos and the bd hive live? | `$HOME/Work/git-repos` | `WORK_ROOT`, and `BEADS_DB="$WORK_ROOT/.beads"` |
 | 3 | Where should domain docs live? | `$HOME/Work/docs` | `HARNESS_DOCS` |
-| 4 | Issue tracker base URL | — *(ask; the `create-pr` skill builds ticket links from it)* | `JIRA_BASE_URL` |
+| 4 | Issue tracker base URL | — *(ask; the `create-pr` skill builds ticket links from it)* | `TRACKER_BASE_URL` |
 | 5 | Which cloud CLIs does this org use — one, both, neither? | — *(ask)* | decides which rows of §4 you run |
 
 There is no safe default for 4 and 5. A guessed tracker URL produces plausible, broken links in every PR body.
 
 ---
 
-## §1. `env.sh` — the single switch
+## §1. `config.sh` — the single switch
 
-[`agent-knowledge/env.sh`](../agent-knowledge/env.sh) is the one file that knows where this machine's work lives. Everything else in the harness reads it instead of re-deriving paths, which is what makes an org change one edit rather than a grep.
+[`agent-knowledge/env.sh`](../agent-knowledge/env.sh) is the one file that knows where this machine's work lives, and everything else in the harness reads it instead of re-deriving paths. **It ships generic defaults only.** The real values go in `config.sh`, which is gitignored precisely so that a public checkout never carries one org's paths.
 
-**Read what is there before writing.** It still carries the previous org's values — expected, not a bug.
-
-```sh
-cat "${HARNESS_HOME:-$HOME/.agent-knowledge}/env.sh"
-```
-
-Set the values from §0's answers, preserving the `${VAR:-default}` form and the comments:
+**Read what is there before writing**, with provenance for every setting:
 
 ```sh
-export WORK_ROOT="${WORK_ROOT:-$HOME/<new>/git-repos}"
-export BEADS_DB="${BEADS_DB:-$WORK_ROOT/.beads}"
-export HARNESS_DOCS="${HARNESS_DOCS:-$HOME/<new>/docs}"
-export JIRA_BASE_URL="${JIRA_BASE_URL:-https://<neworg>.atlassian.net}"
-export ACTIVE_ORG="${ACTIVE_ORG:-<neworg>}"
+"${HARNESS_HOME:-$HOME/.agent-knowledge}/env.sh" --config
 ```
 
-Keep the paths `$HOME`-relative. That is what lets the file survive a username change untouched.
+Create `config.sh` from the template if it does not exist, then set the values from §0's answers:
+
+```sh
+cp config.template "${HARNESS_HOME:-$HOME/.agent-knowledge}/config.sh"
+```
+
+```sh
+WORK_ROOT="$HOME/<new>/git-repos"
+HARNESS_DOCS="$HOME/<new>/docs"
+TRACKER_BASE_URL="https://<neworg>.atlassian.net"
+ACTIVE_ORG="<neworg>"
+```
+
+`BEADS_DB` is left out on purpose: it derives from `WORK_ROOT`. Keep the paths `$HOME`-relative, which is what lets the file survive a username change untouched. Re-run `env.sh --config` afterwards and check every row reads `config`, not `default`.
 
 **Two consequences you must not skip:**
 

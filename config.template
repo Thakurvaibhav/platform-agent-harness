@@ -1,0 +1,35 @@
+# config.template: copy to config.sh and fill in your own values.
+#
+#   cp config.template "${HARNESS_HOME:-$HOME/.agent-knowledge}/config.sh"
+#
+# config.sh is gitignored; this template is not, so it must never carry real
+# values. env.sh sources config.sh and falls back to generic defaults for
+# anything left unset, so a missing config.sh breaks nothing.
+#
+# Precedence: environment > config.sh > generic default.
+# Check what resolved, and from where: `env.sh --config`.
+#
+# Leave a setting out to take the generic default. An EMPTY value is NOT the
+# same as a missing one: env.sh keeps "" rather than re-defaulting it, and warns
+# on stderr for the three path settings. See the header of env.sh for why.
+
+# Root directory holding your git repos and the bd hive.
+WORK_ROOT="$HOME/Work/git-repos"
+
+# The bd hive. Omit this line to derive "$WORK_ROOT/.beads". A runtime that
+# configures the agent from JSON cannot source a shell file and so carries a
+# LITERAL copy of this path; if you set it here, change it there too.
+#BEADS_DB="$WORK_ROOT/.beads"
+
+# Domain docs tree searched by knowledge-search.sh. Keep it outside WORK_ROOT so
+# it survives a repo move. Leave unset if you have no such tree.
+HARNESS_DOCS="$HOME/Work/docs"
+
+# Issue tracker prefix used by the create-pr skill to build ticket links. The
+# whole prefix, because trackers disagree on the path: Linear is /issue/<TICKET>,
+# Jira is /browse/<TICKET>. Empty means "no ticket links".
+TRACKER_BASE_URL=""
+
+# Which directory under orgs/ is the current employer. This labels writes and
+# prompts only; knowledge-search.sh reads every org regardless.
+ACTIVE_ORG=""

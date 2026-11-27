@@ -1,7 +1,14 @@
 #!/usr/bin/env bash
 # knowledge-search.sh — Search across bd memories + both knowledge tiers + reading notes + docs
 #
-# Usage: knowledge-search.sh <query terms...>
+# Usage: knowledge-search.sh [--quiet-weak] <query terms...>
+#
+# --quiet-weak (or KSEARCH_QUIET_WEAK=1) prints NOTHING AT ALL when the best entry
+# covers less of the query than BM25_COVERAGE_FLOOR. For a hook or any other caller
+# that did not ask a question, a low-confidence guess is noise that teaches agents to
+# skip this layer; silence is the honest answer. Interactive callers keep the rows and
+# get them labelled instead. The flag is a no-op under SEARCH_BACKEND=ripgrep, which
+# computes no coverage.
 #
 # Searches:
 #   1. references/index.md                           : CURATED router, ranked by distinct terms
@@ -25,7 +32,8 @@
 #   HARNESS_ORGS  — instance tier   (default: $HARNESS_HOME/orgs)
 #   HARNESS_READING — reading notes (default: $HARNESS_HOME/reading)
 #   HARNESS_DOCS  — domain docs directory (optional)
-#   BEADS_DIR     — beads database location (default: auto-discover)
+#   BEADS_DIR     — directory to run bd from (default: derived from $BEADS_DB)
+#   BM25_COVERAGE_FLOOR — weak-result threshold (default 0.40)
 #
 # Backend seam: SEARCH_BACKEND defaults to bm25, which ranks entries in both tiers AND
 # the hive. `ripgrep` restores the file match-count path. NEVER flip to `qmd` without
@@ -53,9 +61,24 @@ fi
 REFS_DIR="${HARNESS_REFS:-$HOME_DIR/references}"
 ORGS_DIR="${HARNESS_ORGS:-$HOME_DIR/orgs}"
 READING_DIR="${HARNESS_READING:-$HOME_DIR/reading}"
+# ${VAR-} not ${VAR:-}: an empty HARNESS_DOCS means "no docs tree", and the -d test
+# below then skips the section rather than searching a directory nobody configured.
+DOCS_DIR="${HARNESS_DOCS-}"
+# An unset or empty BEADS_DB makes dirname print ".", which is the same CWD the
+# trailing `|| pwd` falls back to, so there is no estate default to carry here.
+BEADS_CWD="${BEADS_DIR:-$(cd "$(dirname "${BEADS_DB-}")" 2>/dev/null && pwd || pwd)}"
+
+QUIET_WEAK="${KSEARCH_QUIET_WEAK:-0}"
+while [ $# -gt 0 ]; do
+    case "$1" in
+        --quiet-weak) QUIET_WEAK=1; shift ;;
+        --) shift; break ;;
+        *) break ;;
+    esac
+done
 
 if [ $# -eq 0 ]; then
-    echo "Usage: knowledge-search.sh <query terms...>"
+    echo "Usage: knowledge-search.sh [--quiet-weak] <query terms...>"
     echo ""
     echo "Examples:"
     echo "  knowledge-search.sh helm dependency version"
@@ -131,6 +154,48 @@ if [ "${SEARCH_BACKEND:-bm25}" = "qmd" ] && command -v qmd >/dev/null 2>&1; then
     QMD_MODE=1
 fi
 
+# Calibrated on 380 real queries, not borrowed: 0.40 labels 8.4% of them weak. A
+# hand-check of 20 at this floor scored 18 right; the same check at 0.50 (17.8% weak)
+# scored 16, because it started suppressing queries whose top hit WAS the answer.
+# False-weak is the expensive error under --quiet-weak, so the floor sits at the low
+# edge of the mixed band.
+BM25_COVERAGE_FLOOR="${BM25_COVERAGE_FLOOR:-0.40}"
+
+# A weak or empty result is the signal that says what the corpus does NOT cover, and
+# it was previously thrown away. `source` distinguishes these rows from a hook's own.
+log_miss() {
+    Q="$QUERY" HITS="${1:-0}" COV="${2:-0}" WEAK="${3:-0}" METRICS="$HOME_DIR/metrics" \
+        BK="${SEARCH_BACKEND:-default}" python3 - <<'MISSEOF' 2>/dev/null || true
+import json, os
+rec = {"q": os.environ["Q"], "source": "knowledge-search", "backend": os.environ["BK"],
+       "transcript": "", "hits": int(os.environ["HITS"]),
+       "coverage": float(os.environ["COV"]), "weak": os.environ["WEAK"] == "1"}
+path = os.path.join(os.environ["METRICS"], "search-queries.jsonl")
+os.makedirs(os.path.dirname(path), exist_ok=True)
+with open(path, "a") as fh:
+    fh.write(json.dumps(rec) + "\n")
+MISSEOF
+}
+
+# Ranked BEFORE the first line of output, because --quiet-weak has to be able to
+# print nothing at all, the title included.
+_bm_rows=""; _bm_cov="0"; _bm_hits="0"; _bm_weak=0
+if [ "$BM25_MODE" = 1 ] && [ "$QMD_MODE" = 0 ]; then
+    _bm=$(HARNESS_HOME="$HOME_DIR" HARNESS_REFS="$REFS_DIR" HARNESS_ORGS="$ORGS_DIR" \
+        "$BM25_BIN" --verdict -n "${BM25_HITS:-12}" $QUERY 2>/dev/null) || _bm=""
+    if [ -n "$_bm" ]; then
+        _bm_cov=$(printf '%s\n' "$_bm" | sed -n '1s/^# coverage=\([0-9.]*\).*/\1/p')
+        _bm_hits=$(printf '%s\n' "$_bm" | sed -n '1s/.*hits=\([0-9]*\).*/\1/p')
+        _bm_rows=$(printf '%s\n' "$_bm" | tail -n +2)
+    fi
+    _bm_cov="${_bm_cov:-0}"; _bm_hits="${_bm_hits:-0}"
+    _bm_weak=$(awk -v c="$_bm_cov" -v f="$BM25_COVERAGE_FLOOR" 'BEGIN{print (c+0 < f+0) ? 1 : 0}')
+    if [ "$_bm_weak" = 1 ]; then
+        log_miss "$_bm_hits" "$_bm_cov" 1
+        if [ "$QUIET_WEAK" = 1 ]; then exit 0; fi
+    fi
+fi
+
 echo "## Knowledge Search: $QUERY"
 echo ""
 
@@ -145,7 +210,7 @@ bd_memories_section() {
     echo ""
     # `bd memories` prints key and body on separate lines, so a line-wise grep
     # returns one or the other. Match whole records instead.
-    BD_JSON=$(bd memories --json 2>/dev/null || echo "")
+    BD_JSON=$(cd "$BEADS_CWD" && bd memories --json 2>/dev/null || echo "")
     if [ -z "$BD_JSON" ]; then
         echo "(bd memories unavailable)"
         echo ""
@@ -255,8 +320,14 @@ echo ""
 if [ "$BM25_MODE" = 1 ]; then
     echo "### entries, BM25-ranked (both tiers — the citation is the result)"
     echo ""
-    HARNESS_HOME="$HOME_DIR" HARNESS_REFS="$REFS_DIR" HARNESS_ORGS="$ORGS_DIR" \
-        "$BM25_BIN" -n "${BM25_HITS:-12}" $QUERY || echo "(bm25 failed)"
+    # Ranked above, before the title, so --quiet-weak can suppress the whole report.
+    if [ "$_bm_weak" = 1 ]; then
+        printf "no close match for '%s' (best covers %.0f%%). The rows below are\n" \
+            "$QUERY" "$(awk -v c="$_bm_cov" 'BEGIN{print c*100}')"
+        echo "the nearest entries, not an answer; treat this as a gap in the corpus"
+        echo ""
+    fi
+    if [ -n "$_bm_rows" ]; then printf '%s\n' "$_bm_rows"; else echo "(bm25 failed)"; fi
     echo ""
     # A file whose list numbering repeats has no citable `#N`, so the ranker drops it
     # entirely. The instance tier's cluster registries are exactly that shape, so
@@ -324,10 +395,10 @@ fi
 echo ""
 
 # --- Section 5: domain docs (optional) ---
-if [ -n "${HARNESS_DOCS:-}" ] && [ -d "$HARNESS_DOCS" ]; then
+if [ -d "$DOCS_DIR" ]; then
     echo "### domain docs"
     echo ""
-    rg -ilH --color=never "$PATTERN" "$HARNESS_DOCS" 2>/dev/null | head -10 || echo "(no matches in domain docs)"
+    rg -ilH --color=never "$PATTERN" "$DOCS_DIR" 2>/dev/null | head -10 || echo "(no matches in domain docs)"
     echo ""
 fi
 

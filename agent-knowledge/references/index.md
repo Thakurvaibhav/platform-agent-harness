@@ -26,7 +26,7 @@ and it is the wrong answer. Match keywords to your task and load every file that
 | Path | Purpose |
 | --- | --- |
 | [`agent-knowledge/README.md`](../README.md) | Shared knowledge-home explainer: layout, how each runtime reaches it, deployment note |
-| [`agent-knowledge/env.sh`](../env.sh) | The single switch: `WORK_ROOT`, `BEADS_DB`, `HARNESS_HOME`, `HARNESS_DOCS`, `JIRA_BASE_URL`, `ACTIVE_ORG` — one edit per machine/employer change |
+| [`agent-knowledge/env.sh`](../env.sh) | The single switch: `WORK_ROOT`, `BEADS_DB`, `HARNESS_HOME`, `HARNESS_DOCS`, `TRACKER_BASE_URL`, `ACTIVE_ORG`. Ships generic defaults only; real values go in the gitignored `$HARNESS_HOME/config.sh` (copied from `config.template`). `env.sh --config` prints each setting with its provenance |
 | [`agent-knowledge/orgs/README.md`](../orgs/README.md) | Instance knowledge tier: per-org directories, basename-collision rule, why `ACTIVE_ORG` never narrows a read |
 | [`agent-knowledge/references/consolidation-workflow.md`](consolidation-workflow.md) | Promoting bd memories into `learnings-*.md` and retiring what is covered: discard log before any forget, write-verify-forget ordering, reciprocal-link guard |
 | [`agent-knowledge/references/playbook-alert-investigation.md`](playbook-alert-investigation.md) | Read-only alert triage: capability preflight, evidence controls, call-path analysis, scope and impact, detection timing, triage card |
@@ -40,7 +40,6 @@ and it is the wrong answer. Match keywords to your task and load every file that
 | [`agent-knowledge/scripts/learn.sh`](../scripts/learn.sh) | One-liner `bd remember` wrapper; finds the `.beads`-owning dir from CWD |
 | [`agent-knowledge/scripts/codex-dispatch.sh`](../scripts/codex-dispatch.sh) | Cross-runtime subagent parity: wraps `codex exec` with specialist role + hive preamble |
 | [`agent-knowledge/scripts/codex-session-prime.sh`](../scripts/codex-session-prime.sh) | Codex SessionStart hook: warms bd hive, emits valid JSON hook output |
-| [`agent-knowledge/scripts/auto-consolidate.sh`](../scripts/auto-consolidate.sh) | Scheduled, threshold-guarded knowledge consolidation (launchd/cron runner) |
 | [`agent-knowledge/scripts/render-matrix.sh`](../scripts/render-matrix.sh) | Parallel per-environment `helm template` vs merge-base; R1 offline proof at fleet width (`NO-BASE` = unverified, not "new") |
 | [`agent-knowledge/metrics/README.md`](../metrics/README.md) | Usage metrics explainer: per-file read counts + append-only citation log |
 | [`agent-knowledge/reading/index.md`](../reading/index.md) | Reading-notes corpus catalog: external-source distilled notes (separate trust tier from learnings) |

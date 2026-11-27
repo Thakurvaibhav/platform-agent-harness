@@ -153,7 +153,7 @@ Run before creating a PR. Domain-specific checks add to this.
 3. **No secrets in diff**: `git diff` shows no credentials, tokens, API keys.
 4. **PR description**: external ticket link and rationale (WHY, not just WHAT).
 5. **PR title**: Conventional Commits + ticket key, matching the head commit subject (see *PR titles* above).
-6. **Mechanical gates**: [`comment-discipline.sh`](../hooks/generic/comment-discipline.sh) and [`test-discipline.sh`](../hooks/generic/test-discipline.sh) both exit 0 against the branch diff. Both are blocking before push.
+6. **Mechanical gates**: [`discipline.py comment`](../hooks/generic/discipline.py) and [`discipline.py test`](../hooks/generic/discipline.py) both exit 0 against the branch diff. Both are blocking before push.
 
 ## Post-deploy validation
 
