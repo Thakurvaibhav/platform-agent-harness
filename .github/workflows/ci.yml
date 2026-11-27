@@ -46,21 +46,42 @@ jobs:
           done
           exit $rc
 
+      # Dispatch on the SHEBANG, not the extension. Two gates are Python that
+      # keep a .sh name on purpose: the name is referenced by hooks and dispatch
+      # prompts by absolute path, and renaming them would silently break every
+      # caller, whereas the shebang is what the kernel actually honours.
       - name: Shell syntax
         run: |
           rc=0
-          while IFS= read -r f; do bash -n "$f" || rc=1; done \
-            < <(find . -name '*.sh' -not -path './.git/*')
+          while IFS= read -r f; do
+            head -1 "$f" | grep -qE '^#!.*(ba)?sh' || continue
+            bash -n "$f" || rc=1
+          done < <(find . -name '*.sh' -not -path './.git/*')
           exit $rc
 
       - name: ShellCheck (error level)
         run: |
           sudo apt-get update -qq && sudo apt-get install -y -qq shellcheck
-          find . -name '*.sh' -not -path './.git/*' -print0 \
-            | xargs -0 shellcheck -S error
+          rc=0
+          while IFS= read -r f; do
+            head -1 "$f" | grep -qE '^#!.*(ba)?sh' || continue
+            shellcheck -S error "$f" || rc=1
+          done < <(find . -name '*.sh' -not -path './.git/*')
+          exit $rc
 
+      # compileall only walks *.py, so the two gates that are Python under a .sh
+      # name would be checked by NEITHER this nor the shell gate above. Dispatch
+      # on the shebang here too, or skipping them in one gate silently drops them
+      # from both and the suite reads green on an unchecked file.
       - name: Python syntax
-        run: python3 -m compileall -q core sanitization tools agent-knowledge
+        run: |
+          python3 -m compileall -q core sanitization tools agent-knowledge
+          rc=0
+          while IFS= read -r f; do
+            head -1 "$f" | grep -qE '^#!.*python' || continue
+            python3 -c "import ast,sys; ast.parse(open(sys.argv[1]).read())" "$f" || rc=1
+          done < <(find . -name '*.sh' -not -path './.git/*')
+          exit $rc
 
       - name: Secret scan (gitleaks)
         run: |
