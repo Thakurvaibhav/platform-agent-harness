@@ -1,56 +1,26 @@
 #!/usr/bin/env bash
-# knowledge-search.sh — Search across bd memories + both knowledge tiers + reading notes + docs
-#
-# Usage: knowledge-search.sh [--quiet-weak] <query terms...>
-#
-# --quiet-weak (or KSEARCH_QUIET_WEAK=1) prints NOTHING AT ALL when the best entry
-# covers less of the query than BM25_COVERAGE_FLOOR. For a hook or any other caller
-# that did not ask a question, a low-confidence guess is noise that teaches agents to
-# skip this layer; silence is the honest answer. Interactive callers keep the rows and
-# get them labelled instead. The flag is a no-op under SEARCH_BACKEND=ripgrep, which
-# computes no coverage.
-#
-# Searches:
-#   1. references/index.md                           : CURATED router, ranked by distinct terms
-#   2. references/learnings-*.md                     : PORTABLE tier (method, vendor behavior)
-#   3. orgs/*/*.md                                   : INSTANCE tier, EVERY org, always
-#   4. reading/*.md                                  : external notes, separate trust tier
-#   5. $HARNESS_DOCS                                 : domain docs (optional)
-#   6. bd memories (key + value text)                : the hive, printed LAST on purpose
-#
-# Under SEARCH_BACKEND=ripgrep, sections 2 and 3 rank files by match count and print
-# the ranking before the match lines: the ranking is the routing signal, the lines are
-# only proof. Under the bm25 default they collapse into one ranked-entry section, plus
-# a text match over the files that have no citable entries. See emit_ranked.
-#
-# INVARIANT: the orgs tier is searched UNCONDITIONALLY — no ACTIVE_ORG filter on any
-# read path. Rule, rationale, and failure mode: knowledge-tiers.md § ACTIVE_ORG.
-#
-# Environment:
-#   HARNESS_HOME  — deployed knowledge home (default: $HOME/.agent-knowledge)
-#   HARNESS_REFS  — portable tier   (default: $HARNESS_HOME/references)
-#   HARNESS_ORGS  — instance tier   (default: $HARNESS_HOME/orgs)
-#   HARNESS_READING — reading notes (default: $HARNESS_HOME/reading)
-#   HARNESS_DOCS  — domain docs directory (optional)
-#   BEADS_DIR     — directory to run bd from (default: derived from $BEADS_DB)
-#   BM25_COVERAGE_FLOOR — weak-result threshold (default 0.40)
-#
-# Backend seam: SEARCH_BACKEND defaults to bm25, which ranks entries in both tiers AND
-# the hive. `ripgrep` restores the file match-count path. NEVER flip to `qmd` without
-# a qmd `orgs` collection — the instance tier vanishes silently. knowledge-tiers.md.
+# knowledge-search.sh — search bd memories + both knowledge tiers + reading notes + docs.
+
+
+# --quiet-weak (KSEARCH_QUIET_WEAK=1) prints NOTHING AT ALL when the best entry covers
+# less of the query than BM25_COVERAGE_FLOOR. No-op under SEARCH_BACKEND=ripgrep.
+
+# INVARIANT: the orgs tier is searched UNCONDITIONALLY, with no ACTIVE_ORG filter on
+# any read path. Rule, rationale and failure mode: knowledge-tiers.md § ACTIVE_ORG.
+
+# NEVER flip SEARCH_BACKEND to `qmd` without a qmd `orgs` collection: the instance
+# tier then vanishes silently.
+
 
 set -o pipefail
 
-# Hooks and cron do not reliably source a login shell, so pick up this machine's
-# paths here rather than assuming the caller's environment already has them.
-# Resolved relative to this script so the home can live anywhere.
+# Hooks and cron do not reliably source a login shell; resolve relative to this file.
 _SELF_HOME="$(cd "$(dirname "$0")/.." 2>/dev/null && pwd)"
 _HOME_PRESET="${HARNESS_HOME:-}"
 # shellcheck source=/dev/null
 [ -f "$_SELF_HOME/env.sh" ] && . "$_SELF_HOME/env.sh"
 
-# An explicit HARNESS_HOME from the caller wins; otherwise the home this script
-# lives in beats env.sh's default, so a checkout in any location searches itself.
+# An explicit HARNESS_HOME wins, else the home this script lives in.
 if [ -n "$_HOME_PRESET" ]; then
     HOME_DIR="$_HOME_PRESET"
 elif [ -d "$_SELF_HOME/references" ]; then
@@ -61,11 +31,8 @@ fi
 REFS_DIR="${HARNESS_REFS:-$HOME_DIR/references}"
 ORGS_DIR="${HARNESS_ORGS:-$HOME_DIR/orgs}"
 READING_DIR="${HARNESS_READING:-$HOME_DIR/reading}"
-# ${VAR-} not ${VAR:-}: an empty HARNESS_DOCS means "no docs tree", and the -d test
-# below then skips the section rather than searching a directory nobody configured.
+# ${VAR-} not ${VAR:-}: an empty HARNESS_DOCS means "no docs tree", and -d skips it.
 DOCS_DIR="${HARNESS_DOCS-}"
-# An unset or empty BEADS_DB makes dirname print ".", which is the same CWD the
-# trailing `|| pwd` falls back to, so there is no estate default to carry here.
 BEADS_CWD="${BEADS_DIR:-$(cd "$(dirname "${BEADS_DB-}")" 2>/dev/null && pwd || pwd)}"
 
 QUIET_WEAK="${KSEARCH_QUIET_WEAK:-0}"
@@ -89,22 +56,15 @@ fi
 QUERY="$*"
 PATTERN=$(echo "$QUERY" | tr ' ' '\n' | sed 's/[^a-zA-Z0-9_-]//g' | paste -sd '|' -)
 
-# A flat `head -N` over a multi-file match stream STARVES the densest files: rg walks
-# files in parallel, so emission order is arbitrary AND non-deterministic, and one
-# verbose file can swallow the whole budget. Measured on a 4-term query: 782 matching
-# lines across the instance tier, of which the 60 kept gave ONE file 52 lines while the
-# file with the MOST matches (126) got 2 — the most relevant file was effectively
-# invisible. Rank files by match count, print the ranking (that list is the routing
-# signal), then sample a bounded number of lines per file as proof.
+# A flat `head -N` starves the densest files: rg emits in parallel, arbitrary order.
 emit_ranked() {
     local per_file="$1"; shift
     local any=0 f n ranked
     ranked=$(for f in "$@"; do
                  [ -f "$f" ] || continue
                  n=$(rg -ic --color=never "$PATTERN" "$f" 2>/dev/null || echo 0)
-                 # if/then, not `[ test ] && printf`: as the last command in the loop a
-                 # false test makes the subshell exit non-zero, which kills the whole
-                 # script the moment anyone adds `set -e` to this file.
+                 # if/then, not `[ test ] && printf`: a trailing false test exits
+                 # the subshell non-zero under `set -e`.
                  if [ "${n:-0}" -gt 0 ]; then printf '%s\t%s\n' "$n" "$f"; fi
              done | sort -rn || true)
     if [ -z "$ranked" ]; then echo "(no matches)"; return; fi
@@ -117,11 +77,7 @@ emit_ranked() {
     while IFS=$'\t' read -r n f; do
         [ -n "$f" ] || continue
         any=1
-        # No -C1: an entry is already ONE long line, so context triples a 1-2KB line.
-        # Truncate too — the ranking above routes; these lines only prove the hit.
-        # Entries are one line each, so a matched line IS an entry line and its
-        # leading "N." IS the citation. Print it as file.md#N, not :LINE:, or the
-        # reader has to open the file and scan to cite what it already found.
+        # No -C1: an entry is one long line, and its leading "N." IS the citation.
         rg -inH --color=never -m "$per_file" "$PATTERN" "$f" 2>/dev/null \
             | sed "s|$HOME_DIR/||" \
             | awk -F: 'BEGIN{OFS=":"}
@@ -138,11 +94,8 @@ emit_ranked() {
     [ "$any" = 1 ] || echo "(no matches)"
 }
 
-# Decide file-search backend. Default is bm25: it ranks ENTRIES instead of files, so a
-# hit is already the citable `file.md#N`, with IDF and length normalisation.
-# SEARCH_BACKEND=ripgrep restores the file ranking below, a raw match count with no
-# length term and no IDF, which lets the largest files win queries they do not answer.
-# That path is also the automatic fallback when bm25-search.py is missing.
+# bm25 ranks ENTRIES, so a hit is already citable; the ripgrep file ranking is also
+# the automatic fallback when bm25-search.py is missing.
 BM25_MODE=0
 BM25_BIN="${HARNESS_SCRIPTS:-$(dirname "$0")}/bm25-search.py"
 if [ "${SEARCH_BACKEND:-bm25}" = "bm25" ] && [ -x "$BM25_BIN" ]; then
@@ -154,15 +107,8 @@ if [ "${SEARCH_BACKEND:-bm25}" = "qmd" ] && command -v qmd >/dev/null 2>&1; then
     QMD_MODE=1
 fi
 
-# Calibrated on 380 real queries, not borrowed: 0.40 labels 8.4% of them weak. A
-# hand-check of 20 at this floor scored 18 right; the same check at 0.50 (17.8% weak)
-# scored 16, because it started suppressing queries whose top hit WAS the answer.
-# False-weak is the expensive error under --quiet-weak, so the floor sits at the low
-# edge of the mixed band.
 BM25_COVERAGE_FLOOR="${BM25_COVERAGE_FLOOR:-0.40}"
 
-# A weak or empty result is the signal that says what the corpus does NOT cover, and
-# it was previously thrown away. `source` distinguishes these rows from a hook's own.
 log_miss() {
     Q="$QUERY" HITS="${1:-0}" COV="${2:-0}" WEAK="${3:-0}" METRICS="$HOME_DIR/metrics" \
         BK="${SEARCH_BACKEND:-default}" python3 - <<'MISSEOF' 2>/dev/null || true
@@ -177,8 +123,7 @@ with open(path, "a") as fh:
 MISSEOF
 }
 
-# Ranked BEFORE the first line of output, because --quiet-weak has to be able to
-# print nothing at all, the title included.
+# Ranked BEFORE the first line of output: --quiet-weak must print nothing, title included.
 _bm_rows=""; _bm_cov="0"; _bm_hits="0"; _bm_weak=0
 if [ "$BM25_MODE" = 1 ] && [ "$QMD_MODE" = 0 ]; then
     _bm=$(HARNESS_HOME="$HOME_DIR" HARNESS_REFS="$REFS_DIR" HARNESS_ORGS="$ORGS_DIR" \
@@ -200,16 +145,10 @@ echo "## Knowledge Search: $QUERY"
 echo ""
 
 # --- Section 6: bd memories, DEFINED here and CALLED LAST (call site at end) ---
-# The order is deliberate and was measured. This section used to print FIRST and was
-# 9,387 bytes of a 13,976 byte result on one real query, 67% of the output, while the
-# BM25-ranked entries that answered that query were 2,350 bytes and printed fourth. An
-# agent that read the first screen and moved on never reached the answer. The routed,
-# citable layers lead now; the hive follows.
 bd_memories_section() {
     echo "### bd memories"
     echo ""
-    # `bd memories` prints key and body on separate lines, so a line-wise grep
-    # returns one or the other. Match whole records instead.
+    # `bd memories` prints key and body on separate lines, so match whole records.
     BD_JSON=$(cd "$BEADS_CWD" && bd memories --json 2>/dev/null || echo "")
     if [ -z "$BD_JSON" ]; then
         echo "(bd memories unavailable)"
@@ -217,10 +156,6 @@ bd_memories_section() {
         return 0
     fi
     if [ "$BM25_MODE" = 1 ]; then
-        # Same ranker as the entries section, so a generic term stops weighing as much
-        # as a rare one. The fallback below is a pure OR match taking the first 25 hits
-        # in dict order with no ranking at all, and on four real queries 15 to 19 of
-        # those 25 matched exactly ONE query term.
         printf '%s' "$BD_JSON" \
             | "$BM25_BIN" --docs-json --pairs -n "${BD_HITS:-25}" $QUERY \
             || echo "(bd ranking failed)"
@@ -247,7 +182,6 @@ if len(hits) > CAP:
     echo ""
 }
 
-# --- Sections 1-5: files (qmd if enabled, else ripgrep per-source) ---
 if [ "$QMD_MODE" = 1 ]; then
     echo "### files (qmd)"
     echo ""
@@ -258,17 +192,10 @@ if [ "$QMD_MODE" = 1 ]; then
     exit 0
 fi
 
-# --- Section 1: the curated router ---
-# index.md's Keywords columns are hand-maintained and are the whole point of the
-# two-tier system, yet a raw grep over file BODIES bypasses them: a keyword that is an
-# intent hook ("pod debugging") rather than a literal string in the text routed nothing.
-# Lead with the index so search REINFORCES it instead of competing with it; the ranked
-# body matches below are the fallback, not the route.
+# Lead with the curated index so search REINFORCES it; body matches are the fallback.
 echo "### index.md (curated router — start here)"
 echo ""
 if [ -f "$REFS_DIR/index.md" ]; then
-    # Rank a row by how many DISTINCT query terms it matches, not by whether any single
-    # one does: an OR match on one generic word ("limit") is not routing.
     _idx=$(QP="$PATTERN" python3 - "$REFS_DIR/index.md" <<'PYEOF'
 import os, re, sys
 terms = list(dict.fromkeys(x for x in os.environ["QP"].split("|") if x))
@@ -281,15 +208,8 @@ for line in open(sys.argv[1], encoding="utf-8"):
     mm = re.match(r"\| *\[?\x60([^\x60]+)\x60", line)
     if not mm:
         continue
-    # Score the row's OWN name plus its prose, never its LINK columns. Cross-refs
-    # (portable table) and Portable counterpart (instance table) both hold backticked
-    # file names, so every row that merely linked to learnings-terraform.md scored a
-    # free hit on the term "terraform": measured, "terraform state lock" ranked
-    # learnings-observability.md ABOVE learnings-terraform.md on exactly that false hit.
-    # Stripping backticked file names AFTER the first is shape-independent, so it holds
-    # for both tables, and the leading name stays because matching a file by its own
-    # name is real routing. Only file-like tokens go: the summary column uses backticks
-    # for code terms (`bd forget`) that are legitimate keywords.
+    # Score the row's OWN name and prose, never its LINK columns, or a row that merely
+    # links to learnings-terraform.md scores a free hit on "terraform".
     own = mm.group(1)
     rest = re.sub(r"\x60[^\x60]*\.(?:md|sh|py|json)\x60", " ", line[mm.end():])
     low = (own + " " + rest).lower()
@@ -316,11 +236,9 @@ fi
 
 echo ""
 
-# --- Section 2: portable tier ---
 if [ "$BM25_MODE" = 1 ]; then
     echo "### entries, BM25-ranked (both tiers — the citation is the result)"
     echo ""
-    # Ranked above, before the title, so --quiet-weak can suppress the whole report.
     if [ "$_bm_weak" = 1 ]; then
         printf "no close match for '%s' (best covers %.0f%%). The rows below are\n" \
             "$QUERY" "$(awk -v c="$_bm_cov" 'BEGIN{print c*100}')"
@@ -329,9 +247,7 @@ if [ "$BM25_MODE" = 1 ]; then
     fi
     if [ -n "$_bm_rows" ]; then printf '%s\n' "$_bm_rows"; else echo "(bm25 failed)"; fi
     echo ""
-    # A file whose list numbering repeats has no citable `#N`, so the ranker drops it
-    # entirely. The instance tier's cluster registries are exactly that shape, so
-    # without this they vanish from the default backend with no trace in the output.
+        # A file whose list numbering repeats has no citable `#N`, so it is dropped.
     _skipped=$(HARNESS_HOME="$HOME_DIR" HARNESS_REFS="$REFS_DIR" HARNESS_ORGS="$ORGS_DIR" \
         "$BM25_BIN" --skipped 2>/dev/null)
     if [ -n "$_skipped" ]; then
@@ -351,7 +267,6 @@ fi
 
 echo ""
 
-# --- Section 3: instance tier, every org, unconditionally (see header) ---
 # Guard with -d: an unmatched glob expands to its literal pattern, not to nothing.
 if [ -d "$ORGS_DIR" ]; then
     _found_org=0
@@ -383,7 +298,6 @@ else
 fi
 fi
 
-# --- Section 4: reading notes (separate trust tier) ---
 echo "### reading (external notes)"
 echo ""
 if [ -d "$READING_DIR" ] && ls "$READING_DIR"/*.md >/dev/null 2>&1; then
@@ -394,7 +308,6 @@ fi
 
 echo ""
 
-# --- Section 5: domain docs (optional) ---
 if [ -d "$DOCS_DIR" ]; then
     echo "### domain docs"
     echo ""
@@ -402,5 +315,4 @@ if [ -d "$DOCS_DIR" ]; then
     echo ""
 fi
 
-# The hive prints after the routed, citable layers. See bd_memories_section.
 bd_memories_section

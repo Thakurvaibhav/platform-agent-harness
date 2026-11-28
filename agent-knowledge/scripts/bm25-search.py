@@ -1,19 +1,13 @@
 #!/usr/bin/env python3
 """Rank numbered knowledge entries by BM25.
 
-The ripgrep path ranks FILES by raw match count, which has no length
-normalisation and no IDF: the two 370 KB files win queries they have nothing to
-do with, and a generic term weighs the same as a rare one. This ranks ENTRIES,
-so the result is already the citable unit the caller needs.
+Ranks ENTRIES rather than files, with IDF and length normalisation, so a hit is
+already the citable unit the caller needs.
 
---docs-json ranks documents handed to it on stdin instead of the file corpus, so the
-bd hive gets the same IDF and length normalisation as the entries. rank() and
-tokenize() are untouched by it: they were already corpus-agnostic, and only the
-corpus builder differs. --pairs prints those hits as key + body pairs.
-
---verdict prefixes the output with `# coverage=<f> hits=<n>`: how much of the
-query, weighted by IDF, the TOP hit actually contains. The caller decides what
-counts as too little; this script holds no threshold.
+--verdict prefixes the output with `# coverage=<f> hits=<n>`: how much of the query,
+weighted by IDF, the TOP hit contains. This script holds no threshold, the caller does.
+--docs-json ranks documents from stdin instead of the file corpus and --pairs prints
+them as key + body. rank() and tokenize() are corpus-agnostic either way.
 
 Usage: bm25-search.py [-n N] [--json] [--files] [--verdict] <query terms...>
        bm25-search.py --docs-json --pairs [-n N] <query terms...> < docs.json
@@ -26,25 +20,19 @@ import os
 import re
 import sys
 
-# Same resolution knowledge-search.sh uses, so both halves of the search read one
-# corpus. A clone lives in the repo, not under $HOME, and hardcoding the latter
-# would make every adopter search an empty tree.
+# Same resolution knowledge-search.sh uses, so both halves read one corpus, and a
+# clone in the repo is not under $HOME.
 HOME_DIR = os.environ.get("HARNESS_HOME") or os.path.expanduser("~/.agent-knowledge")
 REFS_DIR = os.environ.get("HARNESS_REFS") or os.path.join(HOME_DIR, "references")
 ORGS_DIR = os.environ.get("HARNESS_ORGS") or os.path.join(HOME_DIR, "orgs")
 ENTRY_RE = re.compile(r"^(\d+)\. ")
-# Matched on the ORIGINAL text, not a lowercased copy: lowercasing first destroys
-# the case boundary camel_parts() needs. Case is dropped per piece afterwards.
+# Matched on the ORIGINAL text: lowercasing first kills camel_parts()'s boundary.
 TOKEN_RE = re.compile(r"[A-Za-z0-9]+(?:[-_][A-Za-z0-9]+)*")
 CAMEL_RE = re.compile(r"[A-Z]+(?![a-z])|[A-Z][a-z0-9]*|[a-z0-9]+")
 K1, B = 1.2, 0.75
 
-# Closed-class function words only, each dropped from the list if it is also an
-# identifier or domain term here: "set", "check", "run", "all", "no" and "re"
-# all failed that test and are deliberately absent. Entries are written as full
-# sentences, so "the" appears in 93.6% of them and "is" in 80.8%: on a
-# sentence-shaped query they were 5.1% of the top hit's score and kept two
-# on-topic entries out of the top five. Mean document length 153 -> 110.
+# Closed-class words only: "set", "check", "run", "all", "no" and "re" are domain
+# terms here, so they are deliberately absent.
 STOPWORDS = frozenset("""
 a an the this that these those
 i we you he she it they them us me him her
@@ -65,10 +53,8 @@ s t
 def camel_parts(word):
     """Sub-pieces of a camelCase/PascalCase word, or [] if it is not camel.
 
-    A split containing a one-character piece is rejected whole rather than
-    trimmed: mTLS splits as m + TLS and IPv4 as I + Pv4, and emitting the long
-    half broadened queries onto every TLS entry. Measured on 20 known items,
-    rejecting these splits moved the one demotion this caused from rank 29 to 16.
+    A split with a one-character piece is rejected whole, not trimmed: mTLS splits as
+    m + TLS, and emitting the long half broadens the query onto every TLS entry.
     """
     sub = CAMEL_RE.findall(word)
     return sub if len(sub) > 1 and all(len(s) > 1 for s in sub) else []
@@ -80,12 +66,9 @@ def tokenize(text):
         pieces = [raw]
         parts = [p for p in re.split(r"[-_]", raw) if p] if ("-" in raw or "_" in raw) else [raw]
         if parts != [raw]:
-            # Keep hyphenated and underscored identifiers whole (kube-dns,
-            # force_ssl) AND index their parts, so either spelling finds the entry.
+            # Index identifiers whole AND by part, so either spelling finds them.
             pieces += parts
         for p in parts:
-            # Same bargain for camelCase, which the hyphen rule did not cover:
-            # PeerAuthentication, nodeSelector and syncPolicy returned nothing.
             pieces += camel_parts(p)
         out.extend(w for w in (x.lower() for x in pieces) if w not in STOPWORDS)
     return out
@@ -123,8 +106,7 @@ def corpus(skipped=None):
             continue
         nums = [ENTRY_RE.match(l) for l in lines]
         seen = [int(m.group(1)) for m in nums if m]
-        # A repeated number means the file is a procedural list, not entries:
-        # `#N` would be ambiguous, so it is not citable and is skipped.
+        # A repeated number means a procedural list, not entries: `#N` is ambiguous.
         if not seen or len(set(seen)) != len(seen):
             if skipped is not None:
                 skipped.append(p)
@@ -139,10 +121,9 @@ def corpus(skipped=None):
 def json_docs(fh):
     """[(key, text)] from a `bd memories --json` payload on stdin.
 
-    Tolerates both shapes bd has emitted: a {key: body} object and a list of
-    {key, content} records. Same tolerance as the shell caller this replaces, so a
-    bd output change breaks both or neither. Returns None when the payload will not
-    parse, so an unreadable hive stays distinguishable from one that held no match.
+    Tolerates both shapes bd emits, a {key: body} object and a list of {key, content}
+    records, and returns None on a payload that will not parse, so an unreadable hive
+    stays distinguishable from one that held no match.
     """
     try:
         d = json.load(fh)
@@ -155,8 +136,7 @@ def json_docs(fh):
 class Ranked(list):
     """Hits, plus `coverage`: the share of the query the TOP hit actually answers.
 
-    A plain list subclass, not a (hits, coverage) tuple, because every existing
-    caller indexes and iterates the return value directly.
+    A list subclass, not a (hits, coverage) tuple: callers index and iterate it directly.
     """
 
     coverage = 0.0
@@ -197,9 +177,7 @@ def rank(query, docs, limit):
     top = scored[:limit]
     out = Ranked((s, cite, text) for s, cite, text, _ in top)
     if top:
-        # Weighted by IDF, not a raw term count: a hit matching only "argocd" and
-        # "chart" out of five terms answered the cheap half. The score cannot say
-        # this on its own, since it rises with term frequency.
+        # Weighted by IDF: matching the two cheapest terms of five is not coverage.
         counts = tfs[top[0][3]]
         total = sum(idf[w] for w in set(q))
         if total:
@@ -244,14 +222,11 @@ def main():
         if docs is None:
             print("(bd memories unreadable)")
             return 0
-        # A bd key IS the searchable part of a memory, so index it alongside the body
-        # the way the ripgrep path did. Display still shows the body alone.
+        # A bd key is searchable, so index it with the body; display shows body alone.
         bodies = dict(docs)
         docs = [(k, k + " " + b) for k, b in docs]
     else:
         docs = corpus()
-    # by_file folds entries into files and pairs reports a total, so both need every
-    # hit ranked before the slice rather than a ranking truncated to the limit.
     hits = rank(" ".join(rest), docs, len(docs) if (by_file or pairs) else limit)
     matched = len(hits)
     if verdict:
@@ -285,8 +260,7 @@ def main():
         return 0
     for s, cite, text in hits:
         text = bodies.get(cite, text)
-        # Strip the entry number by PATTERN, not by arithmetic on the citation: a
-        # --docs-json key carries no "#", and indexing that split raised IndexError.
+        # Strip the entry number by PATTERN: a --docs-json key carries no "#" to split.
         body = ENTRY_RE.sub("", text, count=1).strip() if text else ""
         print("%-42s %s" % (cite, body[:150]))
     return 0
